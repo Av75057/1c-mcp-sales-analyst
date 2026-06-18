@@ -1,0 +1,100 @@
+from __future__ import annotations
+
+from typing import Any
+
+from src.clients.c1_client import C1Client
+from src.clients.mock_c1_client import MockC1Client
+from src.config import settings
+from src.logger import logger
+
+C1ClientProtocol = C1Client | MockC1Client
+
+
+def _get_client() -> C1ClientProtocol:
+    if settings.use_mock_data:
+        logger.info("Используется MockC1Client (демо-режим)")
+        return MockC1Client()
+    logger.info("Используется C1Client (режим 1С)")
+    return C1Client()
+
+
+_client_instance: C1ClientProtocol | None = None
+
+
+def get_client() -> C1ClientProtocol:
+    global _client_instance
+    if _client_instance is None:
+        _client_instance = _get_client()
+    return _client_instance
+
+
+async def close_client() -> None:
+    global _client_instance
+    if _client_instance:
+        await _client_instance.close()
+        _client_instance = None
+
+
+async def get_stock_tool(
+    warehouse: str | None = None,
+    nomenclature: str | None = None,
+    min_quantity: int | None = None,
+) -> list[dict[str, Any]]:
+    logger.info("Вызов get_stock: warehouse={}, nomenclature={}, min_quantity={}", warehouse, nomenclature, min_quantity)
+    client = get_client()
+    return await client.get_stock(
+        warehouse=warehouse,
+        nomenclature=nomenclature,
+        min_quantity=min_quantity,
+    )
+
+
+async def get_sales_tool(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    manager: str | None = None,
+    warehouse: str | None = None,
+) -> list[dict[str, Any]]:
+    logger.info("Вызов get_sales: date_from={}, date_to={}, manager={}, warehouse={}", date_from, date_to, manager, warehouse)
+    client = get_client()
+    return await client.get_sales(
+        date_from=date_from,
+        date_to=date_to,
+        manager=manager,
+        warehouse=warehouse,
+    )
+
+
+async def get_sales_by_manager_tool(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    manager: str | None = None,
+) -> list[dict[str, Any]]:
+    logger.info("Вызов get_sales_by_manager: date_from={}, date_to={}, manager={}", date_from, date_to, manager)
+    client = get_client()
+    return await client.get_sales_by_manager(
+        date_from=date_from,
+        date_to=date_to,
+        manager=manager,
+    )
+
+
+async def get_receivables_tool(
+    min_amount: float | None = None,
+    date_from: str | None = None,
+) -> list[dict[str, Any]]:
+    logger.info("Вызов get_receivables: min_amount={}, date_from={}", min_amount, date_from)
+    client = get_client()
+    return await client.get_receivables(
+        min_amount=min_amount,
+        date_from=date_from,
+    )
+
+
+async def list_nomenclature_tool(
+    query: str,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    logger.info("Вызов list_nomenclature: query={}, limit={}", query, limit)
+    client = get_client()
+    return await client.list_nomenclature(query=query, limit=limit)

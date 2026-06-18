@@ -1,0 +1,22 @@
+[project]
+name = "1c-mcp-sales-analyst"
+version = "0.1.0"
+description = "AI-аналитик склада и продаж на базе 1С + MCP + DeepSeek"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "loguru>=0.7.2",
+    "openai>=1.12.0",
+    "pydantic>=2.5.0",
+    "tenacity>=8.2.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
+]
+
+[project.optional-dependencies]
+web = ["streamlit>=1.30.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

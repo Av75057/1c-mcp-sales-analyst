@@ -1,0 +1,85 @@
+services:
+  proxy:
+    build: .
+    container_name: 1c-mcp-proxy
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    command: python -m src proxy
+    restart: unless-stopped
+    networks:
+      - 1c-network
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: 1c-open-webui
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui-data:/app/backend/data
+    environment:
+      - OPENAI_API_BASE_URL=http://proxy:8000/v1
+      - OPENAI_API_KEY=not-needed
+      - WEBUI_NAME=1C Аналитик
+      - DEFAULT_MODELS=deepseek-chat
+      - ENABLE_SIGNUP=true
+    depends_on:
+      - proxy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - 1c-network
+
+  mcp-server:
+    build: .
+    container_name: 1c-mcp-server
+    profiles:
+      - mcp
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    command: python -m src server
+    restart: unless-stopped
+    networks:
+      - 1c-network
+
+  web-ui:
+    build: .
+    container_name: 1c-mcp-web
+    profiles:
+      - legacy
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    command: streamlit run web_ui.py --server.port 8501 --server.address 0.0.0.0
+    restart: unless-stopped
+    networks:
+      - 1c-network
+
+  chat-cli:
+    build: .
+    container_name: 1c-mcp-cli
+    profiles:
+      - cli
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    entrypoint: ["python", "chat.py"]
+    networks:
+      - 1c-network
+
+volumes:
+  open-webui-data:
+
+networks:
+  1c-network:
+    driver: bridge
