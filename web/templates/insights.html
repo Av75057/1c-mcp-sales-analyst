@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">🤖 AI Инсайты</h4>
+</div>
+{% if insights %}
+<div class="mb-2"><small class="text-secondary">Всего: {{ insights|length }} инсайтов</small></div>
+<div class="row g-2">
+    {% for ins in insights %}
+    {% set priority = ins.get('priority', 'info') %}
+    {% set emoji = {'critical': '🔴', 'warning': '🟡', 'info': 'ℹ️'}[priority] %}
+    <div class="col-12">
+        <div class="card p-3 insight-card insight-{{ priority }}">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>{{ emoji }} {{ ins.get('title', 'Инсайт') }}</strong>
+                    <div class="small text-secondary mt-1">{{ ins.get('detector', '') }} · {{ ins.get('entity_id', '') }}</div>
+                </div>
+                <small class="text-secondary">{{ ins.get('sent_at', '')[:16].replace('T', ' ') }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card p-5 text-center text-secondary">
+    <h1 class="mb-3">🤖</h1>
+    <p>Нет инсайтов. Запустите сканирование:</p>
+    <code>python run_insights.py scan</code>
+</div>
+{% endif %}
+{% endblock %}

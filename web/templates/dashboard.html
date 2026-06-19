@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📊 Дашборд</h4>
+    <button class="btn btn-outline-secondary btn-sm" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise"></i> Обновить</button>
+</div>
+
+<div class="row g-3 mb-4" id="metricsRow">
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Позиций на складе</div><div class="stat-value" id="statStock">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Всего единиц</div><div class="stat-value" id="statQty">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Выручка за 30д</div><div class="stat-value" id="statSales">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Менеджеров</div><div class="stat-value" id="statMgrs">—</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card p-3"><canvas id="stockChart" height="250"></canvas></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3"><canvas id="salesChart" height="250"></canvas></div>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">📦 Топ-10 товаров</h6>
+    </div>
+    <div class="table-responsive"><table class="table table-sm" id="topStockTable"><tbody id="topStockBody"></tbody></table></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDashboard() {
+    const r = await fetch('/api/dashboard');
+    const d = await r.json();
+    document.getElementById('statStock').textContent = d.stock_count;
+    document.getElementById('statQty').textContent = d.stock_qty.toLocaleString();
+    document.getElementById('statSales').textContent = d.sales_sum.toLocaleString() + ' ₽';
+    document.getElementById('statMgrs').textContent = d.managers_count;
+
+    const stock = await (await fetch('/api/stock')).json();
+    const top = stock.data.slice(0, 10).reverse();
+    new Chart(document.getElementById('stockChart'), {
+        type: 'bar',
+        data: { labels: top.map(i => i.nomenclature.length > 25 ? i.nomenclature.slice(0, 24) + '…' : i.nomenclature),
+                datasets: [{ label: 'Количество', data: top.map(i => i.quantity), backgroundColor: '#2563eb' }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    const sales = await (await fetch('/api/sales')).json();
+    if (sales.by_manager?.length) {
+        new Chart(document.getElementById('salesChart'), {
+            type: 'doughnut',
+            data: { labels: sales.by_manager.map(i => i.manager),
+                    datasets: [{ data: sales.by_manager.map(i => i.total_sum), backgroundColor: ['#2563eb','#7c3aed','#059669'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+    document.getElementById('topStockBody').innerHTML = top.slice().reverse().map((i, idx) =>
+        `<tr><td>${idx + 1}</td><td>${i.nomenclature}</td><td class="text-end">${i.quantity}</td><td>${i.warehouse}</td></tr>`
+    ).join('');
+}
+loadDashboard();
+</script>
+{% endblock %}

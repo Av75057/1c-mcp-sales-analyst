@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">🔮 What-If симулятор</h4>
+</div>
+<div class="row g-2 mb-3">
+    <div class="col-md-3"><input class="form-control" id="entityName" placeholder="Товар (Гвоздь 100мм)" value="Гвоздь 100мм"></div>
+    <div class="col-md-2"><input class="form-control" id="changePercent" type="number" placeholder="Изменение %" value="10"></div>
+    <div class="col-md-2"><input class="form-control" id="periodDays" type="number" placeholder="Дней" value="30"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="runSimulation()"><i class="bi bi-magic"></i> Симулировать</button></div>
+</div>
+<div id="simResult" style="display:none">
+    <div class="row g-3 mb-3" id="simMetrics"></div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-8"><div class="card p-3"><canvas id="simChart" height="250"></canvas></div></div>
+        <div class="col-md-4"><div class="card p-3" id="simRecommendations"></div></div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function runSimulation() {
+    const name = document.getElementById('entityName').value;
+    const change = document.getElementById('changePercent').value;
+    const days = document.getElementById('periodDays').value;
+    document.getElementById('simResult').style.display = 'none';
+    document.getElementById('simResult').innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div><div class="mt-2">Симулирую...</div></div>';
+    document.getElementById('simResult').style.display = 'block';
+    const r = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `entity_name=${encodeURIComponent(name)}&change_percent=${change}&period_days=${days}`
+    });
+    const d = await r.json();
+    if (d.error) { document.getElementById('simResult').innerHTML = `<div class="alert alert-warning">${d.error}</div>`; return; }
+    document.getElementById('simResult').innerHTML = `
+        <div class="row g-3 mb-3">
+            <div class="col-md-3"><div class="card p-3"><div class="card-title">Баз. выручка</div><div class="stat-value">${d.baseline.revenue.toLocaleString()} ₽</div></div></div>
+            <div class="col-md-3"><div class="card p-3"><div class="card-title">Прогноз</div><div class="stat-value ${d.delta.revenue_percent >= 0 ? 'text-success' : 'text-danger'}">${d.projected.revenue.toLocaleString()} ₽</div></div></div>
+            <div class="col-md-3"><div class="card p-3"><div class="card-title">Δ выручки</div><div class="stat-value ${d.delta.revenue_percent >= 0 ? 'text-success' : 'text-danger'}">${d.delta.revenue_percent >= 0 ? '+' : ''}${d.delta.revenue_percent}%</div></div></div>
+            <div class="col-md-3"><div class="card p-3"><div class="card-title">Уверенность</div><div class="stat-value">${(d.confidence * 100).toFixed(0)}%</div></div></div>
+        </div>
+        <div class="row g-3 mb-3">
+            <div class="col-md-8"><div class="card p-3"><div id="simChartContainer">${d.chart_html || '<canvas id="simChart" height="250"></canvas>'}</div></div></div>
+            <div class="col-md-4"><div class="card p-3"><h6>💡 Рекомендации</h6><ul class="small mt-2">${(d.recommendations || []).map(r => `<li class="mb-1">${r}</li>`).join('')}</ul></div></div>
+        </div>
+    `;
+}
+</script>
+{% endblock %}

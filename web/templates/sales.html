@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">💰 Продажи</h4>
+</div>
+<div class="row g-2 mb-3">
+    <div class="col-md-2"><input class="form-control" id="dateFrom" type="date"></div>
+    <div class="col-md-2"><input class="form-control" id="dateTo" type="date"></div>
+    <div class="col-md-2"><input class="form-control" id="manager" placeholder="Менеджер"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="loadSales()"><i class="bi bi-search"></i> Загрузить</button></div>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Выручка</div><div class="stat-value" id="salesRevenue">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Продаж</div><div class="stat-value" id="salesCount">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Средний чек</div><div class="stat-value" id="salesAvg">—</div></div></div>
+    <div class="col-md-3"><div class="card p-3"><div class="card-title">Менеджеров</div><div class="stat-value" id="salesMgrs">—</div></div></div>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-md-7"><div class="card p-3"><canvas id="salesLineChart" height="250"></canvas></div></div>
+    <div class="col-md-5"><div class="card p-3"><canvas id="salesPieChart" height="250"></canvas></div></div>
+</div>
+<div class="card p-3">
+    <div class="table-responsive"><table class="table table-sm" id="salesTable"><thead><tr><th>Дата</th><th>Товар</th><th class="text-end">Кол-во</th><th class="text-end">Сумма</th><th>Менеджер</th></tr></thead><tbody id="salesBody"></tbody></table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadSales() {
+    const df = document.getElementById('dateFrom').value;
+    const dt = document.getElementById('dateTo').value;
+    const mgr = document.getElementById('manager').value;
+    const r = await fetch(`/api/sales?date_from=${df}&date_to=${dt}&manager=${encodeURIComponent(mgr)}`);
+    const d = await r.json();
+    const rows = d.data;
+    document.getElementById('salesRevenue').textContent = rows.reduce((s, i) => s + i.sum, 0).toLocaleString() + ' ₽';
+    document.getElementById('salesCount').textContent = rows.length;
+    const avg = rows.length ? rows.reduce((s, i) => s + i.sum, 0) / rows.length : 0;
+    document.getElementById('salesAvg').textContent = avg.toLocaleString() + ' ₽';
+    document.getElementById('salesMgrs').textContent = new Set(rows.map(i => i.manager)).size;
+    document.getElementById('salesBody').innerHTML = rows.map(i =>
+        `<tr><td>${i.date}</td><td>${i.nomenclature}</td><td class="text-end">${i.quantity}</td><td class="text-end">${i.sum.toLocaleString()}</td><td>${i.manager}</td></tr>`
+    ).join('');
+    const daily = rows.reduce((acc, i) => { acc[i.date] = (acc[i.date] || 0) + i.sum; return acc; }, {});
+    const dates = Object.keys(daily).sort();
+    const vals = dates.map(d => daily[d]);
+    if (window.salesLine) window.salesLine.destroy();
+    window.salesLine = new Chart(document.getElementById('salesLineChart'), {
+        type: 'line',
+        data: { labels: dates, datasets: [{ label: 'Выручка', data: vals, borderColor: '#2563eb', fill: true, tension: .3 }] },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+    if (d.by_manager?.length) {
+        if (window.salesPie) window.salesPie.destroy();
+        window.salesPie = new Chart(document.getElementById('salesPieChart'), {
+            type: 'doughnut',
+            data: { labels: d.by_manager.map(i => i.manager),
+                    datasets: [{ data: d.by_manager.map(i => i.total_sum), backgroundColor: ['#2563eb','#7c3aed','#059669','#d97706','#dc2626'] }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today;
+    const first = new Date(); first.setDate(1); document.getElementById('dateFrom').value = first.toISOString().split('T')[0];
+    loadSales();
+});
+</script>
+{% endblock %}

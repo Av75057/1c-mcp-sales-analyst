@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📦 Остатки товаров</h4>
+</div>
+<div class="row g-2 mb-3">
+    <div class="col-md-4"><input class="form-control" id="searchNomenclature" placeholder="Поиск по названию"></div>
+    <div class="col-md-2"><input class="form-control" id="minQty" type="number" placeholder="Мин. кол-во" value="0"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="loadStock()"><i class="bi bi-search"></i> Найти</button></div>
+    <div class="col-md-2"><button class="btn btn-outline-secondary w-100" onclick="exportStock()"><i class="bi bi-download"></i> Excel</button></div>
+</div>
+<div class="card p-3">
+    <canvas id="stockBarChart" height="250" class="mb-3"></canvas>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover" id="stockTable">
+            <thead><tr><th>#</th><th>Товар</th><th>Организация</th><th class="text-end">Количество</th></tr></thead>
+            <tbody id="stockBody"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadStock() {
+    const name = document.getElementById('searchNomenclature').value;
+    const min = document.getElementById('minQty').value;
+    const r = await fetch(`/api/stock?nomenclature=${encodeURIComponent(name)}&min_quantity=${min}`);
+    const d = await r.json();
+    const rows = d.data;
+    document.getElementById('stockBody').innerHTML = rows.map((i, idx) =>
+        `<tr><td>${idx + 1}</td><td>${i.nomenclature}</td><td>${i.warehouse}</td><td class="text-end">${i.quantity}</td></tr>`
+    ).join('');
+    const top = rows.slice(0, 15).reverse();
+    if (window.stockChart) window.stockChart.destroy();
+    window.stockChart = new Chart(document.getElementById('stockBarChart'), {
+        type: 'bar',
+        data: { labels: top.map(i => i.nomenclature.length > 20 ? i.nomenclature.slice(0, 19) + '…' : i.nomenclature),
+                datasets: [{ data: top.map(i => i.quantity), backgroundColor: '#2563eb' }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+}
+function exportStock() {
+    const rows = [...document.querySelectorAll('#stockBody tr')].map(tr =>
+        [...tr.querySelectorAll('td')].map(td => td.textContent).join(',')
+    ).join('\n');
+    const blob = new Blob(['#,Товар,Организация,Количество\n' + rows], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'stock.csv'; a.click();
+}
+loadStock();
+</script>
+{% endblock %}

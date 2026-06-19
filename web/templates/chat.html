@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">💬 AI Аналитик</h4>
+</div>
+<div class="row g-2 mb-3">
+    <div class="col-md-8"><input class="form-control" id="chatInput" placeholder="Задайте вопрос на русском языке..." onkeydown="if(event.key==='Enter') sendChat()"></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="sendChat()"><i class="bi bi-send"></i> Спросить</button></div>
+</div>
+<div class="mb-3">
+    <small class="text-secondary">Примеры: </small>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Покажи топ-10 товаров по остаткам')">Топ-10 товаров</button>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Какая выручка за последние 30 дней?')">Выручка за 30д</button>
+    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Продажи по менеджерам')">Продажи по менеджерам</button>
+</div>
+<div id="chatHistory" class="mb-3"></div>
+<div id="chatResult" class="card p-3" style="display:none">
+    <div id="chatAnswer" class="mb-3"></div>
+    <div id="chartContainer" class="mb-3"></div>
+    <div id="toolCalls" class="small text-secondary"></div>
+    <div id="usageInfo" class="small text-secondary mt-2"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function setQuery(q) { document.getElementById('chatInput').value = q; sendChat(); }
+async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const q = input.value.trim();
+    if (!q) return;
+    const history = document.getElementById('chatHistory');
+    history.innerHTML += `<div class="mb-2 text-end"><span class="badge bg-primary">${q}</span></div>`;
+    input.value = '';
+    document.getElementById('chatResult').style.display = 'none';
+    document.getElementById('chatResult').innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div><div class="mt-2">Анализирую...</div></div>';
+    document.getElementById('chatResult').style.display = 'block';
+    const r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: `query=${encodeURIComponent(q)}` });
+    const d = await r.json();
+    document.getElementById('chatResult').innerHTML = `
+        <div class="mb-3" style="white-space:pre-wrap">${d.answer}</div>
+        ${d.chart_html ? `<div class="mb-3">${d.chart_html}</div>` : ''}
+        ${d.tool_calls?.length ? `<div class="small text-secondary">🤖 Инструменты: ${d.tool_calls.map(t => t.name).join(', ')}</div>` : ''}
+        ${d.usage ? `<div class="small text-secondary mt-1">💰 Токены: ${d.usage.prompt_tokens} in / ${d.usage.completion_tokens} out</div>` : ''}
+    `;
+}
+</script>
+{% endblock %}
