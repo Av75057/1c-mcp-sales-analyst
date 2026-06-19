@@ -112,6 +112,7 @@ async function processDocument() {
                         <h6 class="mb-3">📋 Шапка документа</h6>
                         <table class="table table-sm small">
                             <tr><td>Поставщик</td><td><strong>${hdr.counterparty || '?'}</strong> ${hdr.counterparty_match ? (hdr.counterparty_match.confidence > 0.7 ? '✅' : '⚠️') : ''}</td></tr>
+                            <tr><td>Покупатель</td><td>${hdr.buyer || '—'}</td></tr>
                             <tr><td>ИНН</td><td>${hdr.inn || '—'}</td></tr>
                             <tr><td>Дата</td><td>${hdr.date || '?'}</td></tr>
                             <tr><td>Номер</td><td>${hdr.number || '?'}</td></tr>
