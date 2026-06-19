@@ -78,6 +78,11 @@ def render_chat():
                         for tc in result["tool_calls"]:
                             args_str = ", ".join(f"{k}={v}" for k, v in tc["args"].items())
                             st.code(f"{tc['name']}({args_str})", language="text")
+                            if tc["name"] == "create_chart" and "result" in tc:
+                                from PIL import Image
+                                import base64, io
+                                img_bytes = base64.b64decode(tc["result"]["image_base64"])
+                                st.image(Image.open(io.BytesIO(img_bytes)), use_container_width=True)
 
                 usage = result["usage"]
                 col1, col2, col3 = st.columns(3)

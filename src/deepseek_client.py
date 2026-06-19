@@ -28,8 +28,19 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_sales_by_manager — продажи в разрезе менеджеров
 - get_receivables — задолженность клиентов
 - list_nomenclature — поиск номенклатуры по названию
+- create_chart — построить график на основе данных
 
-Анализируй запрос пользователя и вызывай нужные инструменты. После получения данных сформулируй ответ."""
+ПРАВИЛА ВИЗУАЛИЗАЦИИ (create_chart):
+1. ВСЕГДА строй график, если пользователь явно просит или данные содержат временной ряд, сравнение, структуру.
+2. НЕ строй график, если ответ — просто одно число или данных слишком много (>30 точек).
+3. ВЫБОР ТИПА:
+   - line / area → временные ряды, тренды, динамика
+   - hbar → топ-N списки (до 15), названия товаров
+   - bar → сравнение категорий (до 10), grouped bar для нескольких серий
+   - pie → доли, структура (до 8 категорий)
+4. ПОСЛЕ построения графика дай текстовый анализ (2-4 предложения) и рекомендации.
+
+Анализируй запрос пользователя и вызывай нужные инструменты. После получения данных сформулируй ответ. Если знаешь, что данные подходят для графика — сначала получи данные через get_stock/get_sales, затем передай их в create_chart."""
 
 TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
@@ -145,7 +156,56 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
                         "description": "Максимальное количество результатов (по умолчанию 10)",
                     },
                 },
-                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_chart",
+            "description": "Построить график на основе данных. Вызывай ПОСЛЕ получения данных из get_stock/get_sales. Передай агрегированные данные.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "chart_type": {
+                        "type": "string",
+                        "enum": ["line", "bar", "hbar", "pie", "area"],
+                        "description": "Тип графика: line/area для трендов, hbar для топ-N, bar для сравнения, pie для долей",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Заголовок графика на русском",
+                    },
+                    "x_data": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Подписи по оси X (категории или даты)",
+                    },
+                    "y_data": {
+                        "type": "array",
+                        "items": {},
+                        "description": "Значения по оси Y (числа или массив массивов для multi-series)",
+                    },
+                    "x_label": {
+                        "type": "string",
+                        "description": "Подпись оси X",
+                    },
+                    "y_label": {
+                        "type": "string",
+                        "description": "Подпись оси Y с единицами измерения",
+                    },
+                    "series_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Названия серий для multi-series графиков (grouped bar, multi-line)",
+                    },
+                    "color_scheme": {
+                        "type": "string",
+                        "enum": ["default", "corporate", "vibrant"],
+                        "description": "Цветовая схема",
+                    },
+                },
+                "required": ["chart_type", "title", "x_data", "y_data"],
             },
         },
     },
@@ -156,6 +216,7 @@ TOOL_NAME_TO_FUNC: dict[str, Any] = {}
 
 def _import_tools() -> None:
     from src.tools import (
+        create_chart_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
         get_sales_tool,
@@ -168,6 +229,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["get_sales_by_manager"] = get_sales_by_manager_tool
     TOOL_NAME_TO_FUNC["get_receivables"] = get_receivables_tool
     TOOL_NAME_TO_FUNC["list_nomenclature"] = list_nomenclature_tool
+    TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
 
 
 _import_tools()
@@ -249,18 +311,29 @@ class DeepSeekClient:
                         args = {}
 
                     logger.info("LLM вызывает tool: {} с args={}", func_name, args)
-                    all_tool_calls.append({"name": func_name, "args": args})
 
                     func = TOOL_NAME_TO_FUNC.get(func_name)
                     if func is None:
                         result_text = f"Ошибка: неизвестный инструмент {func_name}"
+                        result = None
                     else:
                         try:
                             result = await func(**args)
                             result_text = json.dumps(result, ensure_ascii=False, default=str)
                         except Exception as e:
                             result_text = f"Ошибка при вызове {func_name}: {e!s}"
+                            result = None
                             logger.error("Ошибка tool {}: {}", func_name, e)
+
+                    tool_entry: dict[str, Any] = {"name": func_name, "args": args}
+                    if func_name == "create_chart" and result and "image_base64" in result:
+                        tool_entry["result"] = {
+                            "chart_id": result.get("chart_id"),
+                            "image_base64": result["image_base64"],
+                            "image_url": result.get("image_url"),
+                            "chart_type": result.get("metadata", {}).get("chart_type"),
+                        }
+                    all_tool_calls.append(tool_entry)
 
                     logger.debug("Результат tool {}: {}", func_name, result_text[:200])
                     messages.append({

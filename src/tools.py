@@ -98,3 +98,27 @@ async def list_nomenclature_tool(
     logger.info("Вызов list_nomenclature: query={}, limit={}", query, limit)
     client = get_client()
     return await client.list_nomenclature(query=query, limit=limit)
+
+
+async def create_chart_tool(
+    chart_type: str,
+    title: str,
+    x_data: list[Any],
+    y_data: list[Any],
+    x_label: str = "",
+    y_label: str = "",
+    series_names: list[str] | None = None,
+    color_scheme: str = "default",
+) -> dict[str, Any]:
+    logger.info("create_chart: type={}, title={}, points={}", chart_type, title, len(x_data))
+    from src.charts.tool import create_chart_tool as _create
+    return _create(
+        chart_type=chart_type,
+        title=title,
+        x_data=x_data,
+        y_data=y_data,
+        x_label=x_label,
+        y_label=y_label,
+        series_names=series_names,
+        color_scheme=color_scheme,
+    )

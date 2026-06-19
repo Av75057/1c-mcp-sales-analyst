@@ -42,6 +42,10 @@ async def main() -> None:
         print("=" * 60)
         for tc in result["tool_calls"]:
             print(f"  • {tc['name']}({tc['args']})")
+            if tc["name"] == "create_chart" and "result" in tc:
+                img_path = tc["result"].get("image_path", "")
+                if img_path:
+                    print(f"    📊 График сохранён: {img_path}")
         print()
 
     usage = result["usage"]
