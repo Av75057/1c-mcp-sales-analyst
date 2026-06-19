@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">⚙️ Статус системы</h4>
+    <button class="btn btn-outline-secondary btn-sm" onclick="loadStatus()"><i class="bi bi-arrow-clockwise"></i> Обновить</button>
+</div>
+
+<div class="row g-3 mb-4" id="statusCards"></div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">📊 Статистика модулей</h6>
+            <table class="table table-sm" id="modulesTable">
+                <thead><tr><th>Модуль</th><th>Статус</th><th>Версия</th></tr></thead>
+                <tbody>
+                    <tr><td>📦 Остатки (Stock)</td><td id="mStock">—</td><td>v1</td></tr>
+                    <tr><td>💰 Продажи (Sales)</td><td id="mSales">—</td><td>v1</td></tr>
+                    <tr><td>💬 AI Чат</td><td id="mChat">—</td><td>v1</td></tr>
+                    <tr><td>🔮 What-If</td><td id="mWhatif">—</td><td>v1</td></tr>
+                    <tr><td>🤖 Инсайты</td><td id="mInsights">—</td><td>v1</td></tr>
+                    <tr><td>📄 Документы</td><td id="mDocs">—</td><td>v1</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3">
+            <h6 class="mb-3">🔌 Подключения</h6>
+            <div id="connections"></div>
+        </div>
+        <div class="card p-3 mt-3">
+            <h6 class="mb-3">🗄️ Последние действия</h6>
+            <div id="recentActions" class="small text-secondary">Загрузка...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadStatus() {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    document.getElementById('statusCards').innerHTML = `
+        <div class="col-md-3"><div class="card p-3 text-center"><div class="card-title">📦 Товаров</div><div class="stat-value">${d.stock_count||0}</div></div></div>
+        <div class="col-md-3"><div class="card p-3 text-center"><div class="card-title">💰 Продажи (30д)</div><div class="stat-value">${(d.sales_sum||0).toLocaleString()} ₽</div></div></div>
+        <div class="col-md-3"><div class="card p-3 text-center"><div class="card-title">🤖 Инсайтов</div><div class="stat-value">${d.insights_count||0}</div></div></div>
+        <div class="col-md-3"><div class="card p-3 text-center"><div class="card-title">📄 API запросов</div><div class="stat-value">—</div></div></div>
+    `;
+    const ok = '<span class="text-success">✅ Работает</span>';
+    const err = '<span class="text-danger">❌ Ошибка</span>';
+    document.getElementById('mStock').innerHTML = d.stock_count ? ok : err;
+    document.getElementById('mSales').innerHTML = d.sales_count ? ok : err;
+    document.getElementById('mChat').innerHTML = d.deepseek_key ? ok : err;
+    document.getElementById('mWhatif').innerHTML = d.stock_count ? ok : err;
+    document.getElementById('mInsights').innerHTML = d.insights_count >= 0 ? ok : err;
+    document.getElementById('mDocs').innerHTML = ok;
+    document.getElementById('connections').innerHTML = `
+        <div class="mb-2"><span class="text-success">✅</span> <strong>1С:УНФ</strong> <small class="text-secondary">${d.mock_mode ? 'мок-режим' : d.c1_url}</small></div>
+        <div class="mb-2"><span class="text-${d.deepseek_key ? 'success' : 'danger'}">${d.deepseek_key ? '✅' : '❌'}</span> <strong>DeepSeek API</strong> <small class="text-secondary">${d.deepseek_key ? 'ключ задан' : 'ключ не задан'}</small></div>
+        ${d.telegram_token ? `<div class="mb-2"><span class="text-success">✅</span> <strong>Telegram Bot</strong> <small class="text-secondary">активен</small></div>` : ''}
+        <div class="mb-2"><span class="text-success">✅</span> <strong>Веб-сервер</strong> <small class="text-secondary">порт ${d.port||8080}</small></div>
+    `;
+    document.getElementById('recentActions').innerHTML = `
+        • Сервер запущен: ${d.uptime || '—'}<br>
+        • Режим данных: ${d.mock_mode ? 'мок (демо)' : 'реальная 1С'}<br>
+        • Модель AI: ${d.llm_model || 'deepseek-chat'}<br>
+        • Всего товаров в 1С: ${d.stock_count || 0}
+    `;
+}
+loadStatus();
+</script>
+{% endblock %}

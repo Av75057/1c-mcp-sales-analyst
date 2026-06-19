@@ -96,6 +96,40 @@ async def documents_page():
     return render("documents.html", {"page": "documents"})
 
 
+@app.get("/status")
+async def status_page():
+    return render("status.html", {"page": "status"})
+
+
+@app.get("/api/status")
+async def api_status():
+    client = await get_c1()
+    import os
+    insights_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
+    insights_count = len(list(insights_dir.glob("*.json"))) if insights_dir.exists() else 0
+    try:
+        stock = await client.get_stock()
+        sales = await client.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat())
+        stock_count = len(stock)
+        sales_count = len(sales)
+        sales_sum = sum(s["sum"] for s in sales)
+    except Exception:
+        stock_count = sales_count = sales_sum = 0
+    return {
+        "stock_count": stock_count,
+        "sales_count": sales_count,
+        "sales_sum": sales_sum,
+        "insights_count": insights_count,
+        "deepseek_key": bool(os.getenv("DEEPSEEK_API_KEY")),
+        "telegram_token": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+        "mock_mode": bool(os.getenv("USE_MOCK_DATA", "false") == "true"),
+        "c1_url": os.getenv("C1_BASE_URL", "http://localhost/1c/api"),
+        "llm_model": os.getenv("LLM_MODEL", "deepseek-chat"),
+        "port": os.getenv("PORT", "8080"),
+        "uptime": "работает",
+    }
+
+
 @app.post("/api/documents/upload")
 async def api_documents_upload(file: UploadFile = File(...), match_nomenclature: bool = Form(False)):
     if not file.filename:
@@ -172,7 +206,7 @@ async def api_dashboard():
     stock, sales, by_mgr = await asyncio.gather(
         client.get_stock(),
         client.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat()),
-        c1.get_sales_by_manager(),
+        client.get_sales_by_manager(),
     )
     total_stock_qty = sum(s["quantity"] for s in stock)
     total_sales_sum = sum(s["sum"] for s in sales)

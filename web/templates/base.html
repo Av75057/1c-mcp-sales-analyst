@@ -76,9 +76,12 @@
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if page == 'documents' }}" href="/documents"><i class="bi bi-file-earmark-text"></i><span>Документы</span></a>
                 </li>
+                <li class="nav-item mt-3">
+                    <a class="nav-link {{ 'active' if page == 'status' }}" href="/status"><i class="bi bi-gear"></i><span>Статус</span></a>
+                </li>
             </ul>
             <div class="position-absolute bottom-0 start-0 end-0 p-3">
-                <small class="text-secondary">1C:УНФ + DeepSeek</small>
+                <small class="text-secondary" id="sysStatus">1C:УНФ + DeepSeek</small>
             </div>
         </nav>
         <main class="content">
