@@ -15,3 +15,5 @@ build/
 .vscode/
 logs/
 
+static/charts/*.png
+static/charts/*.pdf
