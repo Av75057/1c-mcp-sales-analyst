@@ -9,7 +9,7 @@ from PIL import Image
 
 from src.logger import logger
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".tiff", ".tif"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".tiff", ".tif", ".txt", ".csv"}
 MAX_FILE_SIZE = 20 * 1024 * 1024
 MAX_PAGES = 10
 
