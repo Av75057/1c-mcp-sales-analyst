@@ -18,12 +18,36 @@ def _extract_text_from_pdf(data: bytes) -> str:
         pdf_path = f.name
     try:
         result = subprocess.run(["pdftotext", pdf_path, "-"], capture_output=True, text=True, timeout=30)
-        return result.stdout.strip()
+        text = result.stdout.strip()
+        if text:
+            return text
+        logger.info("PDF без текста, пробую OCR...")
+        return _ocr_image(pdf_path)
     except Exception as e:
         logger.error("pdftotext error: {}", e)
         return ""
     finally:
         Path(pdf_path).unlink(missing_ok=True)
+
+
+def _ocr_image(image_path: str) -> str:
+    try:
+        import pytesseract
+        result = subprocess.run(["tesseract", image_path, "stdout", "-l", "rus+eng"], capture_output=True, text=True, timeout=30)
+        return result.stdout.strip()
+    except Exception as e:
+        logger.error("tesseract error: {}", e)
+        return ""
+
+
+def _ocr_bytes(data: bytes) -> str:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+        f.write(data)
+        img_path = f.name
+    try:
+        return _ocr_image(img_path)
+    finally:
+        Path(img_path).unlink(missing_ok=True)
 
 
 def _parse_text_to_document(text: str) -> dict[str, Any]:
@@ -157,10 +181,15 @@ class DocParserEngine:
         if ext == ".pdf":
             text = _extract_text_from_pdf(data)
             if text:
-                logger.info("PDF text extracted: {} chars", len(text))
+                logger.info("PDF: {} chars", len(text))
         elif ext in (".txt", ".csv"):
             text = data.decode("utf-8", errors="replace")
-            logger.info("Text file: {} chars", len(text))
+            logger.info("Text: {} chars", len(text))
+        elif ext in (".jpg", ".jpeg", ".png", ".tiff", ".tif"):
+            logger.info("Image, запускаю OCR...")
+            text = _ocr_bytes(data)
+            if text:
+                logger.info("OCR: {} chars", len(text))
 
         if not text or len(text) < 20:
             result = _mock_parse_result()
