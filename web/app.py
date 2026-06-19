@@ -132,19 +132,24 @@ async def api_status():
 
 @app.post("/api/documents/upload")
 async def api_documents_upload(file: UploadFile = File(...), match_nomenclature: bool = Form(False)):
-    if not file.filename:
-        raise HTTPException(400, "file required")
-    data = await file.read()
-    from src.docparser.engine import DocParserEngine
-    engine = DocParserEngine()
-    catalog = None
-    if match_nomenclature:
-        from src.clients.mock_c1_client import MockC1Client
-        mock = MockC1Client()
-        items = await mock.list_nomenclature("", limit=100)
-        catalog = [{"id": i["ref"], "name": i["name"]} for i in items]
-    result = await engine.parse_with_matching(file.filename, data, nomenclature_catalog=catalog) if catalog else await engine.parse(file.filename, data)
-    return result
+    try:
+        if not file.filename:
+            return {"status": "failed", "error": "Файл не выбран"}
+        data = await file.read()
+        if len(data) == 0:
+            return {"status": "failed", "error": "Пустой файл"}
+        from src.docparser.engine import DocParserEngine
+        engine = DocParserEngine()
+        catalog = None
+        if match_nomenclature:
+            from src.clients.mock_c1_client import MockC1Client
+            mock = MockC1Client()
+            items = await mock.list_nomenclature("", limit=200)
+            catalog = [{"id": i["ref"], "name": i["name"]} for i in items]
+        result = await engine.parse_with_matching(file.filename, data, nomenclature_catalog=catalog) if catalog else await engine.parse(file.filename, data)
+        return result
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
 
 
 @app.post("/api/insights/scan")

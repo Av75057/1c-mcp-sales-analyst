@@ -79,6 +79,12 @@ async function processDocument() {
 
     try {
         const r = await fetch('/api/documents/upload', { method: 'POST', body: form });
+        if (!r.ok) {
+            const text = await r.text();
+            resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка сервера (${r.status}): ${text.slice(0,200)}</div>`;
+            btn.disabled = false; btn.innerHTML = '<i class="bi bi-magic"></i> Распознать';
+            return;
+        }
         const d = await r.json();
         if (d.status === 'failed') {
             resultDiv.innerHTML = `<div class="alert alert-danger">${d.error}</div>`;

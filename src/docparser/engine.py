@@ -52,7 +52,7 @@ class DocParserEngine:
             "document": result,
             "validation": validation,
             "processing": {
-                "pages": len(images),
+                "pages": 1,
                 "file_hash": validated.get("file_hash", ""),
             },
         }
