@@ -22,7 +22,7 @@ def _extract_text_from_pdf(data: bytes) -> str:
         if text:
             return text
         logger.info("PDF без текста, пробую OCR...")
-        return _ocr_image(pdf_path)
+        return _ocr_pdf(data)
     except Exception as e:
         logger.error("pdftotext error: {}", e)
         return ""
@@ -32,7 +32,6 @@ def _extract_text_from_pdf(data: bytes) -> str:
 
 def _ocr_image(image_path: str) -> str:
     try:
-        import pytesseract
         result = subprocess.run(["tesseract", image_path, "stdout", "-l", "rus+eng"], capture_output=True, text=True, timeout=30)
         return result.stdout.strip()
     except Exception as e:
@@ -48,6 +47,26 @@ def _ocr_bytes(data: bytes) -> str:
         return _ocr_image(img_path)
     finally:
         Path(img_path).unlink(missing_ok=True)
+
+
+def _ocr_pdf(data: bytes) -> str:
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+        f.write(data)
+        pdf_path = f.name
+    all_text = ""
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(["pdftoppm", pdf_path, f"{tmpdir}/page", "-png", "-r", "300"], timeout=60, capture_output=True)
+            for page_file in sorted(Path(tmpdir).glob("*.png")):
+                text = _ocr_image(str(page_file))
+                if text:
+                    all_text += text + "\n"
+        return all_text.strip()
+    except Exception as e:
+        logger.error("PDF OCR error: {}", e)
+        return ""
+    finally:
+        Path(pdf_path).unlink(missing_ok=True)
 
 
 def _parse_text_to_document(text: str) -> dict[str, Any]:
