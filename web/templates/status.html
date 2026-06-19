@@ -49,8 +49,9 @@ async function loadStatus() {
     `;
     const ok = '<span class="text-success">✅ Работает</span>';
     const err = '<span class="text-danger">❌ Ошибка</span>';
-    document.getElementById('mStock').innerHTML = d.stock_count ? ok : err;
-    document.getElementById('mSales').innerHTML = d.sales_count ? ok : err;
+    const empty = '<span class="text-warning">⚠️ Нет данных</span>';
+    document.getElementById('mStock').innerHTML = d.stock_count >= 0 ? ok : err;
+    document.getElementById('mSales').innerHTML = d.sales_count >= 0 ? ok : err;
     document.getElementById('mChat').innerHTML = d.deepseek_key ? ok : err;
     document.getElementById('mWhatif').innerHTML = d.stock_count ? ok : err;
     document.getElementById('mInsights').innerHTML = d.insights_count >= 0 ? ok : err;
