@@ -2,11 +2,34 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.config import settings
 from src.docparser.ingestion.file_handler import load_image, validate_file
 from src.docparser.matching.nomenclature_matcher import match_counterparty, match_nomenclature
 from src.docparser.recognition.vision_client import VisionClient
 from src.docparser.validation.document_validator import validate_document
 from src.logger import logger
+
+
+def _mock_parse_result() -> dict[str, Any]:
+    return {
+        "doc_type": "supplier_invoice",
+        "doc_type_confidence": 0.92,
+        "header": {
+            "counterparty": "ООО \"Метизы\"",
+            "inn": "7712345678",
+            "date": "2026-06-18",
+            "number": "147-НС",
+            "currency": "RUB",
+        },
+        "items": [
+            {"name": "Гвоздь 100мм", "quantity": 100, "unit": "шт", "price": 12.50, "sum_without_vat": 1250.00, "vat_rate": 20, "vat_sum": 250.00, "sum_with_vat": 1500.00},
+            {"name": "Саморез 3,5х45", "quantity": 500, "unit": "шт", "price": 3.20, "sum_without_vat": 1600.00, "vat_rate": 20, "vat_sum": 320.00, "sum_with_vat": 1920.00},
+            {"name": "Болт М8х30 DIN933", "quantity": 200, "unit": "шт", "price": 8.50, "sum_without_vat": 1700.00, "vat_rate": 20, "vat_sum": 340.00, "sum_with_vat": 2040.00},
+            {"name": "Краска акриловая 5кг", "quantity": 30, "unit": "шт", "price": 450.00, "sum_without_vat": 13500.00, "vat_rate": 20, "vat_sum": 2700.00, "sum_with_vat": 16200.00},
+        ],
+        "totals": {"subtotal": 18050.00, "vat_total": 3610.00, "total": 21660.00},
+        "confidence": 0.92,
+    }
 
 
 class DocParserEngine:
@@ -20,13 +43,16 @@ class DocParserEngine:
         if not validated["valid"]:
             return {"status": "failed", "error": validated["error"]}
 
-        images = load_image(filename, data)
-        if not images:
-            return {"status": "failed", "error": "Не удалось загрузить изображение"}
-
-        result = await self.vision.recognize(images[0])
-        if "error" in result:
-            return {"status": "failed", "error": result["error"]}
+        images: list[bytes] = []
+        if settings.use_mock_data:
+            result = _mock_parse_result()
+        else:
+            images = load_image(filename, data)
+            if not images:
+                return {"status": "failed", "error": "Не удалось загрузить изображение"}
+            result = await self.vision.recognize(images[0])
+            if "error" in result:
+                return {"status": "failed", "error": result["error"]}
 
         validation = validate_document(result)
 

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📄 Распознавание документов</h4>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-4 text-center" id="uploadZone" style="border:2px dashed #2d3139;cursor:pointer;min-height:200px">
+            <div class="py-4" id="uploadPrompt">
+                <h1 class="mb-2">📤</h1>
+                <p class="mb-1"><strong>Нажмите для загрузки</strong></p>
+                <p class="small text-secondary mb-0">JPEG, PNG, PDF — до 20 MB</p>
+            </div>
+            <div id="uploadPreview" style="display:none">
+                <img id="previewImg" class="img-fluid rounded mb-2" style="max-height:300px">
+                <p class="small text-secondary mb-0" id="fileName"></p>
+            </div>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display:none">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h6 class="mb-2">⚙️ Параметры</h6>
+            <div class="mb-2">
+                <label class="form-label small">Тип документа</label>
+                <select class="form-select" id="docType">
+                    <option value="auto">Автоопределение</option>
+                    <option value="supplier_invoice">Накладная поставщика</option>
+                    <option value="bill">Счёт на оплату</option>
+                    <option value="act">Акт выполненных работ</option>
+                </select>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="matchNomenclature" checked>
+                <label class="form-check-label small">Сопоставлять номенклатуру</label>
+            </div>
+            <button class="btn btn-primary w-100" id="processBtn" onclick="processDocument()" disabled>
+                <i class="bi bi-magic"></i> Распознать
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="resultArea" style="display:none"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uploadZone').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('uploadPrompt').style.display = 'none';
+    document.getElementById('uploadPreview').style.display = 'block';
+    document.getElementById('processBtn').disabled = false;
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => document.getElementById('previewImg').src = e.target.result;
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('previewImg').src = '/static/img/pdf-icon.png';
+    }
+};
+
+async function processDocument() {
+    const file = document.getElementById('fileInput').files[0];
+    if (!file) return;
+    const btn = document.getElementById('processBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Обрабатываю...';
+    const resultDiv = document.getElementById('resultArea');
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="card p-5 text-center"><div class="spinner-border text-primary mb-3"></div><div class="text-secondary">Распознаю документ через AI...</div></div>';
+
+    const form = new FormData();
+    form.append('file', file);
+    form.append('match_nomenclature', document.getElementById('matchNomenclature').checked);
+
+    try {
+        const r = await fetch('/api/documents/upload', { method: 'POST', body: form });
+        const d = await r.json();
+        if (d.status === 'failed') {
+            resultDiv.innerHTML = `<div class="alert alert-danger">${d.error}</div>`;
+            btn.disabled = false; btn.innerHTML = '<i class="bi bi-magic"></i> Распознать';
+            return;
+        }
+        const doc = d.document || {};
+        const hdr = doc.header || {};
+        const validation = d.validation || {};
+        const items = doc.items || [];
+        const totals = doc.totals || {};
+        const isOk = validation.is_valid !== false;
+        const matchClass = d.status === 'completed' ? 'success' : 'warning';
+        resultDiv.innerHTML = `
+            <div class="card p-3 mb-3 border-${matchClass}">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">${isOk ? '✅' : '⚠️'} Документ распознан</h6>
+                    <span class="badge bg-${matchClass}">${d.status}</span>
+                </div>
+                <small class="text-secondary">Тип: ${doc.doc_type || '?'} · Уверенность: ${(doc.confidence * 100).toFixed(0) || '?'}%</small>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-8">
+                    <div class="card p-3">
+                        <h6 class="mb-3">📋 Шапка документа</h6>
+                        <table class="table table-sm small">
+                            <tr><td>Поставщик</td><td><strong>${hdr.counterparty || '?'}</strong> ${hdr.counterparty_match ? (hdr.counterparty_match.confidence > 0.7 ? '✅' : '⚠️') : ''}</td></tr>
+                            <tr><td>ИНН</td><td>${hdr.inn || '—'}</td></tr>
+                            <tr><td>Дата</td><td>${hdr.date || '?'}</td></tr>
+                            <tr><td>Номер</td><td>${hdr.number || '?'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="card p-3 mt-3">
+                        <h6 class="mb-3">📦 Позиции (${items.length})</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm small">
+                                <thead><tr><th>#</th><th>Наименование</th><th class="text-end">Кол-во</th><th class="text-end">Цена</th><th class="text-end">Сумма</th><th>Статус</th></tr></thead>
+                                <tbody>${items.map((item, i) => {
+                                    const match = item.nomenclature_match || {};
+                                    const status = match.confidence > 0.75 ? '✅' : match.confidence > 0.5 ? '⚠️' : '❌';
+                                    return `<tr><td>${i+1}</td><td>${item.name}</td><td class="text-end">${item.quantity}</td><td class="text-end">${item.price ? item.price.toFixed(2) : '—'}</td><td class="text-end">${(item.sum_without_vat || item.sum || 0).toFixed(2)}</td><td>${status} ${match.name || ''}</td></tr>`;
+                                }).join('')}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 mb-3">
+                        <h6 class="mb-3">💰 Итоги</h6>
+                        <table class="table table-sm small">
+                            <tr><td>Без НДС</td><td class="text-end">${(totals.subtotal || 0).toFixed(2)}</td></tr>
+                            <tr><td>НДС</td><td class="text-end">${(totals.vat_total || 0).toFixed(2)}</td></tr>
+                            <tr class="table-active"><td><strong>Итого</strong></td><td class="text-end"><strong>${(totals.total || 0).toFixed(2)}</strong></td></tr>
+                        </table>
+                        ${totals.total ? `<small class="text-${validation.totals_match ? 'success' : 'danger'}">Суммы ${validation.totals_match ? 'сходятся' : 'не сходятся'}</small>` : ''}
+                    </div>
+                    ${validation.errors?.length ? `<div class="card p-3 mb-3 border-danger"><h6 class="mb-2 text-danger">❌ Ошибки</h6>${validation.errors.map(e => `<div class="small text-danger mb-1">• ${e.message}</div>`).join('')}</div>` : ''}
+                    ${validation.warnings?.length ? `<div class="card p-3 border-warning"><h6 class="mb-2 text-warning">⚠️ Предупреждения</h6>${validation.warnings.map(w => `<div class="small text-warning mb-1">• ${w.message}</div>`).join('')}</div>` : ''}
+                </div>
+            </div>
+        `;
+    } catch(e) {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`;
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-magic"></i> Распознать';
+}
+</script>
+{% endblock %}

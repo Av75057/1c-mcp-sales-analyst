@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -89,6 +89,28 @@ async def insights_page():
             except (json.JSONDecodeError, OSError):
                 pass
     return render("insights.html", {"page": "insights", "insights": insights_list})
+
+
+@app.get("/documents")
+async def documents_page():
+    return render("documents.html", {"page": "documents"})
+
+
+@app.post("/api/documents/upload")
+async def api_documents_upload(file: UploadFile = File(...), match_nomenclature: bool = Form(False)):
+    if not file.filename:
+        raise HTTPException(400, "file required")
+    data = await file.read()
+    from src.docparser.engine import DocParserEngine
+    engine = DocParserEngine()
+    catalog = None
+    if match_nomenclature:
+        from src.clients.mock_c1_client import MockC1Client
+        mock = MockC1Client()
+        items = await mock.list_nomenclature("", limit=100)
+        catalog = [{"id": i["ref"], "name": i["name"]} for i in items]
+    result = await engine.parse_with_matching(file.filename, data, nomenclature_catalog=catalog) if catalog else await engine.parse(file.filename, data)
+    return result
 
 
 @app.post("/api/insights/scan")
