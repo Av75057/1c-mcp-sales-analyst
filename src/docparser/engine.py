@@ -75,6 +75,12 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
     header = {"counterparty": "", "inn": "", "date": "", "number": "", "currency": "RUB"}
     items: list[dict[str, Any]] = []
 
+    full_text = " ".join(lines[:50])
+
+    m = re.search(r"(поставщик|продавец|исполнитель|плательщик|получател)\s*[:\-]?\s*(.+?)(?:\.\s|$|\bИНН|\bАдрес)", full_text[:500], re.IGNORECASE)
+    if m:
+        header["counterparty"] = m.group(2).strip().rstrip(".,;").strip()
+
     for line in lines[:30]:
         m = re.search(r"(\d{2}[./]\d{2}[./]\d{2,4})", line)
         if m and not header["date"]:
@@ -82,17 +88,24 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
             try:
                 from datetime import datetime
                 dt = datetime.strptime(parts[:10], "%d-%m-%Y")
-                header["date"] = dt.strftime("%Y-%m-%d")
+                if 2020 <= dt.year <= 2030:
+                    header["date"] = dt.strftime("%Y-%m-%d")
             except ValueError:
                 pass
 
-        m = re.search(r"(поставщик|продавец|поставщи[км])\s*[:\-]?\s*(.+)", line, re.IGNORECASE)
-        if m and not header["counterparty"]:
-            header["counterparty"] = m.group(2).strip().rstrip(".,")
+        m = re.search(r"№\s*(\d[\d\-\/]*)", line)
+        if m and not header["number"] and len(m.group(1)) < 15:
+            header["number"] = m.group(1).strip()
 
-        m = re.search(r"№\s*([\w\-/]+)", line)
-        if m and not header["number"]:
-            header["number"] = m.group(1)
+        if not header["date"]:
+            m = re.search(r"(\d{1,2})\s+(январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр)", line, re.IGNORECASE)
+            if m:
+                months = {"январ":1,"феврал":2,"март":3,"апрел":4,"май":5,"мая":5,"июн":6,"июл":7,"август":8,"сентябр":9,"октябр":10,"ноябр":11,"декабр":12}
+                day = int(m.group(1))
+                month = months.get(m.group(2)[:5].lower(), 1)
+                year_match = re.search(r"(\d{4})\s*г", line)
+                year = int(year_match.group(1)) if year_match else 2026
+                header["date"] = f"{year}-{month:02d}-{day:02d}"
 
         m = re.search(r"ИНН\s*[:\-]?\s*(\d{10,12})", line)
         if m and not header["inn"]:
@@ -152,9 +165,18 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
     subtotal = sum(i["sum_without_vat"] for i in items)
     vat_total = sum(i["vat_sum"] for i in items)
 
+    doc_type = "supplier_invoice"
+    doc_conf = 0.7
+    if "счет" in full_text.lower():
+        doc_type = "bill"
+        doc_conf = 0.6
+    if "акт" in full_text.lower():
+        doc_type = "act"
+        doc_conf = 0.6
+
     return {
-        "doc_type": "supplier_invoice",
-        "doc_type_confidence": 0.7,
+        "doc_type": doc_type,
+        "doc_type_confidence": doc_conf,
         "header": header,
         "items": items[:20],
         "totals": {"subtotal": subtotal, "vat_total": vat_total, "total": subtotal + vat_total},
