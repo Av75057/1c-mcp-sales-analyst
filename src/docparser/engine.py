@@ -119,13 +119,17 @@ async def _parse_with_llm(text: str) -> dict[str, Any]:
     for i in data.get("items", []):
         items.append({"name": i.get("name", ""), "quantity": float(i.get("quantity", 0)), "unit": i.get("unit", "шт"), "price": float(i.get("price", 0)), "sum_without_vat": float(i.get("sum", 0)), "vat_rate": 20, "vat_sum": 0, "sum_with_vat": float(i.get("sum", 0))})
     subtotal = sum(i["sum_without_vat"] for i in items)
+    filled = sum(1 for v in [data.get("counterparty"), data.get("inn"), data.get("date"), data.get("number")] if v)
+    has_prices = sum(1 for i in items if i.get("price", 0) > 0)
+    confidence = 0.5 + filled * 0.08 + (len(items) * 0.04 if items else 0) + (has_prices / len(items) * 0.06 if items else 0)
+    confidence = min(0.99, max(0.3, confidence))
     return {
         "doc_type": "supplier_invoice",
-        "doc_type_confidence": 0.85,
+        "doc_type_confidence": round(confidence, 2),
         "header": {"counterparty": data.get("counterparty", ""), "buyer": data.get("buyer", ""), "inn": data.get("inn", ""), "buyer_inn": data.get("buyer_inn", ""), "date": data.get("date", ""), "number": data.get("number", ""), "currency": "RUB"},
         "items": items,
         "totals": {"subtotal": subtotal, "vat_total": 0, "total": data.get("total", subtotal)},
-        "confidence": 0.85,
+        "confidence": round(confidence, 2),
     }
 
 
@@ -182,7 +186,10 @@ def _parse_regex(text: str) -> dict[str, Any]:
     ft = " ".join(lines).lower()
     doc_type = "bill" if re.search(r"счет|счeт", ft) else "act" if re.search(r"акт", ft) else "supplier_invoice"
     subtotal = sum(i["sum_without_vat"] for i in items)
-    return {"doc_type": doc_type, "doc_type_confidence": 0.6, "header": header, "items": items[:20], "totals": {"subtotal": subtotal, "vat_total": sum(i["vat_sum"] for i in items), "total": subtotal + sum(i["vat_sum"] for i in items)}, "confidence": 0.6}
+    filled = sum(1 for v in [header["counterparty"], header["inn"], header["date"], header["number"]] if v)
+    confidence = 0.3 + filled * 0.08 + (len(items) * 0.06 if items else 0)
+    confidence = min(0.9, max(0.2, confidence))
+    return {"doc_type": doc_type, "doc_type_confidence": round(confidence, 2), "header": header, "items": items[:20], "totals": {"subtotal": subtotal, "vat_total": sum(i["vat_sum"] for i in items), "total": subtotal + sum(i["vat_sum"] for i in items)}, "confidence": round(confidence, 2)}
 
 
 def _mock_parse_result() -> dict[str, Any]:
