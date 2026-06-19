@@ -76,10 +76,12 @@ def _parse_text_to_document(raw_text: str) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
 
     for line in lines[:30]:
-        # Counterparty: any line with colon before a long name
+        # Counterparty: any line with colon before a long name (NOT INN or account)
         if ":" in line and not header["counterparty"]:
+            before = line.split(":", 1)[0].strip()
             after = line.split(":", 1)[1].strip()
-            if len(after) > 5 and not re.search(r"\d{20}", after):
+            if (len(after) > 5 and not re.search(r"\d{10,}", after)
+                and not re.search(r"[ИHMN][НH]", before, re.IGNORECASE)):
                 header["counterparty"] = after.rstrip(".,;")
 
         # Date: DD.MM.YYYY or DD/MM/YYYY
@@ -106,8 +108,8 @@ def _parse_text_to_document(raw_text: str) -> dict[str, Any]:
         if m and not header["number"] and int(m.group(1)) < 10000:
             header["number"] = m.group(1)
 
-        # INN: 10 or 12 digits after ИНН-like text
-        m = re.search(r"[ИHMN][НH]\s*[:\-]?\s*(\d{10,12})", line)
+        # INN: 10 or 12 digits after ИНН-like text (2-3 буквы, устойчиво к OCR)
+        m = re.search(r"[ИHMN][НH][НH]?\s*[:\-]?\s*(\d{10,12})", line)
         if m and not header["inn"]:
             header["inn"] = m.group(1)
 
