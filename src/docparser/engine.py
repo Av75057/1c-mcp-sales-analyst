@@ -87,7 +87,8 @@ LLM_PARSE_PROMPT = """Ты — парсер бухгалтерских доку�
 {{
   "counterparty": "название поставщика",
   "buyer": "название покупателя или пусто",
-  "inn": "ИНН",
+  "inn": "ИНН поставщика",
+  "buyer_inn": "ИНН покупателя или пусто",
   "date": "YYYY-MM-DD",
   "number": "номер",
   "items": [{{"name": "товар", "quantity": 0, "unit": "шт", "price": 0, "sum": 0}}],
@@ -121,7 +122,7 @@ async def _parse_with_llm(text: str) -> dict[str, Any]:
     return {
         "doc_type": "supplier_invoice",
         "doc_type_confidence": 0.85,
-        "header": {"counterparty": data.get("counterparty", ""), "buyer": data.get("buyer", ""), "inn": data.get("inn", ""), "date": data.get("date", ""), "number": data.get("number", ""), "currency": "RUB"},
+        "header": {"counterparty": data.get("counterparty", ""), "buyer": data.get("buyer", ""), "inn": data.get("inn", ""), "buyer_inn": data.get("buyer_inn", ""), "date": data.get("date", ""), "number": data.get("number", ""), "currency": "RUB"},
         "items": items,
         "totals": {"subtotal": subtotal, "vat_total": 0, "total": data.get("total", subtotal)},
         "confidence": 0.85,
@@ -130,7 +131,7 @@ async def _parse_with_llm(text: str) -> dict[str, Any]:
 
 def _parse_regex(text: str) -> dict[str, Any]:
     lines = [l.strip() for l in text.split("\n") if l.strip()]
-    header = {"counterparty": "", "buyer": "", "inn": "", "date": "", "number": "", "currency": "RUB"}
+    header = {"counterparty": "", "buyer": "", "inn": "", "buyer_inn": "", "date": "", "number": "", "currency": "RUB"}
     items: list[dict[str, Any]] = []
 
     for line in lines[:30]:
@@ -185,7 +186,7 @@ def _parse_regex(text: str) -> dict[str, Any]:
 
 
 def _mock_parse_result() -> dict[str, Any]:
-    return {"doc_type": "supplier_invoice", "doc_type_confidence": 0.92, "header": {"counterparty": "ООО \"Метизы\"", "buyer": "", "inn": "7712345678", "date": "2026-06-18", "number": "147-НС", "currency": "RUB"}, "items": [{"name": "Гвоздь 100мм", "quantity": 100, "unit": "шт", "price": 12.50, "sum_without_vat": 1250.00, "vat_rate": 20, "vat_sum": 250.00, "sum_with_vat": 1500.00}, {"name": "Саморез 3,5х45", "quantity": 500, "unit": "шт", "price": 3.20, "sum_without_vat": 1600.00, "vat_rate": 20, "vat_sum": 320.00, "sum_with_vat": 1920.00}, {"name": "Болт М8х30 DIN933", "quantity": 200, "unit": "шт", "price": 8.50, "sum_without_vat": 1700.00, "vat_rate": 20, "vat_sum": 340.00, "sum_with_vat": 2040.00}, {"name": "Краска акриловая 5кг", "quantity": 30, "unit": "шт", "price": 450.00, "sum_without_vat": 13500.00, "vat_rate": 20, "vat_sum": 2700.00, "sum_with_vat": 16200.00}], "totals": {"subtotal": 18050.00, "vat_total": 3610.00, "total": 21660.00}, "confidence": 0.92}
+    return {"doc_type": "supplier_invoice", "doc_type_confidence": 0.92, "header": {"counterparty": "ООО \"Метизы\"", "buyer": "", "inn": "7712345678", "buyer_inn": "", "date": "2026-06-18", "number": "147-НС", "currency": "RUB"}, "items": [{"name": "Гвоздь 100мм", "quantity": 100, "unit": "шт", "price": 12.50, "sum_without_vat": 1250.00, "vat_rate": 20, "vat_sum": 250.00, "sum_with_vat": 1500.00}, {"name": "Саморез 3,5х45", "quantity": 500, "unit": "шт", "price": 3.20, "sum_without_vat": 1600.00, "vat_rate": 20, "vat_sum": 320.00, "sum_with_vat": 1920.00}, {"name": "Болт М8х30 DIN933", "quantity": 200, "unit": "шт", "price": 8.50, "sum_without_vat": 1700.00, "vat_rate": 20, "vat_sum": 340.00, "sum_with_vat": 2040.00}, {"name": "Краска акриловая 5кг", "quantity": 30, "unit": "шт", "price": 450.00, "sum_without_vat": 13500.00, "vat_rate": 20, "vat_sum": 2700.00, "sum_with_vat": 16200.00}], "totals": {"subtotal": 18050.00, "vat_total": 3610.00, "total": 21660.00}, "confidence": 0.92}
 
 
 class DocParserEngine:
