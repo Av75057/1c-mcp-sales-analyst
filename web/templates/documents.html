@@ -125,8 +125,10 @@ async function processDocument() {
                                 <thead><tr><th>#</th><th>Наименование</th><th class="text-end">Кол-во</th><th class="text-end">Цена</th><th class="text-end">Сумма</th><th>Статус</th></tr></thead>
                                 <tbody>${items.map((item, i) => {
                                     const match = item.nomenclature_match || {};
-                                    const status = match.confidence > 0.75 ? '✅' : match.confidence > 0.5 ? '⚠️' : '❌';
-                                    return `<tr><td>${i+1}</td><td>${item.name}</td><td class="text-end">${item.quantity}</td><td class="text-end">${item.price ? item.price.toFixed(2) : '—'}</td><td class="text-end">${(item.sum_without_vat || item.sum || 0).toFixed(2)}</td><td>${status} ${match.name || ''}</td></tr>`;
+                                    const conf = match.confidence || 0;
+                                    const statusIcon = conf > 0.75 ? '✅' : conf > 0.5 ? '⚠️' : '';
+                                    const matchLabel = conf > 0.7 ? ` ${match.name}` : '';
+                                    return `<tr><td>${i+1}</td><td>${item.name}</td><td class="text-end">${item.quantity}</td><td class="text-end">${item.price ? item.price.toFixed(2) : '—'}</td><td class="text-end">${(item.sum_without_vat || item.sum || 0).toFixed(2)}</td><td>${statusIcon}${matchLabel}</td></tr>`;
                                 }).join('')}</tbody>
                             </table>
                         </div>
