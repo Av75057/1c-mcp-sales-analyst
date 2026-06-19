@@ -69,45 +69,45 @@ def _ocr_pdf(data: bytes) -> str:
         Path(pdf_path).unlink(missing_ok=True)
 
 
-def _parse_text_to_document(text: str) -> dict[str, Any]:
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
+def _parse_text_to_document(raw_text: str) -> dict[str, Any]:
+    lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
 
     header = {"counterparty": "", "inn": "", "date": "", "number": "", "currency": "RUB"}
     items: list[dict[str, Any]] = []
 
-    full_text = " ".join(lines[:50])
-
-    m = re.search(r"(поставщик|продавец|исполнитель|плательщик|получател)\s*[:\-]?\s*(.+?)(?:\.\s|$|\bИНН|\bАдрес)", full_text[:500], re.IGNORECASE)
-    if m:
-        header["counterparty"] = m.group(2).strip().rstrip(".,;").strip()
-
     for line in lines[:30]:
-        m = re.search(r"(\d{2}[./]\d{2}[./]\d{2,4})", line)
+        # Counterparty: any line with colon before a long name
+        if ":" in line and not header["counterparty"]:
+            after = line.split(":", 1)[1].strip()
+            if len(after) > 5 and not re.search(r"\d{20}", after):
+                header["counterparty"] = after.rstrip(".,;")
+
+        # Date: DD.MM.YYYY or DD/MM/YYYY
+        m = re.search(r"(\d{2})[./](\d{2})[./](\d{2,4})", line)
         if m and not header["date"]:
-            parts = m.group(1).replace(".", "-").replace("/", "-")
-            try:
-                from datetime import datetime
-                dt = datetime.strptime(parts[:10], "%d-%m-%Y")
-                if 2020 <= dt.year <= 2030:
-                    header["date"] = dt.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
+            d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            y += 2000 if y < 100 else 0
+            if 2020 <= y <= 2030 and 1 <= mo <= 12:
+                header["date"] = f"{y}-{mo:02d}-{d:02d}"
 
-        m = re.search(r"№\s*(\d[\d\-\/]*)", line)
-        if m and not header["number"] and len(m.group(1)) < 15:
-            header["number"] = m.group(1).strip()
-
+        # Date: Russian text "29 апреля 2026"
         if not header["date"]:
-            m = re.search(r"(\d{1,2})\s+(январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр)", line, re.IGNORECASE)
+            m = re.search(r"(\d{1,2})\s+(январ|феврал|март|апрел|ма[йя]|июн[ья]?|июл[ья]?|август|сентябр|октябр|ноябр|декабр)", line, re.IGNORECASE)
             if m:
-                months = {"январ":1,"феврал":2,"март":3,"апрел":4,"май":5,"мая":5,"июн":6,"июл":7,"август":8,"сентябр":9,"октябр":10,"ноябр":11,"декабр":12}
+                months = {"январ":1,"феврал":2,"март":3,"апрел":4,"май":5,"мая":5,"июн":6,"июня":6,"июл":7,"июля":7,"август":8,"сентябр":9,"октябр":10,"ноябр":11,"декабр":12}
                 day = int(m.group(1))
-                month = months.get(m.group(2)[:5].lower(), 1)
-                year_match = re.search(r"(\d{4})\s*г", line)
-                year = int(year_match.group(1)) if year_match else 2026
+                month = months.get(m.group(2).lower()[:6], 1)
+                ym = re.search(r"(\d{4})\s*г", line)
+                year = int(ym.group(1)) if ym else 2026
                 header["date"] = f"{year}-{month:02d}-{day:02d}"
 
-        m = re.search(r"ИНН\s*[:\-]?\s*(\d{10,12})", line)
+        # Number: after № or "Ns" or "N"
+        m = re.search(r"[№Nn][sS]?\s*(\d+)", line)
+        if m and not header["number"] and int(m.group(1)) < 10000:
+            header["number"] = m.group(1)
+
+        # INN: 10 or 12 digits after ИНН-like text
+        m = re.search(r"[ИHMN][НH]\s*[:\-]?\s*(\d{10,12})", line)
         if m and not header["inn"]:
             header["inn"] = m.group(1)
 
@@ -116,50 +116,44 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
                   "банк", "сбербанк", "бик", "корр", "иНН", "кпп", "адрес", "тел", "email", "сайт", "www",
                   "основание", "назначение", "платеж", "сумма", "в т.ч.", "без ндс"}
 
-    for i, line in enumerate(lines):
-        line_lower = line.lower().strip()
-        if any(k in line_lower for k in SKIP_LINES):
-            continue
-        if re.match(r"^\d{10,12}$", line.strip()):
-            continue
-        if re.match(r"^\d{20}$", line.strip()):
-            continue
+    for line in lines:
+        ll = line.lower().strip()
+        if any(k in ll for k in SKIP_LINES): continue
+        if re.match(r"^\d{10,}$", line.strip()): continue
 
-        parts = re.split(r"\s{2,}|\t", line)
-        if len(parts) >= 3:
-            # Ищем количество + единицу
-            qty_match = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч)", line)
-            if qty_match:
+        # Item: number + unit (шт/кг/л/м/упак/ч) — OCR может прочитать "wr" как "шт"
+        qty_match = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч|wr|kr|wт|kг)\b", ll)
+        if not qty_match:
+            qty_match = re.search(r"(\d+)\s*[xх×]\s*(\d+[\.,]?\d*)", ll)
+        if qty_match:
+            qty = 1.0
+            unit = "шт"
+            name_part = line[:qty_match.start()].strip().rstrip(",. ")
+            name_part = re.sub(r"^\d+[\.\)]\s*", "", name_part).strip()
+            if qty_match.lastindex == 2 and "x" in line.lower() or "×" in line:
+                qty = 1.0
+            else:
                 qty = float(qty_match.group(1).replace(",", "."))
-                unit = qty_match.group(2)
-                name_part = line[:qty_match.start()].strip().rstrip(",. ")
-                name_part = re.sub(r"^\d+[\.\)]\s*", "", name_part).strip()
-                if not name_part or len(name_part) < 3:
-                    continue
-                # Ищем цены — числа после количества (целые вместе с копейками)
+                unit = qty_match.group(2).replace("wr", "шт").replace("kr", "кг").replace("wт", "шт").replace("kг", "кг").replace("w", "шт").replace("k", "кг")
+            if len(name_part) >= 3:
                 after = line[qty_match.end():]
-                nums_after = re.findall(r"(\d[\d\s]*[\.,]\d{2})", after)
-                if not nums_after:
-                    nums_after = re.findall(r"(\d+[\.,]?\d*)", after)
-                price = float(nums_after[0].replace(" ", "").replace(",", ".")) if len(nums_after) >= 1 else 0
-                total_val = float(nums_after[1].replace(" ", "").replace(",", ".")) if len(nums_after) >= 2 else qty * price
-                items.append({
-                    "name": name_part, "quantity": qty, "unit": unit,
-                    "price": price, "sum_without_vat": total_val,
-                    "vat_rate": 20, "vat_sum": round(total_val * 20 / 120, 2),
-                    "sum_with_vat": total_val,
-                })
+                nums = re.findall(r"(\d[\d\s]*[\.,]\d{2})", after)
+                if not nums:
+                    nums = re.findall(r"(\d+[\.,]?\d*)", after)
+                price = float(nums[0].replace(" ", "").replace(",", ".")) if nums else 0
+                total_val = float(nums[1].replace(" ", "").replace(",", ".")) if len(nums) >= 2 else qty * price
+                items.append({"name": name_part, "quantity": qty, "unit": unit, "price": price, "sum_without_vat": total_val, "vat_rate": 20, "vat_sum": round(total_val * 20 / 120, 2), "sum_with_vat": total_val})
 
     if not items:
-        # Строгий fallback — только строки с явным форматом "название  количество единица"
         for line in lines:
-            m = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч)", line.lower())
+            m = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч|wr|kr|wт|kг)\b", line.lower())
             if m:
                 name = line[:m.start()].strip().rstrip(",. ")
                 name = re.sub(r"^\d+[\.\)]\s*", "", name).strip()
                 if len(name) > 3 and not any(k in name.lower() for k in SKIP_LINES):
                     qty = float(m.group(1).replace(",", "."))
-                    items.append({"name": name, "quantity": qty, "unit": m.group(2), "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0})
+                    unit = m.group(2).replace("wr","шт").replace("kr","кг").replace("wт","шт").replace("kг","кг").replace("w","шт").replace("k","кг")
+                    items.append({"name": name, "quantity": qty, "unit": unit, "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0})
                     if len(items) >= 5: break
 
     subtotal = sum(i["sum_without_vat"] for i in items)
@@ -167,10 +161,11 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
 
     doc_type = "supplier_invoice"
     doc_conf = 0.7
-    if "счет" in full_text.lower():
+    ft = " ".join(lines).lower()
+    if re.search(r"счет|счeт|cuet|сuer", ft):
         doc_type = "bill"
         doc_conf = 0.6
-    if "акт" in full_text.lower():
+    if re.search(r"акт|aкт", ft):
         doc_type = "act"
         doc_conf = 0.6
 
