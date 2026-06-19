@@ -55,30 +55,55 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
         if m and not header["inn"]:
             header["inn"] = m.group(1)
 
+    # Слова-маркеры, которые НЕ являются товарами
+    SKIP_LINES = {"итог", "всего", "ндс", "поставщ", "покупат", "грузо", "получател", "плательщ", "счет", "сч№", "сч. №",
+                  "банк", "сбербанк", "бик", "корр", "иНН", "кпп", "адрес", "тел", "email", "сайт", "www",
+                  "основание", "назначение", "платеж", "сумма", "в т.ч.", "без ндс"}
+
     for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if any(k in line_lower for k in SKIP_LINES):
+            continue
+        if re.match(r"^\d{10,12}$", line.strip()):
+            continue
+        if re.match(r"^\d{20}$", line.strip()):
+            continue
+
         parts = re.split(r"\s{2,}|\t", line)
         if len(parts) >= 3:
+            # Ищем количество + единицу
             qty_match = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч)", line)
-            price_match = re.search(r"(\d+[\.,]?\d*)\s*[хx×]\s*(\d+[\.,]?\d*)", line)
-            sum_match = re.search(r"(\d[\d\s]*[\.,]\d{2})", line.replace(" ", ""))
-            name = parts[0].strip()
-            if qty_match and len(name) > 3 and not any(k in name.lower() for k in ["итог", "всего", "ндс"]):
+            if qty_match:
                 qty = float(qty_match.group(1).replace(",", "."))
                 unit = qty_match.group(2)
-                price = float(price_match.group(2)) if price_match else 0
-                total = float(sum_match.group(1).replace(" ", "").replace(",", ".")) if sum_match else 0
+                name_part = line[:qty_match.start()].strip().rstrip(",. ")
+                if not name_part or len(name_part) < 3:
+                    continue
+                # Ищем цены — числа после количества (целые вместе с копейками)
+                after = line[qty_match.end():]
+                nums_after = re.findall(r"(\d[\d\s]*[\.,]\d{2})", after)
+                if not nums_after:
+                    nums_after = re.findall(r"(\d+[\.,]?\d*)", after)
+                price = float(nums_after[0].replace(" ", "").replace(",", ".")) if len(nums_after) >= 1 else 0
+                total_val = float(nums_after[1].replace(" ", "").replace(",", ".")) if len(nums_after) >= 2 else qty * price
                 items.append({
-                    "name": name, "quantity": qty, "unit": unit,
-                    "price": price, "sum_without_vat": total,
-                    "vat_rate": 20, "vat_sum": round(total * 20 / 120, 2),
-                    "sum_with_vat": total,
+                    "name": name_part, "quantity": qty, "unit": unit,
+                    "price": price, "sum_without_vat": total_val,
+                    "vat_rate": 20, "vat_sum": round(total_val * 20 / 120, 2),
+                    "sum_with_vat": total_val,
                 })
 
     if not items:
-        items = [
-            {"name": line, "quantity": 1, "unit": "шт", "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0}
-            for line in lines if len(line) > 5 and not any(k in line.lower() for k in ["итог", "всего", "ндс", "поставщ", "покупат", "грузо"])
-        ][:10]
+        SKIP_FALLBACK = SKIP_LINES | {"сч№", "с/сч", "р/сч", "к/сч", "кор/сч", "от "}
+        for line in lines:
+            l = line.strip()
+            if len(l) < 5: continue
+            if re.match(r"^\d{8,}$", l): continue
+            if l.startswith("Сч") or l.startswith("БИК") or l.startswith("ИНН"): continue
+            if any(k in l.lower() for k in SKIP_FALLBACK): continue
+            if l[0].isupper() and l[0] in "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ":
+                items.append({"name": l, "quantity": 1, "unit": "шт", "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0})
+                if len(items) >= 5: break
 
     subtotal = sum(i["sum_without_vat"] for i in items)
     vat_total = sum(i["vat_sum"] for i in items)
@@ -133,6 +158,9 @@ class DocParserEngine:
             text = _extract_text_from_pdf(data)
             if text:
                 logger.info("PDF text extracted: {} chars", len(text))
+        elif ext in (".txt", ".csv"):
+            text = data.decode("utf-8", errors="replace")
+            logger.info("Text file: {} chars", len(text))
 
         if not text or len(text) < 20:
             result = _mock_parse_result()
