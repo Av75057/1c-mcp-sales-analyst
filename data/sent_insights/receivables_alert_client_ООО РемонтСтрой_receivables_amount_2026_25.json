@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ООО РемонтСтрой:receivables_amount:2026:25",
+  "detector": "receivables_alert",
+  "entity_id": "ООО РемонтСтрой",
+  "metric_name": "receivables_amount",
+  "priority": "critical",
+  "sent_at": "2026-06-19T18:38:07.655685+00:00",
+  "title": "Задолженность: ООО РемонтСтрой"
+}

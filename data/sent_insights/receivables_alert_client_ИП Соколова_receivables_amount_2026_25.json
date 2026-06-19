@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ИП Соколова:receivables_amount:2026:25",
+  "detector": "receivables_alert",
+  "entity_id": "ИП Соколова",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-19T18:38:07.655615+00:00",
+  "title": "Задолженность: ИП Соколова"
+}

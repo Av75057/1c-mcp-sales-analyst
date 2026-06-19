@@ -91,6 +91,52 @@ async def insights_page():
     return render("insights.html", {"page": "insights", "insights": insights_list})
 
 
+@app.post("/api/insights/scan")
+async def api_insights_scan():
+    try:
+        from src.insights.detectors.sales_anomaly import SalesAnomalyDetector
+        from src.insights.detectors.sales_growth import SalesGrowthDetector
+        from src.insights.detectors.stock_shortage import StockShortageDetector
+        from src.insights.detectors.inactive_clients import InactiveClientsDetector
+        from src.insights.detectors.receivables_alert import ReceivablesAlertDetector
+        from src.insights.deduplication.dedup_engine import DedupEngine
+        from src.insights.models import TenantInsightsConfig
+
+        config = TenantInsightsConfig()
+        config.sales_drop_threshold = 0.0
+        config.sales_growth_threshold = 0.0
+        config.stock_days_threshold = 999
+
+        detectors = [
+            SalesAnomalyDetector(config),
+            SalesGrowthDetector(config),
+            StockShortageDetector(config),
+            InactiveClientsDetector(config),
+            ReceivablesAlertDetector(config),
+        ]
+
+        count = 0
+        dedup = DedupEngine(config)
+        for detector in detectors:
+            raws = await detector.detect()
+            for raw in raws:
+                if dedup.should_send(raw):
+                    dedup.mark_sent(raw)
+                    count += 1
+
+        sent_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
+        new_insights = []
+        if sent_dir.exists():
+            for p in sorted(sent_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:10]:
+                try:
+                    new_insights.append(json.loads(p.read_text()))
+                except (json.JSONDecodeError, OSError):
+                    pass
+        return {"count": count, "insights": new_insights}
+    except Exception as e:
+        return {"error": str(e), "count": 0}
+
+
 @app.get("/whatif")
 async def whatif_page():
     return render("whatif.html", {"page": "whatif"})

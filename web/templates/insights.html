@@ -2,31 +2,70 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">🤖 AI Инсайты</h4>
+    <button class="btn btn-primary" id="scanBtn" onclick="runScan()">
+        <i class="bi bi-search"></i> Сканировать
+    </button>
 </div>
+
+<div id="scanResult" class="mb-3" style="display:none"></div>
+
 {% if insights %}
 <div class="mb-2"><small class="text-secondary">Всего: {{ insights|length }} инсайтов</small></div>
-<div class="row g-2">
-    {% for ins in insights %}
-    {% set priority = ins.get('priority', 'info') %}
-    {% set emoji = {'critical': '🔴', 'warning': '🟡', 'info': 'ℹ️'}[priority] %}
-    <div class="col-12">
-        <div class="card p-3 insight-card insight-{{ priority }}">
-            <div class="d-flex justify-content-between">
-                <div>
-                    <strong>{{ emoji }} {{ ins.get('title', 'Инсайт') }}</strong>
-                    <div class="small text-secondary mt-1">{{ ins.get('detector', '') }} · {{ ins.get('entity_id', '') }}</div>
-                </div>
-                <small class="text-secondary">{{ ins.get('sent_at', '')[:16].replace('T', ' ') }}</small>
+<div id="insightsList">
+{% for ins in insights %}
+{% set priority = ins.get('priority', 'info') %}
+{% set emoji = {'critical': '🔴', 'warning': '🟡', 'info': 'ℹ️'}[priority] %}
+<div class="col-12 mb-2">
+    <div class="card p-3 insight-card insight-{{ priority }}">
+        <div class="d-flex justify-content-between">
+            <div>
+                <strong>{{ emoji }} {{ ins.get('title', 'Инсайт') }}</strong>
+                <div class="small text-secondary mt-1">{{ ins.get('detector', '') }} · {{ ins.get('entity_id', '') }}</div>
             </div>
+            <small class="text-secondary">{{ ins.get('sent_at', '')[:16].replace('T', ' ') }}</small>
         </div>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
 </div>
 {% else %}
-<div class="card p-5 text-center text-secondary">
+<div class="card p-5 text-center text-secondary" id="emptyState">
     <h1 class="mb-3">🤖</h1>
-    <p>Нет инсайтов. Запустите сканирование:</p>
-    <code>python run_insights.py scan</code>
+    <p>Нет инсайтов. Нажмите «Сканировать» для запуска анализа данных.</p>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+async function runScan() {
+    const btn = document.getElementById('scanBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Сканирую...';
+    document.getElementById('scanResult').style.display = 'none';
+    try {
+        const r = await fetch('/api/insights/scan', { method: 'POST' });
+        const d = await r.json();
+        const resultDiv = document.getElementById('scanResult');
+        resultDiv.style.display = 'block';
+        if (d.error) {
+            resultDiv.innerHTML = `<div class="alert alert-warning">${d.error}</div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-success">✅ Сканирование завершено. Найдено ${d.count} инсайтов.</div>`;
+            document.getElementById('emptyState')?.remove();
+            const list = document.getElementById('insightsList') || document.createElement('div');
+            if (!list.id) { list.id = 'insightsList'; list.className = 'row g-2'; document.querySelector('.content').appendChild(list); }
+            if (d.insights) {
+                d.insights.forEach(ins => {
+                    const emoji = {critical: '🔴', warning: '🟡', info: 'ℹ️'}[ins.priority] || 'ℹ️';
+                    const sent = (ins.sent_at || '').replace('T', ' ').slice(0, 16);
+                    list.innerHTML = `<div class="col-12 mb-2"><div class="card p-3 insight-card insight-${ins.priority}"><div class="d-flex justify-content-between"><div><strong>${emoji} ${ins.title}</strong><div class="small text-secondary mt-1">${ins.detector} · ${ins.entity_id}</div></div><small class="text-secondary">${sent}</small></div></div></div>` + list.innerHTML;
+                });
+            }
+        }
+    } catch(e) {
+        document.getElementById('scanResult').innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`;
+        document.getElementById('scanResult').style.display = 'block';
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Сканировать';
+}
+</script>
 {% endblock %}

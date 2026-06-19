@@ -1,0 +1,9 @@
+{
+  "dedup_key": "stock_shortage:nomenclature:Саморез 50мм:stock_days:2026:25",
+  "detector": "stock_shortage",
+  "entity_id": "Саморез 50мм",
+  "metric_name": "stock_days",
+  "priority": "warning",
+  "sent_at": "2026-06-19T18:38:07.654082+00:00",
+  "title": "Товар заканчивается: Саморез 50мм"
+}
