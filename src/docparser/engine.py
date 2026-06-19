@@ -76,12 +76,12 @@ def _parse_text_to_document(raw_text: str) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
 
     for line in lines[:30]:
-        # Counterparty: any line with colon before a long name (NOT INN or account)
+        # Counterparty: line with "поставщик/продавец..." before colon
         if ":" in line and not header["counterparty"]:
-            before = line.split(":", 1)[0].strip()
+            before = line.split(":", 1)[0].strip().lower()
             after = line.split(":", 1)[1].strip()
-            if (len(after) > 5 and not re.search(r"\d{10,}", after)
-                and not re.search(r"[ИHMN][НH]", before, re.IGNORECASE)):
+            seller_kw = ["поставщик", "продавец", "исполнитель", "плательщик", "получател", "поставщи"]
+            if any(k in before for k in seller_kw):
                 header["counterparty"] = after.rstrip(".,;")
 
         # Date: DD.MM.YYYY or DD/MM/YYYY
