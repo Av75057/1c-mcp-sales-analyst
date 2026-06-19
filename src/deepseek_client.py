@@ -29,6 +29,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_receivables — задолженность клиентов
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
+- simulate_scenario — симуляция сценариев "Что если?" (изменение цены, прогноз выручки)
 
 ПРАВИЛА ВИЗУАЛИЗАЦИИ (create_chart):
 1. ВСЕГДА строй график, если пользователь явно просит или данные содержат временной ряд, сравнение, структуру.
@@ -209,6 +210,36 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "simulate_scenario",
+            "description": "Симулировать сценарий 'Что если?' и спрогнозировать финансовый эффект.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "scenario_type": {
+                        "type": "string",
+                        "enum": ["price_change"],
+                        "description": "Тип сценария: price_change — изменение цены",
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Название товара для симуляции",
+                    },
+                    "change_percent": {
+                        "type": "number",
+                        "description": "Процент изменения (положительный = рост цены, отрицательный = снижение)",
+                    },
+                    "period_days": {
+                        "type": "integer",
+                        "description": "Период прогноза в днях",
+                    },
+                },
+                "required": ["scenario_type", "entity_name", "change_percent"],
+            },
+        },
+    },
 ]
 
 TOOL_NAME_TO_FUNC: dict[str, Any] = {}
@@ -217,6 +248,7 @@ TOOL_NAME_TO_FUNC: dict[str, Any] = {}
 def _import_tools() -> None:
     from src.tools import (
         create_chart_tool,
+        simulate_scenario_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
         get_sales_tool,
@@ -230,6 +262,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["get_receivables"] = get_receivables_tool
     TOOL_NAME_TO_FUNC["list_nomenclature"] = list_nomenclature_tool
     TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
+    TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool
 
 
 _import_tools()

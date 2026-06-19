@@ -122,3 +122,21 @@ async def create_chart_tool(
         series_names=series_names,
         color_scheme=color_scheme,
     )
+
+
+async def simulate_scenario_tool(
+    scenario_type: str,
+    entity_name: str,
+    change_percent: float,
+    entity_type: str = "nomenclature",
+    period_days: int = 30,
+) -> dict[str, Any]:
+    logger.info("simulate_scenario: {} {} change={}%", scenario_type, entity_name, change_percent)
+    from src.whatif.tools.simulate_tool import simulate_scenario_tool as _sim
+    return await _sim(
+        scenario_type=scenario_type,
+        entity_name=entity_name,
+        change_percent=change_percent,
+        entity_type=entity_type,
+        period_days=period_days,
+    )
