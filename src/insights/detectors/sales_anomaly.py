@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from src.clients.c1_client import C1Client
 from src.insights.detectors.base import BaseDetector
 from src.insights.models import Priority, RawInsight
 from src.logger import logger
+from src.tools import get_client
 
 
 class SalesAnomalyDetector(BaseDetector):
     async def detect(self, tenant_id: str = "default") -> list[RawInsight]:
         logger.info("SalesAnomalyDetector: запуск")
-        client = C1Client()
+        client = get_client()
         today = date.today()
         # Используем месяц вместо недели, т.к. данные могут быть не за каждую неделю
         month_ago = today - timedelta(days=30)

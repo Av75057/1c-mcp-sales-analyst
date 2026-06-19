@@ -11,6 +11,14 @@ class Priority(str, Enum):
     WARNING = "warning"
     INFO = "info"
 
+    @classmethod
+    def _missing_(cls, value: object) -> "Priority":
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value:
+                    return member
+        return cls.INFO
+
 
 class InsightStatus(str, Enum):
     NEW = "new"

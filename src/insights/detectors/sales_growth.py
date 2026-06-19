@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from src.clients.c1_client import C1Client
 from src.insights.detectors.base import BaseDetector
 from src.insights.models import Priority, RawInsight
 from src.logger import logger
+from src.tools import get_client
 
 
 class SalesGrowthDetector(BaseDetector):
     async def detect(self, tenant_id: str = "default") -> list[RawInsight]:
         logger.info("SalesGrowthDetector: запуск")
-        client = C1Client()
+        client = get_client()
         today = date.today()
         month_ago = today - timedelta(days=30)
         two_months_ago = today - timedelta(days=60)
@@ -46,7 +46,7 @@ class SalesGrowthDetector(BaseDetector):
                     metric_value=curr_total,
                     metric_baseline=prev_total,
                     metric_delta_percent=round(delta * 100, 1),
-                    period_from=week_ago,
+                    period_from=month_ago,
                     period_to=today,
                     context={"direction": "growth"},
                     tenant_id=tenant_id,

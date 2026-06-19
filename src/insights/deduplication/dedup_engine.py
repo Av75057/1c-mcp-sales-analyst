@@ -32,7 +32,8 @@ class DedupEngine:
             return False
 
         sent_at = datetime.fromisoformat(data.get("sent_at", ""))
-        silence_hours = self.config.silence_period_hours.get(raw.priority.value, 24)
+        priority_str = raw.priority.value if hasattr(raw.priority, "value") else raw.priority
+        silence_hours = self.config.silence_period_hours.get(priority_str, 24)
         elapsed = (datetime.now(timezone.utc) - sent_at).total_seconds() / 3600
         return elapsed < silence_hours
 
@@ -43,7 +44,7 @@ class DedupEngine:
             "detector": raw.detector,
             "entity_id": raw.entity_id,
             "metric_name": raw.metric_name,
-            "priority": raw.priority.value,
+            "priority": raw.priority.value if hasattr(raw.priority, "value") else raw.priority,
             "sent_at": datetime.now(timezone.utc).isoformat(),
             "title": raw.title,
         }
