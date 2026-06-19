@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ИП Краснов:receivables_amount:2026:25",
+  "detector": "receivables_alert",
+  "entity_id": "ИП Краснов",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-19T18:43:05.804386+00:00",
+  "title": "Задолженность: ИП Краснов"
+}

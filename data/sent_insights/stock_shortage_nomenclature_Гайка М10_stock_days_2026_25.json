@@ -1,0 +1,9 @@
+{
+  "dedup_key": "stock_shortage:nomenclature:Гайка М10:stock_days:2026:25",
+  "detector": "stock_shortage",
+  "entity_id": "Гайка М10",
+  "metric_name": "stock_days",
+  "priority": "warning",
+  "sent_at": "2026-06-19T18:43:05.803521+00:00",
+  "title": "Товар заканчивается: Гайка М10"
+}

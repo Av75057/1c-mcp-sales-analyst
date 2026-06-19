@@ -1,0 +1,9 @@
+{
+  "dedup_key": "sales_growth:total:total:sales_volume:2026:25",
+  "detector": "sales_growth",
+  "entity_id": "total",
+  "metric_name": "sales_volume",
+  "priority": "info",
+  "sent_at": "2026-06-19T18:43:05.802038+00:00",
+  "title": "Рост продаж: +3244.3% за неделю"
+}
