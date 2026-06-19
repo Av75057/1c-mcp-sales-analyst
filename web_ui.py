@@ -190,7 +190,12 @@ def render_sales():
             return
 
         df = pd.DataFrame(data)
-        df.columns = ["Дата", "Товар", "Количество", "Сумма", "Менеджер"]
+        mapped = {
+            "date": "Дата", "nomenclature": "Товар", "quantity": "Количество",
+            "sum": "Сумма", "manager": "Менеджер", "warehouse": "Организация",
+        }
+        df = df.rename(columns=mapped)
+        df = df[list(mapped.values())]
 
         # Метрики
         total_sum = df["Сумма"].sum()
@@ -318,7 +323,7 @@ def main():
         render_stock()
     elif page == PAGES[2]:
         render_sales()
-    el    if page == PAGES[3]:
+    elif page == PAGES[3]:
         render_dashboard()
     elif page == PAGES[4]:
         render_insights()
