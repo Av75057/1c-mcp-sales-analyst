@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Рулетка 5м:stock_days:2026:25",
-  "detector": "stock_shortage",
-  "entity_id": "Рулетка 5м",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-06-19T18:38:07.654441+00:00",
-  "title": "Товар заканчивается: Рулетка 5м"
-}

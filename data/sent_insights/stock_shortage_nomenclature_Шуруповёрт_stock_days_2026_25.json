@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Шуруповёрт:stock_days:2026:25",
-  "detector": "stock_shortage",
-  "entity_id": "Шуруповёрт",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-06-19T18:38:07.653016+00:00",
-  "title": "Товар заканчивается: Шуруповёрт"
-}

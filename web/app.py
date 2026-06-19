@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
@@ -149,7 +149,7 @@ async def api_dashboard():
     client = await get_c1()
     stock, sales, by_mgr = await asyncio.gather(
         client.get_stock(),
-        c1.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat()),
+        client.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat()),
         c1.get_sales_by_manager(),
     )
     total_stock_qty = sum(s["quantity"] for s in stock)
@@ -184,7 +184,7 @@ async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
 
 
 @app.post("/api/chat")
-async def api_chat(query: str = ""):
+async def api_chat(query: str = Form("")):
     if not query:
         raise HTTPException(400, "query required")
     ai = await get_ds()
@@ -203,10 +203,10 @@ async def api_chat(query: str = ""):
 
 @app.post("/api/simulate")
 async def api_simulate(
-    entity_name: str = "",
-    change_percent: float = 10,
-    period_days: int = 30,
-    scenario_type: str = "price_change",
+    entity_name: str = Form(""),
+    change_percent: float = Form(10),
+    period_days: int = Form(30),
+    scenario_type: str = Form("price_change"),
 ):
     req = SimulationRequest(
         scenario_type=scenario_type,
@@ -218,6 +218,12 @@ async def api_simulate(
     result = await sim.simulate(req)
     if not result.baseline.volume:
         return {"error": "Недостаточно данных для симуляции"}
+
+    margin_rate = 0.4
+    baseline_margin = result.baseline.revenue * margin_rate
+    projected_margin = result.projected.revenue * margin_rate
+    margin_delta = projected_margin - baseline_margin
+
     chart = render_chart(
         "line",
         f"Прогноз: {entity_name} (изменение цены на {change_percent:+.0f}%)",
@@ -228,10 +234,37 @@ async def api_simulate(
         format="both",
     )
     return {
-        "baseline": {"revenue": result.baseline.revenue, "volume": result.baseline.volume, "avg_price": result.baseline.avg_price},
-        "projected": {"revenue": result.projected.revenue, "volume": result.projected.volume, "avg_price": result.projected.avg_price},
-        "delta": {"revenue_percent": round((result.delta.revenue / result.baseline.revenue) * 100, 1) if result.baseline.revenue else 0},
+        "entity_name": entity_name,
+        "change_percent": change_percent,
+        "period_days": period_days,
+        "baseline": {
+            "revenue": result.baseline.revenue,
+            "volume": result.baseline.volume,
+            "avg_price": result.baseline.avg_price,
+            "margin": baseline_margin,
+        },
+        "projected": {
+            "revenue": result.projected.revenue,
+            "volume": result.projected.volume,
+            "avg_price": result.projected.avg_price,
+            "margin": projected_margin,
+        },
+        "delta": {
+            "revenue": round(result.delta.revenue, 2),
+            "volume": round(result.delta.volume, 0),
+            "revenue_percent": round((result.delta.revenue / result.baseline.revenue) * 100, 1) if result.baseline.revenue else 0,
+            "volume_percent": round((result.delta.volume / result.baseline.volume) * 100, 1) if result.baseline.volume else 0,
+            "margin": round(margin_delta, 2),
+        },
+        "risks": [{"name": r.name, "probability": r.probability, "impact": r.impact, "mitigation": r.mitigation} for r in result.risks],
         "recommendations": result.recommendations,
         "confidence": result.confidence,
+        "confidence_interval": result.confidence_interval,
+        "data_quality": {
+            "history_months": result.data_quality.history_months,
+            "data_points": result.data_quality.data_points,
+            "model_used": result.data_quality.model_used,
+        },
         "chart_html": chart["html"],
+        "elasticity": result.delta.volume / result.baseline.volume * 100 / change_percent if result.baseline.volume and change_percent else 0,
     }

@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Болт М10х50:stock_days:2026:25",
-  "detector": "stock_shortage",
-  "entity_id": "Болт М10х50",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-06-19T18:38:07.654734+00:00",
-  "title": "Товар заканчивается: Болт М10х50"
-}
