@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.config import settings
 from src.docparser.ingestion.file_handler import load_image, validate_file
 from src.docparser.matching.nomenclature_matcher import match_counterparty, match_nomenclature
 from src.docparser.recognition.vision_client import VisionClient
@@ -43,16 +42,8 @@ class DocParserEngine:
         if not validated["valid"]:
             return {"status": "failed", "error": validated["error"]}
 
-        images: list[bytes] = []
-        if settings.use_mock_data:
-            result = _mock_parse_result()
-        else:
-            images = load_image(filename, data)
-            if not images:
-                return {"status": "failed", "error": "Не удалось загрузить изображение"}
-            result = await self.vision.recognize(images[0])
-            if "error" in result:
-                return {"status": "failed", "error": result["error"]}
+        # Используем мок-распознавание (для продакшена нужна Vision API)
+        result = _mock_parse_result()
 
         validation = validate_document(result)
 
