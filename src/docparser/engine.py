@@ -120,6 +120,7 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
                 qty = float(qty_match.group(1).replace(",", "."))
                 unit = qty_match.group(2)
                 name_part = line[:qty_match.start()].strip().rstrip(",. ")
+                name_part = re.sub(r"^\d+[\.\)]\s*", "", name_part).strip()
                 if not name_part or len(name_part) < 3:
                     continue
                 # Ищем цены — числа после количества (целые вместе с копейками)
@@ -137,16 +138,16 @@ def _parse_text_to_document(text: str) -> dict[str, Any]:
                 })
 
     if not items:
-        SKIP_FALLBACK = SKIP_LINES | {"сч№", "с/сч", "р/сч", "к/сч", "кор/сч", "от "}
+        # Строгий fallback — только строки с явным форматом "название  количество единица"
         for line in lines:
-            l = line.strip()
-            if len(l) < 5: continue
-            if re.match(r"^\d{8,}$", l): continue
-            if l.startswith("Сч") or l.startswith("БИК") or l.startswith("ИНН"): continue
-            if any(k in l.lower() for k in SKIP_FALLBACK): continue
-            if l[0].isupper() and l[0] in "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ":
-                items.append({"name": l, "quantity": 1, "unit": "шт", "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0})
-                if len(items) >= 5: break
+            m = re.search(r"(\d+[\.,]?\d*)\s*(шт|кг|л|м|упак|ч)", line.lower())
+            if m:
+                name = line[:m.start()].strip().rstrip(",. ")
+                name = re.sub(r"^\d+[\.\)]\s*", "", name).strip()
+                if len(name) > 3 and not any(k in name.lower() for k in SKIP_LINES):
+                    qty = float(m.group(1).replace(",", "."))
+                    items.append({"name": name, "quantity": qty, "unit": m.group(2), "price": 0, "sum_without_vat": 0, "vat_rate": 20, "vat_sum": 0, "sum_with_vat": 0})
+                    if len(items) >= 5: break
 
     subtotal = sum(i["sum_without_vat"] for i in items)
     vat_total = sum(i["vat_sum"] for i in items)
