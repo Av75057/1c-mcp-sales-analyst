@@ -34,7 +34,7 @@ def validate_document(data: dict[str, Any]) -> dict[str, Any]:
 
         vat_rate = item.get("vat_rate", 0)
         vat_sum = item.get("vat_sum", 0)
-        if vat_rate > 0 and raw_sum > 0:
+        if vat_rate > 0 and raw_sum > 0 and vat_sum > 0:
             expected_vat = round(raw_sum * vat_rate / 100, 2)
             if abs(expected_vat - vat_sum) > 1:
                 warnings.append({"field": f"items[{i}].vat", "message": f"НДС строки '{name}': {expected_vat:.2f} ≠ {vat_sum:.2f}"})
