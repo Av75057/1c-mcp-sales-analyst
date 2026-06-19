@@ -22,7 +22,7 @@ st.set_page_config(
     layout="wide",
 )
 
-PAGES = ["💬 Чат", "📦 Остатки", "💰 Продажи", "📊 Дашборд"]
+PAGES = ["💬 Чат", "📦 Остатки", "💰 Продажи", "📊 Дашборд", "🤖 Инсайты"]
 
 
 def to_excel(df: pd.DataFrame) -> bytes:
@@ -265,6 +265,43 @@ def render_dashboard():
         st.plotly_chart(fig, use_container_width=True)
 
 
+def render_insights():
+    st.title("🤖 AI Инсайты")
+
+    from pathlib import Path
+    import json
+    from datetime import datetime
+
+    sent_dir = Path(__file__).resolve().parent / "data" / "sent_insights"
+    if not sent_dir.exists():
+        st.info("Нет инсайтов. Запусти `python run_insights.py scan` чтобы сгенерировать.")
+        return
+
+    files = sorted(sent_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not files:
+        st.info("Нет отправленных инсайтов")
+        return
+
+    st.markdown(f"Всего инсайтов: **{len(files)}**")
+
+    for path in files:
+        try:
+            data = json.loads(path.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        sent_at = data.get("sent_at", "")[:16].replace("T", " ")
+        priority = data.get("priority", "info")
+        emoji = {"critical": "🔴", "warning": "🟡", "info": "ℹ️"}.get(priority, "ℹ️")
+        title = data.get("title", data.get("detector", "unknown"))
+
+        with st.container():
+            cols = st.columns([1, 6, 2])
+            cols[0].markdown(emoji)
+            cols[1].markdown(f"**{title}**  \n{data.get('detector', '')} · {data.get('entity_id', '')}")
+            cols[2].markdown(f"`{sent_at}`")
+
+
 def main():
     with st.sidebar:
         st.image("https://cdn.jsdelivr.net/gh/opencode-ai/opencode@main/docs/public/logo.svg", width=40)
@@ -281,8 +318,10 @@ def main():
         render_stock()
     elif page == PAGES[2]:
         render_sales()
-    elif page == PAGES[3]:
+    el    if page == PAGES[3]:
         render_dashboard()
+    elif page == PAGES[4]:
+        render_insights()
 
 
 if __name__ == "__main__":

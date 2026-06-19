@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:АО МонтажСервис:receivables_amount:2026:25",
+  "detector": "receivables_alert",
+  "entity_id": "АО МонтажСервис",
+  "metric_name": "receivables_amount",
+  "priority": "warning",
+  "sent_at": "2026-06-19T17:37:13.983225+00:00",
+  "title": "Задолженность: АО МонтажСервис"
+}
