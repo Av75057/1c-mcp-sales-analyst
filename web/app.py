@@ -7,14 +7,13 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from jinja2 import Environment, FileSystemLoader
 
 from src.clients.c1_client import C1Client
 from src.charts.engine import render_chart
-from src.config import settings
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
 from src.whatif.models import SimulationRequest
@@ -23,46 +22,63 @@ app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
-templates = Jinja2Templates(directory=str(BASE / "templates"))
+jinja_env = Environment(loader=FileSystemLoader(str(BASE / "templates")), autoescape=True)
 
-c1 = C1Client()
-ds = DeepSeekClient()
-simulator = WhatIfSimulator()
+def render(name: str, context: dict | None = None) -> HTMLResponse:
+    template = jinja_env.get_template(name)
+    html = template.render(**(context or {}))
+    return HTMLResponse(html)
+
+c1: C1Client | None = None
+ds: DeepSeekClient | None = None
+simulator: WhatIfSimulator | None = None
 
 
-def run_async(coro: Any) -> Any:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+async def get_c1() -> C1Client:
+    global c1
+    if c1 is None:
+        c1 = C1Client()
+    return c1
+
+
+async def get_ds() -> DeepSeekClient:
+    global ds
+    if ds is None:
+        ds = DeepSeekClient()
+    return ds
+
+
+async def get_sim() -> WhatIfSimulator:
+    global simulator
+    if simulator is None:
+        simulator = WhatIfSimulator()
+    return simulator
 
 
 # ---- Pages ----
 
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request, "page": "dashboard"})
+@app.get("/")
+async def dashboard():
+    return render("dashboard.html", {"page": "dashboard"})
 
 
-@app.get("/stock", response_class=HTMLResponse)
-async def stock_page(request: Request):
-    return templates.TemplateResponse("stock.html", {"request": request, "page": "stock"})
+@app.get("/stock")
+async def stock_page():
+    return render("stock.html", {"page": "stock"})
 
 
-@app.get("/sales", response_class=HTMLResponse)
-async def sales_page(request: Request):
-    return templates.TemplateResponse("sales.html", {"request": request, "page": "sales"})
+@app.get("/sales")
+async def sales_page():
+    return render("sales.html", {"page": "sales"})
 
 
-@app.get("/chat", response_class=HTMLResponse)
-async def chat_page(request: Request):
-    return templates.TemplateResponse("chat.html", {"request": request, "page": "chat"})
+@app.get("/chat")
+async def chat_page():
+    return render("chat.html", {"page": "chat"})
 
 
-@app.get("/insights", response_class=HTMLResponse)
-async def insights_page(request: Request):
+@app.get("/insights")
+async def insights_page():
     sent_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
     insights_list: list[dict[str, Any]] = []
     if sent_dir.exists():
@@ -72,23 +88,24 @@ async def insights_page(request: Request):
                 insights_list.append(data)
             except (json.JSONDecodeError, OSError):
                 pass
-    return templates.TemplateResponse("insights.html", {"request": request, "page": "insights", "insights": insights_list})
+    return render("insights.html", {"page": "insights", "insights": insights_list})
 
 
-@app.get("/whatif", response_class=HTMLResponse)
-async def whatif_page(request: Request):
-    return templates.TemplateResponse("whatif.html", {"request": request, "page": "whatif"})
+@app.get("/whatif")
+async def whatif_page():
+    return render("whatif.html", {"page": "whatif"})
 
 
 # ---- API ----
 
 @app.get("/api/dashboard")
 async def api_dashboard():
-    stock, sales, by_mgr = run_async(asyncio.gather(
-        c1.get_stock(),
+    client = await get_c1()
+    stock, sales, by_mgr = await asyncio.gather(
+        client.get_stock(),
         c1.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat()),
         c1.get_sales_by_manager(),
-    ))
+    )
     total_stock_qty = sum(s["quantity"] for s in stock)
     total_sales_sum = sum(s["sum"] for s in sales)
     return {
@@ -102,24 +119,21 @@ async def api_dashboard():
 
 @app.get("/api/stock")
 async def api_stock(nomenclature: str = "", min_quantity: int = 0):
-    data = run_async(c1.get_stock(
+    client = await get_c1()
+    data = await client.get_stock(
         nomenclature=nomenclature or None,
         min_quantity=min_quantity or None,
-    ))
+    )
     return {"data": data, "total": len(data)}
 
 
 @app.get("/api/sales")
 async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
-    data = run_async(c1.get_sales(
-        date_from=date_from or None,
-        date_to=date_to or None,
-        manager=manager or None,
-    ))
-    by_mgr = run_async(c1.get_sales_by_manager(
-        date_from=date_from or None,
-        date_to=date_to or None,
-    ))
+    client = await get_c1()
+    data, by_mgr = await asyncio.gather(
+        client.get_sales(date_from=date_from or None, date_to=date_to or None, manager=manager or None),
+        client.get_sales_by_manager(date_from=date_from or None, date_to=date_to or None),
+    )
     return {"data": data, "total": len(data), "by_manager": by_mgr}
 
 
@@ -127,7 +141,8 @@ async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
 async def api_chat(query: str = ""):
     if not query:
         raise HTTPException(400, "query required")
-    result = run_async(ds.process_query(query))
+    ai = await get_ds()
+    result = await ai.process_query(query)
     chart_html = ""
     for tc in result["tool_calls"]:
         if tc["name"] == "create_chart" and "result" in tc:
@@ -147,13 +162,14 @@ async def api_simulate(
     period_days: int = 30,
     scenario_type: str = "price_change",
 ):
-    request = SimulationRequest(
+    req = SimulationRequest(
         scenario_type=scenario_type,
         entity_type="nomenclature",
         entity_name=entity_name,
         parameters={"change_percent": change_percent, "period_days": period_days},
     )
-    result = run_async(simulator.simulate(request))
+    sim = await get_sim()
+    result = await sim.simulate(req)
     if not result.baseline.volume:
         return {"error": "Недостаточно данных для симуляции"}
     chart = render_chart(
