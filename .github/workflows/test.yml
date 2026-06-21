@@ -10,11 +10,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install deps
-        run: |
-          pip install --upgrade pip 2>&1 | tail -3
-          pip install -e "." 2>&1 | tail -5
-          pip install pytest pytest-asyncio 2>&1 | tail -3
-      - name: Create data dirs
-        run: mkdir -p data/sent_insights models_cache static/charts
+        run: pip install -e "." && pip install pytest pytest-asyncio
       - name: Test
-        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_tools.py tests/test_c1_client.py tests/test_insights.py -v --tb=short 2>&1
+        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_c1_client.py tests/test_tools.py tests/test_insights.py -v --tb=short 2>&1
