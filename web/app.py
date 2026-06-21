@@ -16,7 +16,6 @@ from src.clients.c1_client import C1Client
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
-from src.whatif.models import SimulationRequest
 
 app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
 
@@ -269,63 +268,39 @@ async def api_simulate(
     period_days: int = Form(30),
     scenario_type: str = Form("price_change"),
 ):
-    req = SimulationRequest(
-        scenario_type=scenario_type,
-        entity_type="nomenclature",
-        entity_name=entity_name,
-        parameters={"change_percent": change_percent, "period_days": period_days},
-    )
     sim = await get_sim()
-    result = await sim.simulate(req)
-    if not result.baseline.volume:
-        return {"error": "Недостаточно данных для симуляции"}
+    from src.whatif.mcp.tools import simulate_scenario_tool as sim_tool
+    result = await sim_tool(scenario_type=scenario_type, entity_name=entity_name, change_percent=change_percent, period_days=period_days)
+    if not result.get("success"):
+        return {"error": result.get("error", "Ошибка симуляции")}
 
-    margin_rate = 0.4
-    baseline_margin = result.baseline.revenue * margin_rate
-    projected_margin = result.projected.revenue * margin_rate
-    margin_delta = projected_margin - baseline_margin
+    b = result.get("baseline_metrics", {})
+    p = result.get("projected_metrics", {})
+    d = result.get("delta_percent", {})
+    rev = d.get("revenue", 0)
 
-    chart = render_chart(
-        "line",
-        f"Прогноз: {entity_name} (изменение цены на {change_percent:+.0f}%)",
-        result.time_series.dates[:14],
-        [result.time_series.baseline[:14], result.time_series.projected[:14]],
-        "Дата", "Выручка, ₽",
-        series_names=["Базовый", "Прогноз"],
-        format="both",
-    )
+    baseline_rev = b.get("revenue", b.get("daily_revenue", 0)) * (period_days or 30)
+    projected_rev = p.get("revenue", p.get("daily_revenue", 0)) * (period_days or 30)
+
+    margin = 0.4
+    bm = baseline_rev * margin
+    pm = projected_rev * margin
+    md = pm - bm
+
+    chart_data = result.get("chart_params")
+    chart_html = ""
+    if chart_data:
+        try:
+            chart = render_chart(chart_data["chart_type"], chart_data["title"], chart_data["x_data"][:10], chart_data["y_data"][0][:10] if isinstance(chart_data["y_data"][0], list) else chart_data["y_data"][:10], chart_data.get("x_label", ""), chart_data.get("y_label", ""), format="both")
+            chart_html = chart["html"]
+        except Exception:
+            pass
+
     return {
-        "entity_name": entity_name,
-        "change_percent": change_percent,
-        "period_days": period_days,
-        "baseline": {
-            "revenue": result.baseline.revenue,
-            "volume": result.baseline.volume,
-            "avg_price": result.baseline.avg_price,
-            "margin": baseline_margin,
-        },
-        "projected": {
-            "revenue": result.projected.revenue,
-            "volume": result.projected.volume,
-            "avg_price": result.projected.avg_price,
-            "margin": projected_margin,
-        },
-        "delta": {
-            "revenue": round(result.delta.revenue, 2),
-            "volume": round(result.delta.volume, 0),
-            "revenue_percent": round((result.delta.revenue / result.baseline.revenue) * 100, 1) if result.baseline.revenue else 0,
-            "volume_percent": round((result.delta.volume / result.baseline.volume) * 100, 1) if result.baseline.volume else 0,
-            "margin": round(margin_delta, 2),
-        },
-        "risks": [{"name": r.name, "probability": r.probability, "impact": r.impact, "mitigation": r.mitigation} for r in result.risks],
-        "recommendations": result.recommendations,
-        "confidence": result.confidence,
-        "confidence_interval": result.confidence_interval,
-        "data_quality": {
-            "history_months": result.data_quality.history_months,
-            "data_points": result.data_quality.data_points,
-            "model_used": result.data_quality.model_used,
-        },
-        "chart_html": chart["html"],
-        "elasticity": result.delta.volume / result.baseline.volume * 100 / change_percent if result.baseline.volume and change_percent else 0,
+        "baseline": {"revenue": baseline_rev, "margin": bm},
+        "projected": {"revenue": projected_rev, "margin": pm},
+        "delta": {"revenue_percent": rev, "margin_percent": d.get("margin", 0)},
+        "recommendations": result.get("recommendations", []),
+        "confidence": result.get("confidence", 0),
+        "chart_html": chart_html,
     }
