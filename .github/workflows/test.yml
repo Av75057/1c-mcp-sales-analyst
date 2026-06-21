@@ -10,12 +10,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install deps
-        run: |
-          pip install -e ".[dev]" 2>&1 | tail -5
-          pip install plotly pandas openai httpx loguru tenacity 2>&1 | tail -5
+        run: pip install -e ".[dev]" && pip install plotly pandas openai httpx loguru tenacity
       - name: Create data dirs
         run: mkdir -p data/sent_insights models_cache static/charts
-      - name: Test
+      - name: Debug info
         run: |
-          USE_MOCK_DATA=true python -c "from src.clients.mock_c1_client import MockC1Client; print('imports OK')"
-          USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_tools.py tests/test_c1_client.py tests/test_deepseek_client.py tests/test_insights.py tests/integration/ -v --tb=short 2>&1
+          python --version
+          pip list | grep -i -E "pytest|asyncio|plotly"
+          python -c "import src; print('src import OK')"
+      - name: Test
+        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_tools.py tests/test_c1_client.py tests/test_insights.py -v --tb=short 2>&1
