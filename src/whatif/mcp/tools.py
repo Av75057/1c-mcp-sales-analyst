@@ -100,10 +100,13 @@ async def _fetch_real_data(entity_name: str, days: int = 365) -> pd.DataFrame | 
             price = s.get("sum", 0) / qty if qty > 0 else 0
             if qty > 0 and price > 0:
                 rows.append({"date": d, "price": price, "quantity": qty})
-        if len(rows) < 10:
+        if len(rows) < 3:
+            logger.warning("Слишком мало данных о продажах для '{}' в 1С ({} записей, нужно минимум 3)", entity_name, len(rows))
             return None
+        logger.info("Найдено {} записей о продажах для '{}'", len(rows), entity_name)
         return pd.DataFrame(rows)
-    except Exception:
+    except Exception as e:
+        logger.error("Ошибка при загрузке данных из 1С: {}", e)
         return None
 
 
