@@ -1,114 +1,115 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from dataclasses import dataclass, field
 
 import numpy as np
+import pandas as pd
 
 from src.logger import logger
-from src.whatif.engine.data_loader import DataLoader
-from src.whatif.models import (
-    DataQuality,
-    FinancialEffect,
-    Risk,
-    ScenarioMetrics,
-    SimulationRequest,
-    SimulationResult,
-    TimeSeries,
-)
+from src.whatif.engine.financial_calculator import FinancialCalculator, FinancialResult
 from src.whatif.models.elasticity_model import ElasticityModel
-from src.whatif.scenarios.base import BaseScenarioHandler
+from src.whatif.models.monte_carlo import MonteCarloSimulator
 
 
-class PriceChangeScenario(BaseScenarioHandler):
-    async def execute(self, request: SimulationRequest) -> SimulationResult:
-        logger.info("PriceChange: {} | change={}% | days={}", request.entity_name, request.parameters.get("change_percent"), request.parameters.get("period_days", 30))
+@dataclass
+class PriceChangeResult:
+    entity_name: str = ""
+    baseline_price: float = 0.0
+    price_change_percent: float = 0.0
+    period_days: int = 30
+    elasticity: float = 0.0
+    elasticity_confidence: float = 0.0
+    is_elastic: bool = False
+    volume_change_percent: float = 0.0
+    projected_price: float = 0.0
+    projected_quantity: float = 0.0
+    financial: FinancialResult = field(default_factory=FinancialResult)
+    mc_revenue_median: float = 0.0
+    mc_revenue_ci_lower: float = 0.0
+    mc_revenue_ci_upper: float = 0.0
+    mc_probability_positive: float = 0.0
+    overall_confidence: float = 0.0
+    recommendations: list[str] = field(default_factory=list)
 
-        loader = DataLoader()
-        change_pct = request.parameters.get("change_percent", 10)
-        period_days = request.parameters.get("period_days", 30)
 
-        sales = await loader.get_sales_history(
-            entity_type=request.entity_type,
-            entity_name=request.entity_name,
-            period_months=12,
+class PriceChangeScenario:
+    def __init__(self) -> None:
+        self.elasticity_model = ElasticityModel()
+        self.mc_simulator = MonteCarloSimulator(iterations=1000)
+        self.financial_calc = FinancialCalculator()
+
+    def simulate(
+        self,
+        entity_name: str,
+        historical_data: pd.DataFrame,
+        price_change_percent: float,
+        cost_per_unit: float,
+        period_days: int = 30,
+    ) -> PriceChangeResult:
+        logger.info("PriceChange: {} | {}% | {} дней", entity_name, price_change_percent, period_days)
+
+        elasticity_result = self.elasticity_model.fit(historical_data)
+        elasticity_pred = self.elasticity_model.predict(price_change_percent)
+
+        recent = historical_data.tail(30)
+        baseline_price = float(recent["price"].mean())
+        baseline_quantity = float(recent["quantity"].mean()) * (period_days / 30)
+
+        financial = self.financial_calc.calculate_price_change_impact(
+            baseline_price=baseline_price,
+            baseline_quantity=baseline_quantity,
+            baseline_cost_per_unit=cost_per_unit,
+            price_change_percent=price_change_percent,
+            volume_change_percent=elasticity_pred.volume_change_percent,
+            period_days=period_days,
         )
 
-        if not sales:
-            return SimulationResult(
-                request=request,
-                confidence=0.0,
-                recommendations=["Недостаточно данных для симуляции"],
-            )
+        volatility = elasticity_result.mape * 0.5 if elasticity_result.model_trained else 0.15
+        mc_result = self.mc_simulator.simulate(base_value=financial.projected_revenue, volatility=volatility)
 
-        # Считаем базовые метрики
-        recent = [s for s in sales if s.get("date", "")[:10] >= (date.today() - timedelta(days=period_days)).isoformat()]
-        baseline_volume = sum(s.get("quantity", 0) for s in (recent or sales))
-        baseline_revenue = sum(s.get("sum", 0) for s in (recent or sales))
-        baseline_avg_price = baseline_revenue / baseline_volume if baseline_volume > 0 else 0
-        baseline_margin = baseline_revenue * 0.4
+        projected_price = baseline_price * (1 + price_change_percent / 100)
+        projected_quantity = baseline_quantity * (1 + elasticity_pred.volume_change_percent / 100)
 
-        # Эластичность
-        model = ElasticityModel()
-        model.train(sales, entity_id=request.entity_name)
-        prediction = model.predict(change_pct, baseline_volume, baseline_avg_price)
+        overall_confidence = elasticity_result.confidence * 0.5 + (1 - volatility) * 0.3 + min(len(historical_data) / 365, 1.0) * 0.2
 
-        projected_volume = prediction["new_volume"]
-        projected_price = prediction["new_price"]
-        projected_revenue = prediction["new_revenue"]
-        projected_margin = projected_revenue * 0.4
+        recommendations = self._recommendations(elasticity_pred.elasticity, elasticity_pred.is_elastic, price_change_percent, financial.margin_delta_percent, overall_confidence)
 
-        # Monte-Carlo (упрощённо)
-        np.random.seed(42)
-        vol_changes = np.random.normal(prediction["volume_change_percent"] / 100, abs(model.elasticity * 0.3), 1000)
-        revenues = baseline_volume * (1 + vol_changes) * projected_price
-        rev_low = float(np.percentile(revenues, 10))
-        rev_high = float(np.percentile(revenues, 90))
-
-        # Time series
-        dates = [(date.today() + timedelta(days=i)).isoformat() for i in range(period_days)]
-        daily_base = baseline_volume / period_days
-        daily_new = projected_volume / period_days
-        ts = TimeSeries(
-            dates=dates,
-            baseline=[daily_base * (1 + 0.02 * np.sin(i * 0.2)) for i in range(period_days)],
-            projected=[daily_new * (1 + 0.02 * np.sin(i * 0.2)) for i in range(period_days)],
-            projected_low=[rev_low / period_days] * period_days,
-            projected_high=[rev_high / period_days] * period_days,
-        )
-
-        confidence = min(0.9, 0.3 + model.r2_score * 0.5 + min(len(sales) / 100, 0.2))
-
-        delta_volume = projected_volume - baseline_volume
-        delta_revenue = projected_revenue - baseline_revenue
-        delta_margin = projected_margin - baseline_margin
-
-        risks = [
-            Risk(name="Отток клиентов из-за роста цен", probability=min(1.0, max(0.0, abs(model.elasticity) * change_pct / 50)), impact="Снижение объёма продаж", mitigation="Предупредить ключевых клиентов заранее"),
-            Risk(name="Реакция конкурентов", probability=0.3, impact="Потеря доли рынка", mitigation="Мониторить цены конкурентов"),
-        ]
-
-        recommendations = []
-        if change_pct > 0:
-            if delta_revenue > 0:
-                recommendations.append(f"Поднятие цены на {change_pct}% выгодно: выручка вырастет на {delta_revenue:,.0f} ₽")
-            else:
-                recommendations.append(f"Поднятие цены на {change_pct}% НЕ выгодно: выручка упадёт на {abs(delta_revenue):,.0f} ₽")
-            if abs(model.elasticity) < 0.8:
-                recommendations.append("Спрос неэластичный — можно поднимать цену без значительной потери объёма")
-            else:
-                recommendations.append("Спрос эластичный — рекомендуется поднимать цену не более чем на 5%")
-            recommendations.append("Мониторить продажи первые 2 недели после изменения")
-
-        return SimulationResult(
-            request=request,
-            baseline=ScenarioMetrics(revenue=baseline_revenue, margin=baseline_margin, volume=baseline_volume, avg_price=baseline_avg_price),
-            projected=ScenarioMetrics(revenue=projected_revenue, margin=projected_margin, volume=projected_volume, avg_price=projected_price),
-            delta=ScenarioMetrics(revenue=delta_revenue, margin=delta_margin, volume=delta_volume, avg_price=projected_price - baseline_avg_price),
-            financial_effect=FinancialEffect(additional_revenue=delta_revenue, additional_margin=delta_margin),
-            risks=risks,
+        return PriceChangeResult(
+            entity_name=entity_name,
+            baseline_price=baseline_price,
+            price_change_percent=price_change_percent,
+            period_days=period_days,
+            elasticity=elasticity_pred.elasticity,
+            elasticity_confidence=elasticity_result.confidence,
+            is_elastic=elasticity_pred.is_elastic,
+            volume_change_percent=elasticity_pred.volume_change_percent,
+            projected_price=projected_price,
+            projected_quantity=projected_quantity,
+            financial=financial,
+            mc_revenue_median=mc_result.median,
+            mc_revenue_ci_lower=mc_result.confidence_interval[0],
+            mc_revenue_ci_upper=mc_result.confidence_interval[1],
+            mc_probability_positive=mc_result.probability_positive,
+            overall_confidence=overall_confidence,
             recommendations=recommendations,
-            confidence=round(confidence, 2),
-            confidence_interval={"revenue_low": round(rev_low, 2), "revenue_high": round(rev_high, 2)},
-            time_series=ts,
-            data_quality=DataQuality(history_months=12, data_points=len(sales), model_used="RidgeRegression"),
         )
+
+    def _recommendations(self, elasticity: float, is_elastic: bool, price_change: float, margin_delta_pct: float, confidence: float) -> list[str]:
+        recs: list[str] = []
+        if is_elastic and price_change > 0:
+            recs.append("Спрос эластичный: повышение цены сильно снизит объём. Рассмотрите меньший шаг.")
+        elif not is_elastic and price_change > 0:
+            recs.append("Спрос неэластичный — повышение цены выгодно. Маржа вырастет.")
+        if price_change < 0 and is_elastic:
+            recs.append("Снижение цены при эластичном спросе увеличит объём продаж.")
+        if margin_delta_pct > 5:
+            recs.append(f"Маржа вырастет на {margin_delta_pct:.1f}% — решение выгодно.")
+        elif margin_delta_pct < -5:
+            recs.append(f"Маржа упадёт на {abs(margin_delta_pct):.1f}% — решение невыгодно.")
+        if confidence < 0.6:
+            recs.append("Низкая уверенность. Протестируйте на малой группе товаров.")
+        if price_change > 10:
+            recs.append("Повышайте цену постепенно (по 5% за 2 недели) для минимизации оттока.")
+        if confidence > 0.8:
+            recs.append("Высокая уверенность — можно применять решение.")
+        return recs
