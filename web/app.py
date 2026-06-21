@@ -318,7 +318,13 @@ async def api_simulate(
     chart_html = ""
     if chart_data:
         try:
-            chart = render_chart(chart_data["chart_type"], chart_data["title"], chart_data["x_data"][:10], chart_data["y_data"][0][:10] if isinstance(chart_data["y_data"][0], list) else chart_data["y_data"][:10], chart_data.get("x_label", ""), chart_data.get("y_label", ""), format="both")
+            xd = (chart_data.get("x_data") or [])[:14]
+            yd = chart_data.get("y_data") or []
+            if yd and isinstance(yd[0], list):
+                yd = [s[:14] for s in yd]
+            elif yd:
+                yd = yd[:14]
+            chart = render_chart(chart_data.get("chart_type", "line"), chart_data.get("title", "Прогноз"), xd, yd, chart_data.get("x_label", ""), chart_data.get("y_label", ""), series_names=chart_data.get("series_names"), format="both")
             chart_html = chart["html"]
         except Exception:
             pass
