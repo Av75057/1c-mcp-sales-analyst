@@ -246,19 +246,24 @@ async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
 @app.post("/api/chat")
 async def api_chat(query: str = Form("")):
     if not query:
-        raise HTTPException(400, "query required")
-    ai = await get_ds()
-    result = await ai.process_query(query)
-    chart_html = ""
-    for tc in result["tool_calls"]:
-        if tc["name"] == "create_chart" and "result" in tc:
-            chart_html = tc["result"].get("html", "")
-    return {
-        "answer": result["answer"],
-        "tool_calls": [{"name": t["name"], "args": t["args"]} for t in result["tool_calls"]],
-        "chart_html": chart_html,
-        "usage": result["usage"],
-    }
+        return {"answer": "Введите запрос"}
+    try:
+        ai = await get_ds()
+        result = await ai.process_query(query)
+        chart_html = ""
+        for tc in result["tool_calls"]:
+            if tc["name"] == "create_chart" and "result" in tc:
+                chart_html = tc["result"].get("html", "")
+        return {
+            "answer": result["answer"],
+            "tool_calls": [{"name": t["name"], "args": t["args"]} for t in result["tool_calls"]],
+            "chart_html": chart_html,
+            "usage": result["usage"],
+        }
+    except asyncio.TimeoutError:
+        return {"answer": "⏱️ Превышено время ожидания. Попробуйте упростить запрос или повторить позже."}
+    except Exception as e:
+        return {"answer": f"❌ Ошибка: {e}"}
 
 
 @app.post("/api/simulate")
