@@ -7,37 +7,40 @@
 <div class="card p-3 mb-4">
     <h6 class="mb-3">📋 Параметры сценария</h6>
     <div class="row g-2 align-items-end">
-        <div class="col-md-3">
-            <label class="form-label small">Товар</label>
-            <input class="form-control" id="entityName" value="Гвоздь 100мм" list="itemSuggest">
-            <datalist id="itemSuggest">
-                <option value="Гвоздь 100мм"><option value="Молоток"><option value="Дрель ударная">
-                <option value="Шуруповёрт"><option value="Перфоратор"><option value="Саморез 50мм">
-            </datalist>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Изменение цены</label>
-            <div class="input-group">
-                <input class="form-control" id="changePercent" type="number" value="10" step="1">
-                <span class="input-group-text">%</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label small">Период прогноза</label>
-            <div class="input-group">
-                <input class="form-control" id="periodDays" type="number" value="30" min="7" max="365">
-                <span class="input-group-text">дн.</span>
-            </div>
-        </div>
         <div class="col-md-2">
             <label class="form-label small">Тип сценария</label>
-            <select class="form-select" id="scenarioType">
-                <option value="price_change">Изменение цены</option>
+            <select class="form-select" id="scenarioType" onchange="updateParams()">
+                <option value="price_change">💰 Изменение цены</option>
+                <option value="promotion">🏷️ Акция / Скидка</option>
+                <option value="purchase_change">📦 Закупки</option>
+                <option value="employee_departure">👤 Увольнение</option>
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3" id="entityField">
+            <label class="form-label small" id="entityLabel">Товар</label>
+            <input class="form-control" id="entityName" value="Гвоздь 100мм">
+        </div>
+        <div class="col-md-2" id="changeField">
+            <label class="form-label small" id="changeLabel">Изменение цены</label>
+            <div class="input-group">
+                <input class="form-control" id="changePercent" type="number" value="10" step="1">
+                <span class="input-group-text" id="changeUnit">%</span>
+            </div>
+        </div>
+        <div class="col-md-2" id="daysField">
+            <label class="form-label small" id="daysLabel">Период</label>
+            <div class="input-group">
+                <input class="form-control" id="periodDays" type="number" value="30" min="1" max="365">
+                <span class="input-group-text" id="daysUnit">дн.</span>
+            </div>
+        </div>
+        <div class="col-md-2" id="extraField" style="display:none">
+            <label class="form-label small" id="extraLabel"></label>
+            <input class="form-control" id="extraValue" type="number">
+        </div>
+        <div class="col-md-1">
             <label class="form-label small">&nbsp;</label>
-            <button class="btn btn-primary w-100" onclick="runSimulation()"><i class="bi bi-magic"></i> Симулировать</button>
+            <button class="btn btn-primary w-100" onclick="runSimulation()"><i class="bi bi-magic"></i></button>
         </div>
     </div>
 </div>
@@ -46,97 +49,99 @@
 
 <div class="card p-5 text-center text-secondary" id="simEmpty">
     <h1 class="mb-3">🔮</h1>
-    <p class="mb-1">Нажмите «Симулировать» для прогноза</p>
-    <div class="row mt-4 g-2 justify-content-center">
-        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('entityName').value='Гвоздь 100мм';document.getElementById('changePercent').value='10';runSimulation()">📌 Цена +10%</button></div>
-        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('entityName').value='Молоток';document.getElementById('changePercent').value='-15';runSimulation()">📌 Цена -15%</button></div>
+    <p class="mb-3">Выберите сценарий и нажмите Симулировать</p>
+    <div class="row g-2 justify-content-center">
+        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="setQuick('price_change','Гвоздь 100мм',10)">💰 Цена +10%</button></div>
+        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="setQuick('promotion','Инструменты',15)">🏷️ Скидка 15%</button></div>
+        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="setQuick('purchase_change','Саморезы',50)">📦 Заказ +50%</button></div>
+        <div class="col-auto"><button class="btn btn-outline-secondary btn-sm" onclick="setQuick('employee_departure','Иванов И.И.',0)">👤 Увольнение</button></div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function updateParams() {
+    const t = document.getElementById('scenarioType').value;
+    const ent = document.getElementById('entityField');
+    const chg = document.getElementById('changeField');
+    const days = document.getElementById('daysField');
+    const ext = document.getElementById('extraField');
+    const eLabel = document.getElementById('entityLabel');
+    const cLabel = document.getElementById('changeLabel');
+    const cUnit = document.getElementById('changeUnit');
+    const dLabel = document.getElementById('daysLabel');
+    const dUnit = document.getElementById('daysUnit');
+    const eLabel2 = document.getElementById('extraLabel');
+
+    ent.style.display = chg.style.display = days.style.display = ext.style.display = 'block';
+    if (t === 'price_change') {
+        eLabel.textContent = 'Товар'; cLabel.textContent = 'Изменение цены'; cUnit.textContent = '%'; dLabel.textContent = 'Период'; dUnit.textContent = 'дн.'; ext.style.display = 'none';
+    } else if (t === 'promotion') {
+        eLabel.textContent = 'Категория'; cLabel.textContent = 'Скидка'; cUnit.textContent = '%'; dLabel.textContent = 'Длительность акции'; dUnit.textContent = 'дн.'; ext.style.display = 'none';
+    } else if (t === 'purchase_change') {
+        eLabel.textContent = 'Товар'; cLabel.textContent = 'Изменение заказа'; cUnit.textContent = '%'; dLabel.textContent = 'Период'; dUnit.textContent = 'дн.'; ext.style.display = 'none';
+    } else if (t === 'employee_departure') {
+        eLabel.textContent = 'Сотрудник'; cLabel.textContent = 'Выручка/мес'; cUnit.textContent = '₽'; dLabel.textContent = 'Стаж'; dUnit.textContent = 'лет'; chg.style.display = 'none'; days.style.display = 'none';
+        ext.style.display = 'block'; eLabel2.textContent = 'Клиентов';
+    }
+}
+
+function setQuick(type, name, val) {
+    document.getElementById('scenarioType').value = type;
+    document.getElementById('entityName').value = name;
+    document.getElementById('changePercent').value = val;
+    updateParams();
+    runSimulation();
+}
+
 async function runSimulation() {
+    const t = document.getElementById('scenarioType').value;
     const name = document.getElementById('entityName').value;
-    const change = document.getElementById('changePercent').value;
+    const val = document.getElementById('changePercent').value;
     const days = document.getElementById('periodDays').value;
     const resultDiv = document.getElementById('simResult');
     const emptyDiv = document.getElementById('simEmpty');
-
-    resultDiv.style.display = 'block';
-    emptyDiv.style.display = 'none';
+    resultDiv.style.display = 'block'; emptyDiv.style.display = 'none';
     resultDiv.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary mb-3"></div><div class="text-secondary">Симуляция...</div></div>';
 
     try {
-        const r = await fetch('/api/simulate', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `entity_name=${encodeURIComponent(name)}&change_percent=${change}&period_days=${days}`
-        });
+        let body = `scenario_type=${t}&entity_name=${encodeURIComponent(name)}&period_days=${days}`;
+        if (t === 'price_change') body += `&change_percent=${val}`;
+        else if (t === 'promotion') body += `&discount_percent=${val}&promotion_days=${days}`;
+        else if (t === 'purchase_change') body += `&order_size_change_percent=${val}`;
+        else if (t === 'employee_departure') body += `&monthly_revenue=${val || 2000000}&years_in_company=${days || 5}`;
+
+        const r = await fetch('/api/simulate', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body });
         const d = await r.json();
         if (d.error) { resultDiv.innerHTML = `<div class="alert alert-warning">${d.error}</div>`; return; }
 
-        const revenueUp = d.delta.revenue_percent >= 0;
-        const marginUp = (d.delta.margin_percent || 0) >= 0;
-        const confPct = (d.confidence * 100).toFixed(0);
+        const revPct = d.delta?.revenue_percent || 0;
+        const marPct = d.delta?.margin_percent || 0;
+        const revUp = revPct >= 0; const marUp = marPct >= 0;
+        const confPct = ((d.confidence || 0) * 100).toFixed(0);
         const confColor = d.confidence >= 0.7 ? 'text-success' : d.confidence >= 0.4 ? 'text-warning' : 'text-danger';
         const confLabel = d.confidence >= 0.7 ? 'Высокая' : d.confidence >= 0.4 ? 'Средняя' : 'Низкая';
 
         resultDiv.innerHTML = `
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <div class="card p-3 text-center border-${revenueUp ? 'success' : 'danger'}">
-                        <div class="card-title">Выручка</div>
-                        <div style="font-size:1.8rem;font-weight:700" class="${revenueUp ? 'text-success' : 'text-danger'}">${d.delta.revenue_percent >= 0 ? '+' : ''}${d.delta.revenue_percent.toFixed(1)}%</div>
-                        <small class="text-secondary">${d.baseline.revenue.toLocaleString()} → ${d.projected.revenue.toLocaleString()} ₽</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3 text-center border-${marginUp ? 'success' : 'danger'}">
-                        <div class="card-title">Маржа</div>
-                        <div style="font-size:1.8rem;font-weight:700" class="${marginUp ? 'text-success' : 'text-danger'}">${d.delta.margin_percent >= 0 ? '+' : ''}${d.delta.margin_percent.toFixed(1)}%</div>
-                        <small class="text-secondary">${d.baseline.margin.toLocaleString()} → ${d.projected.margin.toLocaleString()} ₽</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card p-3 text-center">
-                        <div class="card-title">Уверенность</div>
-                        <div style="font-size:1.8rem;font-weight:700" class="${confColor}">${confPct}%</div>
-                        <small class="text-secondary">${confLabel}</small>
-                    </div>
+            <div class="card p-3 mb-3 border-${revUp ? 'success' : 'danger'}">
+                <div class="d-flex justify-content-between">
+                    <h6 class="mb-0">📊 ${t === 'price_change' ? 'Изменение цены' : t === 'promotion' ? 'Акция/Скидка' : t === 'purchase_change' ? 'Закупки' : 'Увольнение'}: ${name}</h6>
+                    <span class="badge bg-${d.confidence >= 0.7 ? 'success' : d.confidence >= 0.4 ? 'warning' : 'danger'}">${confLabel} (${confPct}%)</span>
                 </div>
             </div>
-
             <div class="row g-3 mb-3">
-                <div class="col-md-7">
-                    <div class="card p-3">
-                        <h6 class="mb-3">📈 Прогноз выручки</h6>
-                        <div id="simChartContainer">${d.chart_html || ''}</div>
-                    </div>
-                </div>
-                <div class="col-md-5">
-                    <div class="card p-3 mb-3">
-                        <h6 class="mb-3">📋 Сравнение</h6>
-                        <table class="table table-sm small">
-                            <thead><tr><th>Показатель</th><th class="text-end">Было</th><th class="text-end">Стало</th><th class="text-end">Δ</th></tr></thead>
-                            <tbody>
-                                <tr><td>Выручка</td><td class="text-end">${d.baseline.revenue.toLocaleString()}</td><td class="text-end">${d.projected.revenue.toLocaleString()}</td><td class="text-end ${revenueUp ? 'text-success' : 'text-danger'}">${d.delta.revenue_percent >= 0 ? '+' : ''}${d.delta.revenue_percent.toFixed(1)}%</td></tr>
-                                <tr><td>Маржа</td><td class="text-end">${d.baseline.margin.toLocaleString()}</td><td class="text-end">${d.projected.margin.toLocaleString()}</td><td class="text-end ${marginUp ? 'text-success' : 'text-danger'}">${d.delta.margin_percent >= 0 ? '+' : ''}${d.delta.margin_percent.toFixed(1)}%</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <div class="col-md-4"><div class="card p-3 text-center"><div class="card-title">Выручка</div><div style="font-size:1.8rem;font-weight:700" class="${revUp ? 'text-success' : 'text-danger'}">${revPct >= 0 ? '+' : ''}${revPct.toFixed(1)}%</div><small class="text-secondary">${d.baseline?.revenue?.toLocaleString() || 0} → ${d.projected?.revenue?.toLocaleString() || 0} ₽</small></div></div>
+                <div class="col-md-4"><div class="card p-3 text-center"><div class="card-title">Маржа</div><div style="font-size:1.8rem;font-weight:700" class="${marUp ? 'text-success' : 'text-danger'}">${marPct >= 0 ? '+' : ''}${marPct.toFixed(1)}%</div><small class="text-secondary">${d.baseline?.margin?.toLocaleString() || 0} → ${d.projected?.margin?.toLocaleString() || 0} ₽</small></div></div>
+                <div class="col-md-4"><div class="card p-3 text-center"><div class="card-title">Уверенность</div><div style="font-size:1.8rem;font-weight:700" class="${confColor}">${confPct}%</div><small class="text-secondary">${confLabel}</small></div></div>
             </div>
-
-            ${d.recommendations?.length ? `
-            <div class="card p-3 mb-3">
-                <h6 class="mb-3">💡 Рекомендации</h6>
-                <ol class="mb-0 small">${d.recommendations.map(r => `<li class="mb-1">${r}</li>`).join('')}</ol>
-            </div>` : ''}
+            <div class="row g-3 mb-3">
+                <div class="col-md-7"><div class="card p-3"><h6 class="mb-3">📈 Прогноз</h6><div id="simChartContainer">${d.chart_html || ''}</div></div></div>
+                <div class="col-md-5"><div class="card p-3"><h6 class="mb-3">📋 Показатели</h6><table class="table table-sm small"><thead><tr><th>Показатель</th><th class="text-end">Было</th><th class="text-end">Стало</th><th class="text-end">Δ</th></tr></thead><tbody><tr><td>Выручка</td><td class="text-end">${(d.baseline?.revenue || 0).toLocaleString()}</td><td class="text-end">${(d.projected?.revenue || 0).toLocaleString()}</td><td class="text-end ${revUp ? 'text-success' : 'text-danger'}">${revPct >= 0 ? '+' : ''}${revPct.toFixed(1)}%</td></tr><tr><td>Маржа</td><td class="text-end">${(d.baseline?.margin || 0).toLocaleString()}</td><td class="text-end">${(d.projected?.margin || 0).toLocaleString()}</td><td class="text-end ${marUp ? 'text-success' : 'text-danger'}">${marPct >= 0 ? '+' : ''}${marPct.toFixed(1)}%</td></tr></tbody></table></div></div>
+            </div>
+            ${d.recommendations?.length ? `<div class="card p-3 mb-3"><h6 class="mb-3">💡 Рекомендации</h6><ol class="mb-0 small">${d.recommendations.map(r => `<li class="mb-1">${r}</li>`).join('')}</ol></div>` : ''}
         `;
-    } catch(e) {
-        resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`;
-    }
+    } catch(e) { resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`; }
 }
 </script>
 {% endblock %}

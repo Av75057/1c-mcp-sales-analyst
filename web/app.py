@@ -263,14 +263,37 @@ async def api_chat(query: str = Form("")):
 
 @app.post("/api/simulate")
 async def api_simulate(
-    entity_name: str = Form(""),
-    change_percent: float = Form(10),
-    period_days: int = Form(30),
     scenario_type: str = Form("price_change"),
+    entity_name: str = Form(""),
+    change_percent: float = Form(None),
+    period_days: int = Form(30),
+    discount_percent: float = Form(None),
+    promotion_days: int = Form(None),
+    order_size_change_percent: float = Form(None),
+    employee_name: str = Form(None),
+    monthly_revenue: float = Form(None),
+    years_in_company: int = Form(None),
 ):
-    sim = await get_sim()
     from src.whatif.mcp.tools import simulate_scenario_tool as sim_tool
-    result = await sim_tool(scenario_type=scenario_type, entity_name=entity_name, change_percent=change_percent, period_days=period_days)
+    kwargs = {"scenario_type": scenario_type, "entity_name": entity_name}
+    if change_percent is not None:
+        kwargs["change_percent"] = change_percent
+    if period_days:
+        kwargs["period_days"] = period_days
+    if discount_percent is not None:
+        kwargs["discount_percent"] = discount_percent
+    if promotion_days:
+        kwargs["promotion_days"] = promotion_days
+    if order_size_change_percent is not None:
+        kwargs["order_size_change_percent"] = order_size_change_percent
+    if employee_name:
+        kwargs["employee_name"] = employee_name
+    if monthly_revenue is not None:
+        kwargs["monthly_revenue"] = monthly_revenue
+    if years_in_company is not None:
+        kwargs["years_in_company"] = years_in_company
+
+    result = await sim_tool(**kwargs)
     if not result.get("success"):
         return {"error": result.get("error", "Ошибка симуляции")}
 
@@ -285,7 +308,6 @@ async def api_simulate(
     margin = 0.4
     bm = baseline_rev * margin
     pm = projected_rev * margin
-    md = pm - bm
 
     chart_data = result.get("chart_params")
     chart_html = ""
