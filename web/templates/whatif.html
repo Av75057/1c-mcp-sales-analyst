@@ -87,12 +87,13 @@ async function askAI() {
     resultDiv.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary mb-3"></div><div class="text-secondary">AI анализирует запрос и запускает симуляцию...</div></div>';
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000);
+        const timeout = setTimeout(() => controller.abort(), 120000);
         const r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `query=${encodeURIComponent(q)}`, signal: controller.signal });
         clearTimeout(timeout);
+        if (!r.ok) { resultDiv.innerHTML = `<div class="alert alert-warning">Ошибка сервера (${r.status}). Попробуйте ещё раз.</div>`; return; }
         const d = await r.json();
         resultDiv.innerHTML = `<div class="card p-3"><div style="white-space:pre-wrap">${d.answer}</div>${d.chart_html ? `<div class="mt-3">${d.chart_html}</div>` : ''}</div>`;
-    } catch(e) { resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}. Попробуйте ещё раз.</div>`; }
+    } catch(e) { resultDiv.innerHTML = `<div class="alert alert-warning">⏱️ Превышено время ожидания (2 минуты). Попробуйте упростить запрос или повторить.</div>`; }
 }
 
 function updateParams() {

@@ -295,7 +295,7 @@ class DeepSeekClient:
         self.client = AsyncOpenAI(
             api_key=settings.deepseek_api_key,
             base_url="https://api.deepseek.com",
-            http_client=httpx.AsyncClient(timeout=60.0),
+            http_client=httpx.AsyncClient(timeout=120.0),
         )
         self.model = settings.llm_model
         self.temperature = settings.llm_temperature
