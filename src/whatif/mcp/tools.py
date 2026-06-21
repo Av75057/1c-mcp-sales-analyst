@@ -44,19 +44,19 @@ async def simulate_scenario_tool(
         if scenario_type == "price_change":
             if change_percent is None:
                 return {"error": "Не указан change_percent"}
-            df, is_real = _gen_test_data(price=100, qty=100, elasticity=-0.7, entity_name=entity_name)
+            df, is_real = await _gen_test_data(price=100, qty=100, elasticity=-0.7, entity_name=entity_name)
             params = {"entity_name": entity_name or "Товар", "historical_data": df, "price_change_percent": change_percent, "cost_per_unit": cost_per_unit or 60, "period_days": period_days}
 
         elif scenario_type == "promotion":
             if discount_percent is None:
                 return {"error": "Не указан discount_percent"}
-            df, is_real = _gen_test_data(price=1000, qty=50, elasticity=-1.3, entity_name=entity_name)
+            df, is_real = await _gen_test_data(price=1000, qty=50, elasticity=-1.3, entity_name=entity_name)
             params = {"entity_name": entity_name or "Категория", "historical_data": df, "discount_percent": discount_percent, "promotion_days": promotion_days or period_days, "cost_per_unit": cost_per_unit or 600}
 
         elif scenario_type == "purchase_change":
             if order_size_change_percent is None:
                 return {"error": "Не указан order_size_change_percent"}
-            df, is_real = _gen_test_data(price=100, qty=100, elasticity=0, entity_name=entity_name)
+            df, is_real = await _gen_test_data(price=100, qty=100, elasticity=0, entity_name=entity_name)
             params = {"entity_name": entity_name or "Товар", "historical_data": df, "current_order_size": 2000, "current_order_frequency_days": 20, "purchase_price_per_unit": 8, "selling_price_per_unit": 15, "order_size_change_percent": order_size_change_percent, "avg_lost_sale_value": 150_000}
 
         elif scenario_type == "employee_departure":
@@ -94,6 +94,7 @@ async def _fetch_real_data(entity_name: str, days: int = 365) -> pd.DataFrame | 
             logger.warning("Нет данных о продажах для '{}' в 1С", entity_name)
             return None
         rows: list[dict] = []
+        for s in filtered:
             d = s.get("date", "")
             qty = s.get("quantity", 0)
             price = s.get("sum", 0) / qty if qty > 0 else 0
@@ -106,19 +107,15 @@ async def _fetch_real_data(entity_name: str, days: int = 365) -> pd.DataFrame | 
         return None
 
 
-def _gen_test_data(price: float = 100, qty: float = 100, elasticity: float = -0.7, entity_name: str = "") -> tuple[pd.DataFrame, bool]:
+async def _gen_test_data(price: float = 100, qty: float = 100, elasticity: float = -0.7, entity_name: str = "") -> tuple[pd.DataFrame, bool]:
     if not settings.use_mock_data and entity_name:
-        import asyncio
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            real = loop.run_until_complete(_fetch_real_data(entity_name))
-            loop.close()
+            real = await _fetch_real_data(entity_name)
             if real is not None:
                 logger.info("Используются реальные данные из 1С для '{}' ({} записей)", entity_name, len(real))
                 return real, True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Ошибка загрузки данных из 1С: {}", e)
     np.random.seed(42)
     dates = pd.date_range("2025-06-22", periods=365, freq="D")
     prices = price + np.random.normal(0, price * 0.05, 365)
