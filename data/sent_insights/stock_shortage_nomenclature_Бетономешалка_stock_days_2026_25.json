@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Бетономешалка:stock_days:2026:25",
-  "detector": "stock_shortage",
-  "entity_id": "Бетономешалка",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-06-19T18:43:05.803084+00:00",
-  "title": "Товар заканчивается: Бетономешалка"
-}

@@ -11,6 +11,11 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from src.config import settings
 from src.logger import logger
 
+
+class DeepSeekError(Exception):
+    """Ошибка при работе с DeepSeek API."""
+    pass
+
 SYSTEM_PROMPT = """Ты — аналитик склада и продаж компании. Твоя задача — отвечать на вопросы пользователя на русском языке, используя данные из 1С через доступные инструменты.
 
 Правила:
@@ -395,3 +400,12 @@ class DeepSeekClient:
                 "completion_tokens": total_output_tokens,
             },
         }
+
+    async def ping(self) -> bool:
+        try:
+            response = await self._call_llm(
+                messages=[{"role": "user", "content": "test"}],
+            )
+            return response.choices[0].finish_reason is not None
+        except Exception:
+            return False

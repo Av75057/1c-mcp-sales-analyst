@@ -8,6 +8,11 @@ from src.config import settings
 from src.logger import logger
 
 
+class C1ClientError(Exception):
+    """Ошибка при работе с 1С HTTP API."""
+    pass
+
+
 class C1Client:
     def __init__(self) -> None:
         self.base_url = settings.c1_base_url.rstrip("/")
@@ -168,6 +173,14 @@ class C1Client:
             }
             for d in data
         ]
+
+    async def ping(self) -> bool:
+        try:
+            client = await self._get_client()
+            resp = await client.get(f"{self.base_url}/stock", timeout=5.0)
+            return resp.status_code < 500
+        except Exception:
+            return False
 
     async def close(self) -> None:
         if self._client:
