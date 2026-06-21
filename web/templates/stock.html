@@ -10,8 +10,8 @@
     <div class="col-md-2"><button class="btn btn-outline-secondary w-100" onclick="exportStock()"><i class="bi bi-download"></i> Excel</button></div>
 </div>
 <div class="card p-3">
-    <canvas id="stockBarChart" height="250" class="mb-3"></canvas>
-    <div class="table-responsive">
+    <div style="height:250px"><canvas id="stockBarChart"></canvas></div>
+    <div class="table-responsive mt-3">
         <table class="table table-sm table-hover" id="stockTable">
             <thead><tr><th>#</th><th>Товар</th><th>Организация</th><th class="text-end">Количество</th></tr></thead>
             <tbody id="stockBody"></tbody>
@@ -36,7 +36,7 @@ async function loadStock() {
         type: 'bar',
         data: { labels: top.map(i => i.nomenclature.length > 20 ? i.nomenclature.slice(0, 19) + '…' : i.nomenclature),
                 datasets: [{ data: top.map(i => i.quantity), backgroundColor: '#2563eb' }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } } }
     });
 }
 function exportStock() {
