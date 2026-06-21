@@ -329,5 +329,6 @@ async def api_simulate(
         "delta": {"revenue_percent": rev, "margin_percent": d.get("margin", 0)},
         "recommendations": result.get("recommendations", []),
         "confidence": result.get("confidence", 0),
+        "use_real_data": result.get("use_real_data", False),
         "chart_html": chart_html,
     }

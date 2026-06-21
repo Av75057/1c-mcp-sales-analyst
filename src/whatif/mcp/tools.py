@@ -91,9 +91,9 @@ async def _fetch_real_data(entity_name: str, days: int = 365) -> pd.DataFrame | 
             return None
         filtered = [s for s in sales if entity_name.lower() in s.get("nomenclature", "").lower()]
         if not filtered:
-            filtered = sales[:100]
+            logger.warning("Нет данных о продажах для '{}' в 1С", entity_name)
+            return None
         rows: list[dict] = []
-        for s in filtered:
             d = s.get("date", "")
             qty = s.get("quantity", 0)
             price = s.get("sum", 0) / qty if qty > 0 else 0

@@ -159,6 +159,7 @@ async function runSimulation() {
         const confLabel = d.confidence >= 0.7 ? 'Высокая' : d.confidence >= 0.4 ? 'Средняя' : 'Низкая';
 
         resultDiv.innerHTML = `
+            ${!d.use_real_data ? `<div class="alert alert-warning">⚠️ Данные сгенерированы (нет истории продаж в 1С). Результаты тестовые.</div>` : ''}
             <div class="card p-3 mb-3 border-${revUp ? 'success' : 'danger'}">
                 <div class="d-flex justify-content-between">
                     <h6 class="mb-0">📊 ${t === 'price_change' ? 'Изменение цены' : t === 'promotion' ? 'Акция/Скидка' : t === 'purchase_change' ? 'Закупки' : 'Увольнение'}: ${name}</h6>
