@@ -86,6 +86,7 @@ class C1Client:
                 "quantity": d.get("quantity", 0),
                 "sum": d.get("sum", d.get("cost", 0)),
                 "manager": d.get("manager", ""),
+                "client": d.get("client", d.get("counterparty", "")),
                 "warehouse": d.get("organization", d.get("warehouse", "")),
             }
             for d in data
