@@ -42,6 +42,17 @@ class WhatIfSimulator:
         elif scenario_type == "employee_departure":
             params = EmployeeDepartureParams(**kwargs)
         else:
-            return await scenario.simulate(**kwargs)
+            r = scenario.simulate(**kwargs)
+            return ScenarioResult(
+                scenario_type=scenario_type,
+                scenario_name=r.scenario_name if hasattr(r, "scenario_name") else r.entity_name,
+                entity_name=r.entity_name if hasattr(r, "entity_name") else "",
+                baseline_metrics={"revenue": r.financial.baseline_revenue if hasattr(r, "financial") else 0},
+                projected_metrics={"revenue": r.financial.projected_revenue if hasattr(r, "financial") else 0},
+                delta_percent={"revenue": r.financial.revenue_delta_percent if hasattr(r, "financial") else 0, "margin": r.financial.margin_delta_percent if hasattr(r, "financial") else 0},
+                confidence=r.overall_confidence if hasattr(r, "overall_confidence") else 0.5,
+                risks=[{"name": risk.name, "probability": risk.probability, "impact": risk.impact} for risk in r.risks] if hasattr(r, "risks") else [],
+                recommendations=r.recommendations if hasattr(r, "recommendations") else [],
+            )
 
         return scenario.simulate(params)

@@ -126,17 +126,24 @@ async def create_chart_tool(
 
 async def simulate_scenario_tool(
     scenario_type: str,
-    entity_name: str,
-    change_percent: float,
-    entity_type: str = "nomenclature",
+    entity_name: str = "",
+    change_percent: float | None = None,
+    discount_percent: float | None = None,
     period_days: int = 30,
+    promotion_days: int | None = None,
+    order_size_change_percent: float | None = None,
+    employee_name: str | None = None,
+    **kwargs: Any,
 ) -> dict[str, Any]:
-    logger.info("simulate_scenario: {} {} change={}%", scenario_type, entity_name, change_percent)
-    from src.whatif.tools.simulate_tool import simulate_scenario_tool as _sim
+    logger.info("simulate_scenario: type={}, entity={}", scenario_type, entity_name)
+    from src.whatif.mcp.tools import simulate_scenario_tool as _sim
     return await _sim(
         scenario_type=scenario_type,
         entity_name=entity_name,
         change_percent=change_percent,
-        entity_type=entity_type,
+        discount_percent=discount_percent,
         period_days=period_days,
+        promotion_days=promotion_days,
+        order_size_change_percent=order_size_change_percent,
+        employee_name=employee_name or entity_name,
     )

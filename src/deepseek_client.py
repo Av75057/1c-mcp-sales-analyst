@@ -34,7 +34,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_receivables — задолженность клиентов
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
-- simulate_scenario — симуляция сценариев "Что если?" (изменение цены, прогноз выручки)
+- simulate_scenario — симуляция сценариев "Что если?" (price_change, promotion, purchase_change, employee_departure)
 
 ПРАВИЛА ВИЗУАЛИЗАЦИИ (create_chart):
 1. ВСЕГДА строй график, если пользователь явно просит или данные содержат временной ряд, сравнение, структуру.
@@ -219,29 +219,45 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
         "type": "function",
         "function": {
             "name": "simulate_scenario",
-            "description": "Симулировать сценарий 'Что если?' и спрогнозировать финансовый эффект.",
+            "description": "Запустить симуляцию бизнес-сценария 'Что если?'. Поддерживает price_change, promotion, purchase_change, employee_departure.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "scenario_type": {
                         "type": "string",
-                        "enum": ["price_change"],
-                        "description": "Тип сценария: price_change — изменение цены",
+                        "enum": ["price_change", "promotion", "purchase_change", "employee_departure"],
+                        "description": "Тип сценария: price_change/промо/закупки/увольнение",
                     },
                     "entity_name": {
                         "type": "string",
-                        "description": "Название товара для симуляции",
+                        "description": "Название товара, категории или менеджера",
                     },
                     "change_percent": {
                         "type": "number",
-                        "description": "Процент изменения (положительный = рост цены, отрицательный = снижение)",
+                        "description": "Изменение цены в % (для price_change)",
+                    },
+                    "discount_percent": {
+                        "type": "number",
+                        "description": "Скидка в % (для promotion)",
                     },
                     "period_days": {
                         "type": "integer",
                         "description": "Период прогноза в днях",
                     },
+                    "promotion_days": {
+                        "type": "integer",
+                        "description": "Длительность акции (для promotion)",
+                    },
+                    "order_size_change_percent": {
+                        "type": "number",
+                        "description": "Изменение заказа в % (для purchase_change)",
+                    },
+                    "employee_name": {
+                        "type": "string",
+                        "description": "Имя сотрудника (для employee_departure)",
+                    },
                 },
-                "required": ["scenario_type", "entity_name", "change_percent"],
+                "required": ["scenario_type"],
             },
         },
     },
