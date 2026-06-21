@@ -4,6 +4,21 @@
     <h4 class="mb-0">🔮 What-If симулятор</h4>
 </div>
 
+<div class="card p-3 mb-3">
+    <h6 class="mb-3">💬 Спросить текстом</h6>
+    <div class="input-group">
+        <input class="form-control" id="queryInput" placeholder="Что будет, если поднять цены на Гвоздь 100мм на 10%?" onkeydown="if(event.key==='Enter') askAI()">
+        <button class="btn btn-primary" onclick="askAI()"><i class="bi bi-send"></i> Спросить</button>
+    </div>
+    <div class="mt-2">
+        <small class="text-secondary">Примеры: </small>
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="ask('Что будет, если поднять цены на Гвоздь 100мм на 10%?')">💰 Цена +10%</button>
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="ask('Что будет, если сделать скидку 15% на Инструменты на 2 недели?')">🏷️ Скидка 15%</button>
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="ask('Что будет, если закупать Саморезы на 50% больше?')">📦 Заказ +50%</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="ask('Что будет, если менеджер Иванов уволится?')">👤 Увольнение</button>
+    </div>
+</div>
+
 <div class="card p-3 mb-4">
     <h6 class="mb-3">📋 Параметры сценария</h6>
     <div class="row g-2 align-items-end">
@@ -61,6 +76,22 @@
 
 {% block scripts %}
 <script>
+function ask(q) { document.getElementById('queryInput').value = q; askAI(); }
+
+async function askAI() {
+    const q = document.getElementById('queryInput').value.trim();
+    if (!q) return;
+    const resultDiv = document.getElementById('simResult');
+    const emptyDiv = document.getElementById('simEmpty');
+    resultDiv.style.display = 'block'; emptyDiv.style.display = 'none';
+    resultDiv.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary mb-3"></div><div class="text-secondary">AI анализирует запрос и запускает симуляцию...</div></div>';
+    try {
+        const r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: `query=${encodeURIComponent(q)}` });
+        const d = await r.json();
+        resultDiv.innerHTML = `<div class="card p-3"><div style="white-space:pre-wrap">${d.answer}</div>${d.chart_html ? `<div class="mt-3">${d.chart_html}</div>` : ''}</div>`;
+    } catch(e) { resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`; }
+}
+
 function updateParams() {
     const t = document.getElementById('scenarioType').value;
     const ent = document.getElementById('entityField');
