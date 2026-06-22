@@ -166,16 +166,13 @@ class C1Client:
                 query,
             )
 
-        # Определяем тип: товар или услуга
-        # Услуги: единица = "ч" (час), "мес" (месяц), "услуга"
-        # Товары: единица = "шт", "кг", "л", "м", "упак"
         service_units = {"ч", "мес", "услуга", "раб"}
         return [
             {
                 "ref": d.get("ref", ""),
                 "name": d.get("name", d.get("title", "")),
                 "unit": d.get("unit", d.get("measure", "")),
-                "type": "услуга" if d.get("unit", "").lower() in service_units else "товар",
+                "item_type": d.get("item_type", ""),
             }
             for d in data
         ]
