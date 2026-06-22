@@ -139,6 +139,15 @@ class MockC1Client:
         logger.debug("mock get_purchases returned {} rows", len(data))
         return data
 
+    async def get_price_history(self, item: str, date_from: str | None = None, date_to: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
+        return [{"date": "2026-01-01", "price": 100.0, "change_percent": 0}, {"date": "2026-03-01", "price": 110.0, "change_percent": 10.0}, {"date": "2026-05-01", "price": 120.0, "change_percent": 9.1}]
+
+    async def get_purchase_orders(self, item: str | None = None, supplier: str | None = None, status: str = "open") -> list[dict[str, Any]]:
+        return [{"date": "2026-06-15", "item": item or "Товар", "quantity": 500, "expected_date": "2026-06-25", "supplier": "ООО Метизы", "status": status, "days_overdue": 0}]
+
+    async def get_item_movement(self, item: str, date_from: str | None = None, date_to: str | None = None) -> list[dict[str, Any]]:
+        return [{"date": "2026-06-15", "incoming": 500, "outgoing": 0}, {"date": "2026-06-16", "incoming": 0, "outgoing": 100}, {"date": "2026-06-17", "incoming": 0, "outgoing": 50}]
+
     async def get_receivables(
         self,
         min_amount: float | None = None,

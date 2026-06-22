@@ -210,6 +210,55 @@ class C1Client:
             for d in data
         ]
 
+    async def get_price_history(
+        self,
+        item: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        client = await self._get_client()
+        params = {"item": item, "limit": str(limit)}
+        if date_from:
+            params["date_from"] = date_from
+        if date_to:
+            params["date_to"] = date_to
+        resp = await client.get(f"{self.base_url}/price-history", params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_purchase_orders(
+        self,
+        item: str | None = None,
+        supplier: str | None = None,
+        status: str = "open",
+    ) -> list[dict[str, Any]]:
+        client = await self._get_client()
+        params: dict[str, str] = {"status": status}
+        if item:
+            params["item"] = item
+        if supplier:
+            params["supplier"] = supplier
+        resp = await client.get(f"{self.base_url}/purchase-orders", params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+    async def get_item_movement(
+        self,
+        item: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
+        client = await self._get_client()
+        params: dict[str, str] = {"item": item}
+        if date_from:
+            params["date_from"] = date_from
+        if date_to:
+            params["date_to"] = date_to
+        resp = await client.get(f"{self.base_url}/item-movement", params=params)
+        resp.raise_for_status()
+        return resp.json()
+
     async def ping(self) -> bool:
         try:
             client = await self._get_client()

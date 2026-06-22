@@ -85,6 +85,24 @@ async def _gather_context(anomaly: dict[str, Any]) -> dict[str, Any]:
         if entity_name:
             ctx["sales_item_recent"] = [s for s in sales_recent if entity_name.lower() in (s.get("nomenclature", "") or "").lower()][:5]
     except Exception:
-        ctx["sales_recent"] = []
+        pass
+
+    try:
+        price_history = await client.get_price_history(item=entity_name, limit=5)
+        ctx["price_history"] = [{"date": p.get("date", ""), "price": p.get("price", 0), "change": p.get("change_percent", 0)} for p in price_history[:5]]
+    except Exception:
+        ctx["price_history"] = []
+
+    try:
+        orders = await client.get_purchase_orders(item=entity_name)
+        ctx["purchase_orders"] = [{"expected_date": o.get("expected_date", ""), "quantity": o.get("quantity", 0), "days_overdue": o.get("days_overdue", 0), "supplier": o.get("supplier", "")} for o in orders[:5]]
+    except Exception:
+        ctx["purchase_orders"] = []
+
+    try:
+        movement = await client.get_item_movement(item=entity_name, date_from=(today - timedelta(days=14)).isoformat(), date_to=today.isoformat())
+        ctx["item_movement"] = [{"date": m.get("date", ""), "incoming": m.get("incoming", 0), "outgoing": m.get("outgoing", 0)} for m in movement[:20]]
+    except Exception:
+        ctx["item_movement"] = []
 
     return ctx
