@@ -12,4 +12,4 @@ jobs:
       - name: Install deps
         run: pip install -e ".[dev]" && pip install plotly pandas scikit-learn numpy joblib pillow kaleido 2>/dev/null || true
       - name: Test
-        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_c1_client.py tests/test_insights.py tests/test_tools.py tests/test_abc_xyz.py tests/test_docparser.py tests/test_whatif_scenarios.py -v --tb=short 2>&1
+        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_c1_client.py tests/test_insights.py tests/test_tools.py tests/test_abc_xyz.py tests/test_docparser.py tests/test_whatif_scenarios.py tests/test_forecasting.py tests/test_api.py -v --tb=short 2>&1
