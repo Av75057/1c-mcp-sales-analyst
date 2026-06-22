@@ -100,6 +100,22 @@ async def list_nomenclature_tool(
     return await client.list_nomenclature(query=query, limit=limit)
 
 
+async def get_purchases_tool(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    item: str | None = None,
+    supplier: str | None = None,
+) -> list[dict[str, Any]]:
+    logger.info("get_purchases: date_from={}, date_to={}, item={}, supplier={}", date_from, date_to, item, supplier)
+    client = get_client()
+    return await client.get_purchases(
+        date_from=date_from,
+        date_to=date_to,
+        item=item,
+        supplier=supplier,
+    )
+
+
 async def create_chart_tool(
     chart_type: str,
     title: str,

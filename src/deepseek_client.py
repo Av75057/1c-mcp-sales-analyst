@@ -32,6 +32,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_sales — данные о продажах
 - get_sales_by_manager — продажи в разрезе менеджеров
 - get_receivables — задолженность клиентов
+- get_purchases — закупки товаров/услуг у поставщиков
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
 - simulate_scenario — симуляция сценариев "Что если?" (price_change, promotion, purchase_change, employee_departure)
@@ -141,6 +142,34 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
                     "date_from": {
                         "type": "string",
                         "description": "Начальная дата в формате ISO (YYYY-MM-DD)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_purchases",
+            "description": "Получить данные о закупках (поступление товаров/услуг от поставщиков)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date_from": {
+                        "type": "string",
+                        "description": "Начальная дата в формате ISO (YYYY-MM-DD)",
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Конечная дата в формате ISO (YYYY-MM-DD)",
+                    },
+                    "item": {
+                        "type": "string",
+                        "description": "Название товара/услуги (частичное совпадение)",
+                    },
+                    "supplier": {
+                        "type": "string",
+                        "description": "Название поставщика (частичное совпадение)",
                     },
                 },
             },
@@ -270,18 +299,20 @@ TOOL_NAME_TO_FUNC: dict[str, Any] = {}
 def _import_tools() -> None:
     from src.tools import (
         create_chart_tool,
-        simulate_scenario_tool,
+        get_purchases_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
         get_sales_tool,
         get_stock_tool,
         list_nomenclature_tool,
+        simulate_scenario_tool,
     )
 
     TOOL_NAME_TO_FUNC["get_stock"] = get_stock_tool
     TOOL_NAME_TO_FUNC["get_sales"] = get_sales_tool
     TOOL_NAME_TO_FUNC["get_sales_by_manager"] = get_sales_by_manager_tool
     TOOL_NAME_TO_FUNC["get_receivables"] = get_receivables_tool
+    TOOL_NAME_TO_FUNC["get_purchases"] = get_purchases_tool
     TOOL_NAME_TO_FUNC["list_nomenclature"] = list_nomenclature_tool
     TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
     TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool

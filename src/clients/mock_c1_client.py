@@ -115,6 +115,30 @@ class MockC1Client:
         logger.debug("mock get_sales_by_manager returned {} rows", len(result))
         return result
 
+    async def get_purchases(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        item: str | None = None,
+        supplier: str | None = None,
+    ) -> list[dict[str, Any]]:
+        data: list[dict[str, Any]] = [
+            {"date": "2026-05-15", "item": "Гвоздь 100мм", "quantity": 500, "sum": 6250.0, "supplier": "ООО Метизы"},
+            {"date": "2026-05-20", "item": "Саморез 50мм", "quantity": 1000, "sum": 3200.0, "supplier": "ООО Метизы"},
+            {"date": "2026-06-01", "item": "Аренда виртуального сервера.", "quantity": 1, "sum": 3300.0, "supplier": "ООО Хостинг"},
+            {"date": "2026-06-10", "item": "Краска акриловая 5кг", "quantity": 50, "sum": 22500.0, "supplier": "ИП Краски"},
+        ]
+        if item:
+            data = [d for d in data if item.lower() in d["item"].lower()]
+        if supplier:
+            data = [d for d in data if supplier.lower() in d["supplier"].lower()]
+        if date_from:
+            data = [d for d in data if d["date"] >= date_from]
+        if date_to:
+            data = [d for d in data if d["date"] <= date_to]
+        logger.debug("mock get_purchases returned {} rows", len(data))
+        return data
+
     async def get_receivables(
         self,
         min_amount: float | None = None,

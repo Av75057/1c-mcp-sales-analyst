@@ -145,6 +145,39 @@ class C1Client:
             for d in data
         ]
 
+    async def get_purchases(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        item: str | None = None,
+        supplier: str | None = None,
+    ) -> list[dict[str, Any]]:
+        client = await self._get_client()
+        params: dict[str, str] = {}
+        if date_from:
+            params["date_from"] = date_from
+        if date_to:
+            params["date_to"] = date_to
+        if item:
+            params["item"] = item
+        if supplier:
+            params["supplier"] = supplier
+
+        logger.debug("GET /purchases params={}", params)
+        resp = await client.get(f"{self.base_url}/purchases", params=params)
+        resp.raise_for_status()
+        data: list[dict[str, Any]] = resp.json()
+        return [
+            {
+                "date": d.get("date", ""),
+                "nomenclature": d.get("item", ""),
+                "quantity": d.get("quantity", 0),
+                "sum": d.get("sum", 0),
+                "supplier": d.get("supplier", ""),
+            }
+            for d in data
+        ]
+
     async def list_nomenclature(
         self,
         query: str,
