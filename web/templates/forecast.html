@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📈 Прогнозы</h4>
+</div>
+
+<ul class="nav nav-tabs mb-3" id="forecastTabs">
+    <li class="nav-item"><button class="nav-link active" onclick="showTab('sales')">📊 Продажи</button></li>
+    <li class="nav-item"><button class="nav-link" onclick="showTab('stockout')">📦 Stockout</button></li>
+</ul>
+
+<div id="salesTab">
+    <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4"><label class="form-label small">Товар</label><input class="form-control" id="itemName" value="Гвоздь 100мм"></div>
+            <div class="col-md-2"><label class="form-label small">Дней</label><select class="form-select" id="fcDays"><option value="7">7</option><option value="14" selected>14</option><option value="30">30</option></select></div>
+            <div class="col-md-2"><label class="form-label small">Метод</label><select class="form-select" id="fcMethod"><option value="auto">Auto</option><option value="prophet">Prophet</option><option value="holt_winters">Holt-Winters</option><option value="linear">Linear</option></select></div>
+            <div class="col-md-2"><button class="btn btn-primary w-100" onclick="forecastSales()"><i class="bi bi-graph-up"></i> Прогноз</button></div>
+        </div>
+    </div>
+    <div id="salesResult"></div>
+</div>
+
+<div id="stockoutTab" style="display:none">
+    <div class="card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3"><label class="form-label small">Время поставки (дней)</label><input class="form-control" id="leadTime" type="number" value="7"></div>
+            <div class="col-md-3"><label class="form-label small">Страховой запас (дней)</label><input class="form-control" id="safetyStock" type="number" value="3"></div>
+            <div class="col-md-2"><button class="btn btn-primary w-100" onclick="forecastStockout()"><i class="bi bi-exclamation-triangle"></i> Анализ</button></div>
+        </div>
+    </div>
+    <div id="stockoutResult"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(name) {
+    document.querySelectorAll('#forecastTabs .nav-link').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('salesTab').style.display = name === 'sales' ? 'block' : 'none';
+    document.getElementById('stockoutTab').style.display = name === 'stockout' ? 'block' : 'none';
+}
+
+async function forecastSales() {
+    const name = document.getElementById('itemName').value;
+    const days = document.getElementById('fcDays').value;
+    const method = document.getElementById('fcMethod').value;
+    const div = document.getElementById('salesResult');
+    div.innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div></div>';
+    const r = await fetch(`/api/forecast/sales?nomenclature=${encodeURIComponent(name)}&days=${days}&method=${method}`);
+    const d = await r.json();
+    if (d.error) { div.innerHTML = `<div class="alert alert-warning">${d.error}</div>`; return; }
+    const fc = d.forecast;
+    div.innerHTML = `
+        <div class="card p-3 mb-3"><h6 class="mb-0">📊 ${d.item.name} — прогноз на ${d.forecast_period.days} дней</h6><small class="text-secondary">Метод: ${d.method_used.name}${d.method_used.accuracy_metrics ? ` · MAPE: ${d.method_used.accuracy_metrics.mape}%` : ''}</small></div>
+        <div class="row g-3 mb-3"><div class="col-md-4"><div class="card p-3 text-center"><div class="card-title">Прогноз всего</div><div style="font-size:1.8rem;font-weight:700">${fc.total.toLocaleString()}</div></div></div></div>
+        <div class="card p-3"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Дата</th><th class="text-end">Прогноз</th><th class="text-end">Низкий</th><th class="text-end">Высокий</th></tr></thead><tbody>${fc.daily.map(d2 => `<tr><td>${d2.date}</td><td class="text-end">${d2.value.toFixed(1)}</td><td class="text-end text-warning">${d2.lower_bound.toFixed(1)}</td><td class="text-end text-success">${d2.upper_bound.toFixed(1)}</td></tr>`).join('')}</tbody></table></div></div>
+    `;
+}
+
+async function forecastStockout() {
+    const lt = document.getElementById('leadTime').value;
+    const ss = document.getElementById('safetyStock').value;
+    const div = document.getElementById('stockoutResult');
+    div.innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div></div>';
+    const r = await fetch(`/api/forecast/stockout?lead_time=${lt}&safety_stock=${ss}`);
+    const d = await r.json();
+    if (d.error) { div.innerHTML = `<div class="alert alert-warning">${d.error}</div>`; return; }
+    const s = d.summary;
+    div.innerHTML = `
+        <div class="row g-3 mb-3">
+            <div class="col-md-3"><div class="card p-3 text-center"><div class="card-title">Всего</div><div style="font-size:1.5rem">${s.total_items_analyzed}</div></div></div>
+            <div class="col-md-3"><div class="card p-3 text-center border-danger"><div class="card-title text-danger">Критические</div><div style="font-size:1.5rem;color:var(--bs-danger)">${s.critical_stockouts}</div></div></div>
+            <div class="col-md-3"><div class="card p-3 text-center border-warning"><div class="card-title text-warning">Скоро</div><div style="font-size:1.5rem;color:var(--bs-warning)">${s.upcoming_stockouts}</div></div></div>
+            <div class="col-md-3"><div class="card p-3 text-center border-success"><div class="card-title text-success">Безопасные</div><div style="font-size:1.5rem;color:var(--bs-success)">${s.safe_items}</div></div></div>
+        </div>
+        ${d.critical?.length ? `<div class="card p-3"><h6 class="text-danger mb-3">🔴 Критические (${d.critical.length})</h6><div class="table-responsive"><table class="table table-sm"><thead><tr><th>Товар</th><th class="text-end">Остаток</th><th class="text-end">Расход/день</th><th class="text-end">Дней до stockout</th><th class="text-end">Заказать</th></tr></thead><tbody>${d.critical.map(c => `<tr><td>${c.item}</td><td class="text-end">${c.current_stock}</td><td class="text-end">${c.avg_daily_consumption}</td><td class="text-end text-danger">${c.days_until_stockout}</td><td class="text-end">${c.recommended_order}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+    `;
+}
+</script>
+{% endblock %}

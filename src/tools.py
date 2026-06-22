@@ -175,3 +175,15 @@ async def abc_xyz_analysis_tool(
     logger.info("abc_xyz_analysis: {}-{}", date_from, date_to)
     from src.analysis.tool import abc_xyz_analysis_tool as _a
     return await _a(date_from=date_from, date_to=date_to, group_by=group_by, abc_thresholds=abc_thresholds, xyz_thresholds=xyz_thresholds)
+
+
+async def forecast_sales_tool(nomenclature: str, days: int = 30, method: str = "auto") -> dict[str, Any]:
+    logger.info("forecast_sales: {} {} days", nomenclature, days)
+    from src.forecasting.tool import forecast_sales_tool as _f
+    return await _f(nomenclature=nomenclature, days=days, method=method)
+
+
+async def forecast_stockout_tool(lead_time_days: int = 7, safety_stock_days: int = 3) -> dict[str, Any]:
+    logger.info("forecast_stockout: lead={}", lead_time_days)
+    from src.forecasting.tool import forecast_stockout_tool as _f
+    return await _f(lead_time_days=lead_time_days, safety_stock_days=safety_stock_days)

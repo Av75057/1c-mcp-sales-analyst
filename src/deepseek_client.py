@@ -34,6 +34,8 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
 - abc_xyz_analysis — ABC/XYZ классификация товаров/клиентов по выручке и стабильности
+- forecast_sales — прогноз продаж товара на N дней (Prophet / Holt-Winters / Linear)
+- forecast_stockout — прогноз окончания товаров на складе (критические, скорые, безопасные)
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
 - simulate_scenario — симуляция сценариев "Что если?" (price_change, promotion, purchase_change, employee_departure)
@@ -179,6 +181,37 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
         "type": "function",
         "function": {
+            "name": "forecast_sales",
+            "description": "Прогноз продаж товара на N дней вперёд (использует Prophet/Holt-Winters/Linear)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nomenclature": {"type": "string", "description": "Название товара"},
+                    "days": {"type": "integer", "description": "Горизонт прогноза в днях", "default": 30},
+                    "method": {"type": "string", "enum": ["auto", "prophet", "holt_winters", "linear"], "description": "Метод прогнозирования"},
+                },
+                "required": ["nomenclature"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "forecast_stockout",
+            "description": "Прогноз окончания товаров на складе: какие товары закончатся критически скоро",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "lead_time_days": {"type": "integer", "description": "Время поставки в днях", "default": 7},
+                    "safety_stock_days": {"type": "integer", "description": "Страховой запас в днях", "default": 3},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "abc_xyz_analysis",
             "description": "ABC/XYZ классификация товаров/клиентов по выручке и стабильности спроса",
             "parameters": {
@@ -317,6 +350,8 @@ def _import_tools() -> None:
     from src.tools import (
         abc_xyz_analysis_tool,
         create_chart_tool,
+        forecast_sales_tool,
+        forecast_stockout_tool,
         get_purchases_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
@@ -335,6 +370,8 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
     TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool
     TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
+    TOOL_NAME_TO_FUNC["forecast_sales"] = forecast_sales_tool
+    TOOL_NAME_TO_FUNC["forecast_stockout"] = forecast_stockout_tool
 
 
 _import_tools()

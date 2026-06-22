@@ -202,6 +202,11 @@ async def abc_xyz_page():
     return render("abc_xyz.html", {"page": "abc_xyz"})
 
 
+@app.get("/forecast")
+async def forecast_page():
+    return render("forecast.html", {"page": "forecast"})
+
+
 @app.get("/whatif")
 async def whatif_page():
     return render("whatif.html", {"page": "whatif"})
