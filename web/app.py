@@ -238,6 +238,18 @@ async def api_stock(nomenclature: str = "", min_quantity: int = 0):
     return {"data": data, "total": len(data)}
 
 
+@app.get("/api/forecast/sales")
+async def api_forecast_sales(nomenclature: str = "", days: int = 30, method: str = "auto"):
+    from src.forecasting.tool import forecast_sales_tool
+    return await forecast_sales_tool(nomenclature=nomenclature, days=days, method=method)
+
+
+@app.get("/api/forecast/stockout")
+async def api_forecast_stockout(lead_time: int = 7, safety_stock: int = 3):
+    from src.forecasting.tool import forecast_stockout_tool
+    return await forecast_stockout_tool(lead_time_days=lead_time, safety_stock_days=safety_stock)
+
+
 @app.get("/api/analysis/abc-xyz")
 async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "nomenclature"):
     try:
