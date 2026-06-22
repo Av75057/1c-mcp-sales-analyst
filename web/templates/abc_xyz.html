@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">📊 ABC/XYZ анализ</h4>
+</div>
+
+<div class="card p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small">Дата с</label>
+            <input class="form-control" id="dateFrom" type="date">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Дата по</label>
+            <input class="form-control" id="dateTo" type="date">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Группировка</label>
+            <select class="form-select" id="groupBy">
+                <option value="nomenclature">Товары</option>
+                <option value="client">Клиенты</option>
+                <option value="manager">Менеджеры</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">&nbsp;</label>
+            <button class="btn btn-primary w-100" onclick="loadAnalysis()"><i class="bi bi-bar-chart"></i> Анализ</button>
+        </div>
+    </div>
+</div>
+
+<div id="resultArea" style="display:none"></div>
+
+<div class="card p-5 text-center text-secondary" id="emptyState">
+    <h1 class="mb-3">📊</h1>
+    <p class="mb-0">Выберите период и нажмите «Анализ»</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAnalysis() {
+    const df = document.getElementById('dateFrom').value;
+    const dt = document.getElementById('dateTo').value;
+    const gb = document.getElementById('groupBy').value;
+    const resultDiv = document.getElementById('resultArea');
+    const emptyDiv = document.getElementById('emptyState');
+    resultDiv.style.display = 'block'; emptyDiv.style.display = 'none';
+    resultDiv.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary mb-3"></div></div>';
+
+    try {
+        const r = await fetch(`/api/analysis/abc-xyz?date_from=${df}&date_to=${dt}&group_by=${gb}`);
+        const d = await r.json();
+        if (d.error) { resultDiv.innerHTML = `<div class="alert alert-warning">${d.error}</div>`; return; }
+
+        const m = d.matrix || {};
+        const s = d.summary || {};
+
+        resultDiv.innerHTML = `
+            <div class="card p-3 mb-3">
+                <h6 class="mb-0">📊 ABC/XYZ анализ — ${s.total_items || 0} позиций, выручка ${(s.total_revenue || 0).toLocaleString()} ₽</h6>
+                <small class="text-secondary">Период: ${s.period_from || '?'} — ${s.period_to || '?'} · Группировка: ${s.analysis_type || '?'}</small>
+            </div>
+
+            <div class="row g-2 mb-3" id="matrixGrid">
+                ${['AX','AY','AZ','BX','BY','BZ','CX','CY','CZ'].map(cat => {
+                    const v = m[cat] || {count:0, share:0};
+                    const maxCount = Math.max(...Object.values(m).map(x => x.count || 0), 1);
+                    const intensity = v.count / maxCount;
+                    const bg = v.count > 0 ? `rgba(37, 99, 235, ${0.1 + intensity * 0.6})` : '#f8f9fa';
+                    const border = v.count > 0 ? '1px solid #2563eb22' : '1px solid #eee';
+                    return `<div class="col-md-4"><div class="card p-3 text-center" style="background:${bg};border:${border}"><div style="font-size:1.5rem;font-weight:700" class="mb-1">${cat}</div><div style="font-size:1.2rem">${v.count}</div><small class="text-secondary">${v.share.toFixed(1)}% выручки</small></div></div>`;
+                }).join('')}
+            </div>
+
+            ${d.recommendations?.length ? `
+            <div class="card p-3 mb-3">
+                <h6 class="mb-3">💡 Рекомендации</h6>
+                ${d.recommendations.map(r => `<div class="mb-2"><strong>${r.category}</strong> — ${r.action} (${r.items_count} товаров, ${(r.potential_savings || 0).toLocaleString()} ₽ экономии)</div>`).join('')}
+            </div>` : ''}
+
+            <div class="card p-3 mb-3">
+                <canvas id="paretoChart" height="280"></canvas>
+            </div>
+        `;
+
+        // Build Pareto chart
+        const items = [];
+        const categories = ['AX','AY','AZ','BX','BY','BZ','CX','CY','CZ'];
+        categories.forEach(cat => {
+            if (m[cat]?.count > 0) {
+                items.push({category: cat, count: m[cat].count, share: m[cat].share});
+            }
+        });
+        items.sort((a,b) => b.share - a.share);
+        if (window.paretoChart) window.paretoChart.destroy();
+        window.paretoChart = new Chart(document.getElementById('paretoChart'), {
+            type: 'bar',
+            data: {
+                labels: items.map(i => i.category),
+                datasets: [{
+                    label: 'Доля выручки %',
+                    data: items.map(i => i.share),
+                    backgroundColor: ['#2563eb','#3b82f6','#60a5fa','#f59e0b','#fbbf24','#fcd34d','#ef4444','#f87171','#fca5a5'],
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '% выручки' } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    } catch(e) { resultDiv.innerHTML = `<div class="alert alert-danger">Ошибка: ${e.message}</div>`; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date(); const first = new Date(today.getFullYear(), 0, 1);
+    document.getElementById('dateFrom').value = first.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

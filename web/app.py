@@ -197,6 +197,11 @@ async def api_insights_scan():
         return {"error": str(e), "count": 0}
 
 
+@app.get("/analysis/abc-xyz")
+async def abc_xyz_page():
+    return render("abc_xyz.html", {"page": "abc_xyz"})
+
+
 @app.get("/whatif")
 async def whatif_page():
     return render("whatif.html", {"page": "whatif"})
