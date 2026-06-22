@@ -27,7 +27,7 @@ async def abc_xyz_analysis_tool(
         "summary": result.summary,
         "matrix": result.matrix,
         "recommendations": result.recommendations,
-        "categories": {k: v[:5] for k, v in result.categories.items()},
+        "categories": {k: v[:3] for k, v in result.categories.items()},
     }
 
 

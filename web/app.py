@@ -235,13 +235,16 @@ async def api_stock(nomenclature: str = "", min_quantity: int = 0):
 
 @app.get("/api/analysis/abc-xyz")
 async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "nomenclature"):
-    from src.analysis.abc_xyz import analyze
-    client = await get_c1()
-    sales = await client.get_sales(date_from=date_from or None, date_to=date_to or None)
-    if not sales:
-        return {"error": "Нет данных"}
-    result = analyze(sales, date_from=date_from, date_to=date_to, group_by=group_by)
-    return {"summary": result.summary, "matrix": result.matrix, "recommendations": result.recommendations}
+    try:
+        from src.analysis.abc_xyz import analyze
+        client = await get_c1()
+        sales = await client.get_sales(date_from=date_from or None, date_to=date_to or None)
+        if not sales:
+            return {"error": "Нет данных о продажах за указанный период"}
+        result = analyze(sales, date_from=date_from, date_to=date_to, group_by=group_by)
+        return {"summary": result.summary, "matrix": result.matrix, "recommendations": result.recommendations}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.get("/api/nomenclature")
