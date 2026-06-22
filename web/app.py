@@ -233,6 +233,13 @@ async def api_stock(nomenclature: str = "", min_quantity: int = 0):
     return {"data": data, "total": len(data)}
 
 
+@app.get("/api/nomenclature")
+async def api_nomenclature(query: str = ""):
+    client = await get_c1()
+    data = await client.list_nomenclature(query=query or "", limit=50)
+    return {"data": data, "total": len(data)}
+
+
 @app.get("/api/sales")
 async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
     client = await get_c1()
