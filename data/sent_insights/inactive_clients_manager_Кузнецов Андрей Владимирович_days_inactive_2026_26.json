@@ -1,0 +1,9 @@
+{
+  "dedup_key": "inactive_clients:manager:Кузнецов Андрей Владимирович:days_inactive:2026:26",
+  "detector": "inactive_clients",
+  "entity_id": "Кузнецов Андрей Владимирович",
+  "metric_name": "days_inactive",
+  "priority": "warning",
+  "sent_at": "2026-06-22T13:48:32.265535+00:00",
+  "title": "Менеджер не активен: Кузнецов Андрей Владимирович"
+}

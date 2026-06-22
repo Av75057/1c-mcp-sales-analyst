@@ -163,3 +163,15 @@ async def simulate_scenario_tool(
         order_size_change_percent=order_size_change_percent,
         employee_name=employee_name or entity_name,
     )
+
+
+async def abc_xyz_analysis_tool(
+    date_from: str = "",
+    date_to: str = "",
+    group_by: str = "nomenclature",
+    abc_thresholds: list[int] | None = None,
+    xyz_thresholds: list[int] | None = None,
+) -> dict[str, Any]:
+    logger.info("abc_xyz_analysis: {}-{}", date_from, date_to)
+    from src.analysis.tool import abc_xyz_analysis_tool as _a
+    return await _a(date_from=date_from, date_to=date_to, group_by=group_by, abc_thresholds=abc_thresholds, xyz_thresholds=xyz_thresholds)

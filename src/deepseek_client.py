@@ -33,6 +33,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_sales_by_manager — продажи в разрезе менеджеров
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
+- abc_xyz_analysis — ABC/XYZ классификация товаров/клиентов по выручке и стабильности
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
 - simulate_scenario — симуляция сценариев "Что если?" (price_change, promotion, purchase_change, employee_departure)
@@ -178,6 +179,22 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
         "type": "function",
         "function": {
+            "name": "abc_xyz_analysis",
+            "description": "ABC/XYZ классификация товаров/клиентов по выручке и стабильности спроса",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date_from": {"type": "string", "description": "Начальная дата (YYYY-MM-DD)"},
+                    "date_to": {"type": "string", "description": "Конечная дата (YYYY-MM-DD)"},
+                    "group_by": {"type": "string", "enum": ["nomenclature", "client", "manager"], "description": "Группировка"},
+                },
+                "required": ["date_from", "date_to"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "list_nomenclature",
             "description": "Поиск номенклатуры по названию",
             "parameters": {
@@ -298,6 +315,7 @@ TOOL_NAME_TO_FUNC: dict[str, Any] = {}
 
 def _import_tools() -> None:
     from src.tools import (
+        abc_xyz_analysis_tool,
         create_chart_tool,
         get_purchases_tool,
         get_receivables_tool,
@@ -316,6 +334,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["list_nomenclature"] = list_nomenclature_tool
     TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
     TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool
+    TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
 
 
 _import_tools()
