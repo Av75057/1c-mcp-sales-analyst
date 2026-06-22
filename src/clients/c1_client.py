@@ -223,7 +223,7 @@ class C1Client:
             params["date_from"] = date_from
         if date_to:
             params["date_to"] = date_to
-        resp = await client.get(f"{self.base_url}/price-history", params=params)
+        resp = await client.get(f"{self.base_url}/pricehistory", params=params)
         resp.raise_for_status()
         return resp.json()
 
@@ -239,7 +239,7 @@ class C1Client:
             params["item"] = item
         if supplier:
             params["supplier"] = supplier
-        resp = await client.get(f"{self.base_url}/purchase-orders", params=params)
+        resp = await client.get(f"{self.base_url}/purchaseorders", params=params)
         resp.raise_for_status()
         return resp.json()
 
@@ -255,7 +255,7 @@ class C1Client:
             params["date_from"] = date_from
         if date_to:
             params["date_to"] = date_to
-        resp = await client.get(f"{self.base_url}/item-movement", params=params)
+        resp = await client.get(f"{self.base_url}/itemmovement", params=params)
         resp.raise_for_status()
         return resp.json()
 

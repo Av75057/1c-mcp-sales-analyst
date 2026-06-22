@@ -591,7 +591,7 @@ location /unf-kav {
 }
 ```
 
-### 2.7. GET `/hs/api/price-history`
+### 2.7. GET `/hs/api/pricehistory`
 
 **URL-шаблон:** `price-history`  
 **Метод:** GET  
@@ -682,7 +682,7 @@ location /unf-kav {
 
 ---
 
-### 2.8. GET `/hs/api/purchase-orders`
+### 2.8. GET `/hs/api/purchaseorders`
 
 **URL-шаблон:** `purchase-orders`  
 **Метод:** GET  
@@ -772,7 +772,7 @@ location /unf-kav {
 
 ---
 
-### 2.9. GET `/hs/api/item-movement`
+### 2.9. GET `/hs/api/itemmovement`
 
 **URL-шаблон:** `item-movement`  
 **Метод:** GET  
