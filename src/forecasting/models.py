@@ -32,8 +32,9 @@ def _prepare(df: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray]:
     df = df.copy().sort_values("date")
     if "ds" not in df.columns:
         df["ds"] = pd.to_datetime(df["date"])
-    y = df["y"].values if "y" in df.columns else df["quantity"].values
-    return df, y
+    if "y" not in df.columns:
+        df["y"] = df["quantity"].values
+    return df, df["y"].values
 
 
 class HoltWintersModel(ForecastModel):
@@ -55,9 +56,13 @@ class HoltWintersModel(ForecastModel):
         if self._fitted is None:
             return pd.DataFrame()
         fc = self._fitted.forecast(days)
+        if hasattr(fc, "values"):
+            fc_vals = fc.values
+        else:
+            fc_vals = fc
         last_date = self._history["ds"].max()
         dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=days)
-        return pd.DataFrame({"ds": dates, "yhat": fc.values, "yhat_lower": fc.values * 0.9, "yhat_upper": fc.values * 1.1})
+        return pd.DataFrame({"ds": dates, "yhat": fc_vals, "yhat_lower": fc_vals * 0.9, "yhat_upper": fc_vals * 1.1})
 
 
 class LinearModel(ForecastModel):
