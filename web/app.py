@@ -260,7 +260,10 @@ async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "n
     try:
         from src.analysis.abc_xyz import analyze
         client = await get_c1()
-        sales = await client.get_sales(date_from=date_from or None, date_to=date_to or None)
+        try:
+            sales = await asyncio.wait_for(client.get_sales(date_from=date_from or None, date_to=date_to or None), timeout=30.0)
+        except asyncio.TimeoutError:
+            return {"error": "Таймаут загрузки данных из 1С"}
         if not sales:
             return {"error": "Нет данных о продажах за указанный период"}
         result = analyze(sales, date_from=date_from, date_to=date_to, group_by=group_by)
