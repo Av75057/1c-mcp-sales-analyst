@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
+from src.cache import CachedC1Client
 from src.clients.c1_client import C1Client
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
@@ -28,7 +29,7 @@ def render(name: str, context: dict | None = None) -> HTMLResponse:
     html = template.render(**(context or {}))
     return HTMLResponse(html)
 
-c1: C1Client | None = None
+c1: Any | None = None
 ds: DeepSeekClient | None = None
 simulator: WhatIfSimulator | None = None
 
@@ -36,8 +37,9 @@ simulator: WhatIfSimulator | None = None
 async def get_c1() -> C1Client:
     global c1
     if c1 is None:
-        c1 = C1Client()
-    return c1
+        real_client = C1Client()
+        c1 = CachedC1Client(real_client, ttl=30)  # type: ignore
+    return c1  # type: ignore
 
 
 async def get_ds() -> DeepSeekClient:
