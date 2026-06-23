@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import base64
 from typing import Any
 
 import httpx
 
 from src.config import settings
 from src.logger import logger
+from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed
 
 
 class C1ClientError(Exception):
@@ -16,14 +19,24 @@ class C1ClientError(Exception):
 class C1Client:
     def __init__(self) -> None:
         self.base_url = settings.c1_base_url.rstrip("/")
-        self.auth = (settings.c1_username, settings.c1_password)
+        raw = f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")
+        self._auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
         self._client: httpx.AsyncClient | None = None
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(3), retry=retry_if_exception_type((httpx.ReadTimeout, httpx.ConnectError)))
+    async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        client = await self._get_client()
+        resp = await client.request(method, path, **kwargs)
+        resp.raise_for_status()
+        return resp
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
+            limits = httpx.Limits(max_keepalive_connections=0, max_connections=5)
             self._client = httpx.AsyncClient(
-                auth=self.auth,
+                headers={"Authorization": self._auth_header},
                 timeout=60.0,
+                limits=limits,
             )
         return self._client
 
@@ -44,8 +57,7 @@ class C1Client:
             params["min_quantity"] = str(min_quantity)
 
         logger.debug("GET /stock params={}", params)
-        resp = await client.get(f"{self.base_url}/stock", params=params)
-        resp.raise_for_status()
+        resp = await self._request("GET", f"{self.base_url}/stock", params=params)
         data: list[dict[str, Any]] = resp.json()
         return [
             {
