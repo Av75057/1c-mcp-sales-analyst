@@ -2,20 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.cache import CachedC1Client
 from src.clients.c1_client import C1Client
 from src.clients.mock_c1_client import MockC1Client
 from src.config import settings
 from src.logger import logger
 
-C1ClientProtocol = C1Client | MockC1Client
+C1ClientProtocol = C1Client | MockC1Client | CachedC1Client
 
 
 def _get_client() -> C1ClientProtocol:
     if settings.use_mock_data:
         logger.info("Используется MockC1Client (демо-режим)")
         return MockC1Client()
-    logger.info("Используется C1Client (режим 1С)")
-    return C1Client()
+    logger.info("Используется CachedC1Client (режим 1С)")
+    return CachedC1Client(C1Client(), ttl=30)
 
 
 _client_instance: C1ClientProtocol | None = None

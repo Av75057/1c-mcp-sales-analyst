@@ -182,17 +182,26 @@ async def api_insights_scan():
 
         count = 0
         dedup = DedupEngine(config)
-        for detector in detectors:
+
+        async def safe_detect(detector):
             try:
                 raws = await asyncio.wait_for(detector.detect(), timeout=15.0)
-                for raw in raws:
-                    if dedup.should_send(raw):
-                        dedup.mark_sent(raw)
-                        count += 1
+                return raws
             except asyncio.TimeoutError:
                 logger.warning("Детектор {} превысил таймаут", detector.__class__.__name__)
             except Exception as e:
                 logger.warning("Детектор {} ошибка: {}", detector.__class__.__name__, e)
+            return []
+
+        results = await asyncio.wait_for(
+            asyncio.gather(*(safe_detect(d) for d in detectors)),
+            timeout=20.0,
+        )
+        for raws in results:
+            for raw in raws:
+                if dedup.should_send(raw):
+                    dedup.mark_sent(raw)
+                    count += 1
 
         sent_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
         new_insights = []

@@ -35,7 +35,7 @@ class C1Client:
             limits = httpx.Limits(max_keepalive_connections=0, max_connections=5)
             self._client = httpx.AsyncClient(
                 headers={"Authorization": self._auth_header},
-                timeout=120.0,
+                timeout=httpx.Timeout(30.0, connect=15.0),
                 limits=limits,
             )
         return self._client
