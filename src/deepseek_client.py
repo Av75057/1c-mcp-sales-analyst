@@ -34,8 +34,9 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
 - abc_xyz_analysis — ABC/XYZ классификация товаров/клиентов по выручке и стабильности
-- forecast_sales — прогноз продаж товара на N дней (Prophet / Holt-Winters / Linear)
-- forecast_stockout — прогноз окончания товаров на складе (критические, скорые, безопасные)
+- forecast_sales — прогноз продаж товара на N дней
+- forecast_stockout — прогноз окончания товаров на складе
+- compare_forecasts — сравнение методов прогнозирования (Linear vs Holt-Winters vs Prophet)
 - list_nomenclature — поиск номенклатуры по названию
 - create_chart — построить график на основе данных
 - simulate_scenario — симуляция сценариев "Что если?" (price_change, promotion, purchase_change, employee_departure)
@@ -212,6 +213,21 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
         "type": "function",
         "function": {
+            "name": "compare_forecasts",
+            "description": "Сравнение точности методов прогнозирования (Linear, Holt-Winters, Prophet) для товара",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nomenclature": {"type": "string", "description": "Название товара"},
+                    "test_days": {"type": "integer", "description": "Дней для backtesting", "default": 14},
+                },
+                "required": ["nomenclature"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "abc_xyz_analysis",
             "description": "ABC/XYZ классификация товаров/клиентов по выручке и стабильности спроса",
             "parameters": {
@@ -349,6 +365,7 @@ TOOL_NAME_TO_FUNC: dict[str, Any] = {}
 def _import_tools() -> None:
     from src.tools import (
         abc_xyz_analysis_tool,
+        compare_forecasts_tool,
         create_chart_tool,
         forecast_sales_tool,
         forecast_stockout_tool,
@@ -372,6 +389,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
     TOOL_NAME_TO_FUNC["forecast_sales"] = forecast_sales_tool
     TOOL_NAME_TO_FUNC["forecast_stockout"] = forecast_stockout_tool
+    TOOL_NAME_TO_FUNC["compare_forecasts"] = compare_forecasts_tool
 
 
 _import_tools()

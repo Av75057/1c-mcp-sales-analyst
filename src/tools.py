@@ -187,3 +187,9 @@ async def forecast_stockout_tool(lead_time_days: int = 7, safety_stock_days: int
     logger.info("forecast_stockout: lead={}", lead_time_days)
     from src.forecasting.tool import forecast_stockout_tool as _f
     return await _f(lead_time_days=lead_time_days, safety_stock_days=safety_stock_days)
+
+
+async def compare_forecasts_tool(nomenclature: str, test_days: int = 14) -> dict[str, Any]:
+    logger.info("compare_forecasts: {} test_days={}", nomenclature, test_days)
+    from src.forecasting.tool import compare_forecasts_tool as _c
+    return await _c(nomenclature=nomenclature, test_days=test_days)

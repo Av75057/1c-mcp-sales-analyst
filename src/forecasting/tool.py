@@ -73,6 +73,52 @@ async def forecast_sales_tool(nomenclature: str, days: int = 30, method: str = "
     return result
 
 
+async def compare_forecasts_tool(nomenclature: str, test_days: int = 14) -> dict[str, Any]:
+    logger.info("compare_forecasts: {} | test_days={}", nomenclature, test_days)
+
+    from src.tools import get_client
+    client = get_client()
+    sales = await client.get_sales()
+
+    df = prepare_sales_data(sales, nomenclature)
+    if len(df) < test_days + 2:
+        return {"error": f"Недостаточно данных. Нужно минимум {test_days + 7} записей, найдено {len(df)}"}
+
+    train = df[:-test_days]
+    test = df[-test_days:]
+    y_true = test["quantity"].tolist()
+
+    results: list[dict[str, Any]] = []
+    models_to_test = [("Linear", LinearModel()), ("Holt-Winters", HoltWintersModel()), ("Prophet", ProphetModel())]
+
+    for name, model in models_to_test:
+        try:
+            model.fit(train)
+            pred = model.predict(test_days)
+            if pred.empty:
+                continue
+            y_pred = [pred.iloc[i]["yhat"] for i in range(len(pred))]
+            metrics = calc_metrics(y_true, y_pred)
+            results.append({"method": name, **metrics})
+        except Exception as e:
+            logger.warning("{} failed: {}", name, e)
+
+    if not results:
+        return {"error": "Ни один метод не смог выполнить прогноз"}
+
+    results.sort(key=lambda r: r["mape"])
+    for i, r in enumerate(results):
+        r["rank"] = i + 1
+
+    best = results[0]
+    return {
+        "item": {"name": nomenclature},
+        "test_period": {"test_days": test_days},
+        "comparison": results,
+        "recommendation": {"best_method": best["method"], "reason": f"Наименьшая ошибка MAPE ({best['mape']}%)", "expected_accuracy": f"±{best['mape']}% на горизонте {test_days} дней"},
+    }
+
+
 async def forecast_stockout_tool(
     lead_time_days: int = 7, safety_stock_days: int = 3, days_horizon: int = 60
 ) -> dict[str, Any]:
