@@ -104,22 +104,13 @@ async def status_page():
 
 @app.get("/api/status")
 async def api_status():
-    client = await get_c1()
     import os
     insights_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
     insights_count = len(list(insights_dir.glob("*.json"))) if insights_dir.exists() else 0
-    try:
-        stock = await client.get_stock()
-        sales = await client.get_sales(date_from=(date.today() - timedelta(days=30)).isoformat(), date_to=date.today().isoformat())
-        stock_count = len(stock)
-        sales_count = len(sales)
-        sales_sum = sum(s["sum"] for s in sales)
-    except Exception:
-        stock_count = sales_count = sales_sum = 0
-    return {
-        "stock_count": stock_count,
-        "sales_count": sales_count,
-        "sales_sum": sales_sum,
+    status_data = {
+        "stock_count": "?",
+        "sales_count": "?",
+        "sales_sum": "?",
         "insights_count": insights_count,
         "deepseek_key": bool(os.getenv("DEEPSEEK_API_KEY")),
         "telegram_token": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
@@ -128,7 +119,17 @@ async def api_status():
         "llm_model": os.getenv("LLM_MODEL", "deepseek-chat"),
         "port": os.getenv("PORT", "8080"),
         "uptime": "работает",
+        "c1_connected": False,
     }
+    try:
+        client = await get_c1()
+        stock = await asyncio.wait_for(client.get_stock(), timeout=5.0)
+        status_data["stock_count"] = len(stock)
+        status_data["c1_connected"] = True
+    except Exception:
+        status_data["stock_count"] = 0
+        status_data["c1_connected"] = False
+    return status_data
 
 
 @app.post("/api/documents/upload")
