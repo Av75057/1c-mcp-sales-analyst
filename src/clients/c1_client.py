@@ -8,7 +8,6 @@ import httpx
 
 from src.config import settings
 from src.logger import logger
-from tenacity import retry, stop_after_attempt, retry_if_exception_type, wait_fixed
 
 
 class C1ClientError(Exception):
@@ -23,7 +22,6 @@ class C1Client:
         self._auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
         self._client: httpx.AsyncClient | None = None
 
-    @retry(stop=stop_after_attempt(2), wait=wait_fixed(5), retry=retry_if_exception_type((httpx.ReadTimeout, httpx.ConnectError)))
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         client = await self._get_client()
         resp = await client.request(method, path, **kwargs)
@@ -35,7 +33,7 @@ class C1Client:
             limits = httpx.Limits(max_keepalive_connections=0, max_connections=5)
             self._client = httpx.AsyncClient(
                 headers={"Authorization": self._auth_header},
-                timeout=httpx.Timeout(30.0, connect=15.0),
+                timeout=httpx.Timeout(15.0, connect=10.0),
                 limits=limits,
             )
         return self._client
