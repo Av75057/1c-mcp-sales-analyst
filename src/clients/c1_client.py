@@ -23,7 +23,7 @@ class C1Client:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 auth=self.auth,
-                timeout=30.0,
+                timeout=60.0,
             )
         return self._client
 

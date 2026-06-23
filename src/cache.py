@@ -5,6 +5,8 @@ import json
 import time
 from typing import Any
 
+import httpx
+
 from src.logger import logger
 
 
@@ -85,7 +87,17 @@ class CachedC1Client:
         if cached_val is not None:
             logger.debug("Cache HIT: {}", key)
             return cached_val
-        result = await method(**kwargs)
-        cache.set(key, result, ttl=self._ttl)
-        logger.debug("Cache MISS: {}", key)
-        return result
+        try:
+            result = await method(**kwargs)
+            cache.set(key, result, ttl=self._ttl)
+            logger.debug("Cache MISS: {}", key)
+            return result
+        except httpx.ReadTimeout:
+            logger.error("Timeout 1С: {}", key)
+            return []
+        except httpx.ConnectError:
+            logger.error("1С недоступна: {}", key)
+            return []
+        except Exception as e:
+            logger.error("Ошибка 1С: {} - {}", key, e)
+            return []
