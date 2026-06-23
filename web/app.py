@@ -14,6 +14,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from src.cache import CachedC1Client
 from src.clients.c1_client import C1Client
+from src.logger import logger
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
@@ -164,6 +165,7 @@ async def api_insights_scan():
         from src.insights.detectors.receivables_alert import ReceivablesAlertDetector
         from src.insights.deduplication.dedup_engine import DedupEngine
         from src.insights.models import TenantInsightsConfig
+        import asyncio
 
         config = TenantInsightsConfig()
         config.sales_drop_threshold = 0.0
@@ -181,11 +183,16 @@ async def api_insights_scan():
         count = 0
         dedup = DedupEngine(config)
         for detector in detectors:
-            raws = await detector.detect()
-            for raw in raws:
-                if dedup.should_send(raw):
-                    dedup.mark_sent(raw)
-                    count += 1
+            try:
+                raws = await asyncio.wait_for(detector.detect(), timeout=15.0)
+                for raw in raws:
+                    if dedup.should_send(raw):
+                        dedup.mark_sent(raw)
+                        count += 1
+            except asyncio.TimeoutError:
+                logger.warning("Детектор {} превысил таймаут", detector.__class__.__name__)
+            except Exception as e:
+                logger.warning("Детектор {} ошибка: {}", detector.__class__.__name__, e)
 
         sent_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
         new_insights = []
