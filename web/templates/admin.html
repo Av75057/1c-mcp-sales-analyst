@@ -11,6 +11,8 @@
                 <a class="list-group-item list-group-item-action" href="#settings" onclick="showTab('settings')">⚙️ Settings</a>
                 <a class="list-group-item list-group-item-action" href="#integrations" onclick="showTab('integrations')">🔌 Integrations</a>
                 <a class="list-group-item list-group-item-action" href="#tools" onclick="showTab('tools')">🛠️ Tools</a>
+                <a class="list-group-item list-group-item-action" href="#apikeys" onclick="showTab('apikeys')">🔑 API Keys</a>
+                <a class="list-group-item list-group-item-action" href="#ipblocks" onclick="showTab('ipblocks')">🚫 IP Blocks</a>
                 <a class="list-group-item list-group-item-action" href="#system" onclick="showTab('system')">🖥️ System</a>
             </div>
         </div>
@@ -34,6 +36,8 @@ function showTab(tab) {
     else if (tab === 'settings') loadSettings(c);
     else if (tab === 'integrations') loadIntegrations(c);
     else if (tab === 'tools') loadTools(c);
+    else if (tab === 'apikeys') loadApiKeys(c);
+    else if (tab === 'ipblocks') loadIpBlocks(c);
     else if (tab === 'system') loadSystem(c);
 }
 
@@ -223,6 +227,84 @@ async function loadTools(c) {
         </tbody></table>
     `;
 }
+
+// === API Keys ===
+async function loadApiKeys(c) {
+    const d = await api('/admin/api-keys/');
+    c.innerHTML = `
+        <h3>🔑 API Keys</h3>
+        <button class="btn btn-primary btn-sm mb-3" onclick="showCreateKey()">+ New Key</button>
+        <div id="keyForm"></div>
+        <table class="table table-sm"><thead><tr><th>Name</th><th>Active</th><th>Created</th><th>Expires</th><th>Last Used</th><th>Actions</th></tr></thead><tbody>
+        ${(d.keys || []).map(k => `<tr>
+            <td>${k.name}</td>
+            <td>${k.is_active ? '✅' : '❌'}</td>
+            <td>${k.created_at ? new Date(k.created_at).toLocaleDateString() : '-'}</td>
+            <td>${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '∞'}</td>
+            <td>${k.last_used ? new Date(k.last_used).toLocaleString() : '-'}</td>
+            <td>${k.is_active ? '<button class="btn btn-sm btn-danger" onclick="revokeKey('+k.id+')">Revoke</button>' : ''}</td>
+        </tr>`).join('')}
+        </tbody></table>
+    `;
+}
+window.showCreateKey = function() {
+    document.getElementById('keyForm').innerHTML = `
+        <div class="card p-3 mb-3">
+            <h6>New API Key</h6>
+            <input id="nk_name" class="form-control mb-2" placeholder="Key name">
+            <input id="nk_days" class="form-control mb-2" type="number" placeholder="Expires in days (empty = never)">
+            <button class="btn btn-success btn-sm" onclick="createKey()">Create</button>
+        </div>`;
+};
+window.createKey = async function() {
+    const r = await fetch(API + '/admin/api-keys/', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({name: document.getElementById('nk_name').value, expires_days: parseInt(document.getElementById('nk_days').value) || null})});
+    const d = await r.json();
+    alert('Key created (copy now!):\n\n' + d.plain_key);
+    loadApiKeys(document.getElementById('adminContent'));
+};
+window.revokeKey = async function(id) {
+    await fetch(API + '/admin/api-keys/' + id + '/revoke', {method:'POST'});
+    loadApiKeys(document.getElementById('adminContent'));
+};
+
+// === IP Blocks ===
+async function loadIpBlocks(c) {
+    const d = await api('/admin/ip-blocks/');
+    c.innerHTML = `
+        <h3>🚫 IP Blocks</h3>
+        <button class="btn btn-primary btn-sm mb-3" onclick="showBlockIp()">+ Block IP</button>
+        <div id="blockForm"></div>
+        <table class="table table-sm"><thead><tr><th>IP</th><th>Reason</th><th>Blocked</th><th>Expires</th><th>Actions</th></tr></thead><tbody>
+        ${(d.blocks || []).map(b => `<tr>
+            <td><code>${b.ip_address}</code></td>
+            <td>${b.reason || '-'}</td>
+            <td>${b.blocked_at ? new Date(b.blocked_at).toLocaleString() : '-'}</td>
+            <td>${b.is_permanent ? '∞' : b.expires_at ? new Date(b.expires_at).toLocaleString() : '-'}</td>
+            <td><button class="btn btn-sm btn-success" onclick="unblockIp(${b.id})">Unblock</button></td>
+        </tr>`).join('')}
+        </tbody></table>
+    `;
+}
+window.showBlockIp = function() {
+    document.getElementById('blockForm').innerHTML = `
+        <div class="card p-3 mb-3">
+            <h6>Block IP</h6>
+            <input id="bi_ip" class="form-control mb-2" placeholder="IP address">
+            <input id="bi_reason" class="form-control mb-2" placeholder="Reason">
+            <div class="mb-2"><label><input type="checkbox" id="bi_perm"> Permanent</label></div>
+            <button class="btn btn-danger btn-sm" onclick="blockIp()">Block</button>
+        </div>`;
+};
+window.blockIp = async function() {
+    await fetch(API + '/admin/ip-blocks/', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ip_address: document.getElementById('bi_ip').value, reason: document.getElementById('bi_reason').value, permanent: document.getElementById('bi_perm').checked})});
+    loadIpBlocks(document.getElementById('adminContent'));
+};
+window.unblockIp = async function(id) {
+    await fetch(API + '/admin/ip-blocks/' + id + '/unblock', {method:'POST'});
+    loadIpBlocks(document.getElementById('adminContent'));
+};
 
 // === System ===
 async function loadSystem(c) {
