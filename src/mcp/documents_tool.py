@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+import base64
+from datetime import date
 from typing import Any
 
+import httpx
+
+from src.config import settings
 from src.logger import logger
 from src.perf import measure_time
 
@@ -20,73 +24,52 @@ async def get_sales_documents(
     page: int = 1,
     page_size: int = 50,
 ) -> dict[str, Any]:
-    """Получить список документов реализации из 1С УНФ.
-
-    Args:
-        date_from: Дата начала периода (YYYY-MM-DD)
-        date_to: Дата окончания периода (YYYY-MM-DD)
-        counterparty: Фильтр по контрагенту (подстрока)
-        sum_min: Минимальная сумма
-        sum_max: Максимальная сумма
-        posted_only: Только проведённые документы
-        sort_by: Поле сортировки (date|sum|number)
-        sort_order: Направление (asc|desc)
-        page: Номер страницы (>=1)
-        page_size: Размер страницы (1-500)
-
-    Returns:
-        dict с ключами documents, pagination
-    """
     logger.info(
         "Вызов get_sales_documents: {}-{}, counterparty={}, page={}",
         date_from, date_to, counterparty, page,
     )
 
-    # Валидация периода
     if date_from and date_to:
         try:
             d_from = date.fromisoformat(date_from)
             d_to = date.fromisoformat(date_to)
             if (d_to - d_from).days > 730:
-                return {
-                    "error": "period_too_large",
-                    "message": "Максимальный период — 2 года. Уменьшите диапазон дат.",
-                }
+                return {"error": "period_too_large", "message": "Максимальный период — 2 года. Уменьшите диапазон дат."}
         except ValueError:
             return {"error": "invalid_date", "message": "Неверный формат даты. Используйте YYYY-MM-DD"}
 
-    # Формируем batch-запрос
+    base_url = settings.c1_base_url.rstrip("/")
+    api_url = base_url.replace("/hs/api", "/hs/api/v1")
+
     params: dict[str, Any] = {
         "date_from": date_from,
         "date_to": date_to,
-        "posted_only": posted_only,
+        "posted_only": str(posted_only).lower(),
         "sort_by": sort_by,
         "sort_order": sort_order,
-        "page": page,
-        "page_size": min(page_size, 500),
+        "page": str(page),
+        "page_size": str(min(page_size, 500)),
     }
     if counterparty:
         params["counterparty"] = counterparty
     if sum_min is not None:
-        params["sum_min"] = sum_min
+        params["sum_min"] = str(sum_min)
     if sum_max is not None:
-        params["sum_max"] = sum_max
+        params["sum_max"] = str(sum_max)
 
-    request = {
-        "id": "sales_documents",
-        "method": "GET",
-        "path": "/documents/sales",
-        "params": params,
-    }
+    raw = f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")
+    auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
 
-    from src.clients.batch_client import BatchC1Client
-
-    async with BatchC1Client() as client:
-        result = await client.execute_batch([request])
-
-    results = result.get("results", [])
-    if results:
-        data = results[0].get("data", {})
-        return data
-
-    return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}}
+    try:
+        async with httpx.AsyncClient(
+            headers={"Authorization": auth_header},
+            timeout=httpx.Timeout(30.0, connect=10.0),
+        ) as client:
+            resp = await client.get(f"{api_url}/documents/sales", params=params)
+            if resp.status_code == 200:
+                return resp.json()
+            logger.error("Ошибка 1С {}: {}", resp.status_code, resp.text[:500])
+            return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}, "error": resp.text[:500]}
+    except Exception as e:
+        logger.error("Ошибка запроса к 1С: {}", e)
+        return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}, "error": str(e)}
