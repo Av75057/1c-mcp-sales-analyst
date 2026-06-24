@@ -19,6 +19,9 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4",
     "slowapi>=0.1.9",
     "python-multipart>=0.0.9",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.20",
+    "psutil>=5.9",
 ]
 
 [project.optional-dependencies]

@@ -32,6 +32,12 @@ from src.audit.logger import audit_logger
 from src.security.headers import SecurityHeadersMiddleware
 from src.security.rate_limit import init_rate_limiter, limiter
 
+from src.admin.routes.dashboard import router as admin_dashboard_router
+from src.admin.routes.users import router as admin_users_router
+from src.admin.routes.audit import router as admin_audit_router
+from src.admin.routes.monitoring import router as admin_monitoring_router
+from src.admin.routes.system import router as admin_system_router
+
 
 def _convert_numpy(obj: Any) -> Any:
     if isinstance(obj, dict):
@@ -59,7 +65,16 @@ def _patched_je(obj: Any, *args: Any, **kwargs: Any) -> Any:
 _encoders.jsonable_encoder = _patched_je
 
 
-app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
+app = FastAPI(title="1C MCP Sales Analyst", version="1.3.0")
+
+
+@app.on_event("startup")
+async def on_startup():
+    from src.admin.database import init_db
+    from src.admin.migrate_users import migrate
+    await init_db()
+    await migrate()
+
 
 # Middleware (порядок: от внешнего к внутреннему)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -76,6 +91,13 @@ if settings.auth_enabled:
 
 init_rate_limiter(app)
 app.include_router(auth_router)
+
+# Admin routes
+app.include_router(admin_dashboard_router)
+app.include_router(admin_users_router)
+app.include_router(admin_audit_router)
+app.include_router(admin_monitoring_router)
+app.include_router(admin_system_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")

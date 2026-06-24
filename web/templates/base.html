@@ -89,6 +89,9 @@
                     <a class="nav-link {{ 'active' if page == 'status' }}" href="/status"><i class="bi bi-gear"></i><span>Статус</span></a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ 'active' if page.startswith('admin') }}" href="/admin/" id="adminLink"><i class="bi bi-shield-lock"></i><span>Админка</span></a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="#" id="loginBtn" onclick="showLogin()"><i class="bi bi-person"></i><span id="userDisplay">Войти</span></a>
                 </li>
             </ul>
