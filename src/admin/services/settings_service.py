@@ -32,6 +32,9 @@ def _apply_to_runtime(key: str, value: str) -> None:
 
 class SettingsService:
 
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
+
     async def get_all(self, category: str | None = None) -> list[dict[str, Any]]:
         q = select(Setting)
         if category:
