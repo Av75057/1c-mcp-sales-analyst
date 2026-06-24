@@ -9,6 +9,8 @@ from typing import Any
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.auth.models import Role, Token, TokenPayload, User
 from src.config import settings
@@ -17,76 +19,30 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 USERS_FILE = Path(__file__).resolve().parent / "users.json"
 
 
-def _load_users() -> dict[str, dict[str, Any]]:
-    if not USERS_FILE.exists():
-        return _create_default_users()
-    try:
-        raw = json.loads(USERS_FILE.read_text())
-        # Pydantic auto-parses ISO datetime strings from JSON
-        return {k: User(**v).model_dump() for k, v in raw.items()}
-    except (json.JSONDecodeError, OSError, Exception):
-        return _create_default_users()
-
-
-def _save_users(users: dict[str, dict[str, Any]]) -> None:
-    class _Encoder(json.JSONEncoder):
-        def default(self, o: Any) -> str:
-            if hasattr(o, "isoformat"):
-                return o.isoformat()
-            return str(o)
-    USERS_FILE.write_text(json.dumps(users, ensure_ascii=False, indent=2, cls=_Encoder))
-
-
-def _create_default_users() -> dict[str, dict[str, Any]]:
-    admin_username = os.getenv("ADMIN_USERNAME", "admin")
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-
-    users: dict[str, dict[str, Any]] = {
-        admin_username: User(
-            username=admin_username,
-            password_hash=pwd_context.hash(admin_password),
-            role=Role.ADMIN,
-        ).model_dump(),
-    }
-    _save_users(users)
-    return users
-
-
 class AuthService:
-    _users: dict[str, dict[str, Any]] = {}
 
-    @classmethod
-    def _get_users(cls) -> dict[str, dict[str, Any]]:
-        if not cls._users:
-            cls._users = _load_users()
-        return cls._users
-
-    @classmethod
-    def _save(cls) -> None:
-        _save_users(cls._users)
-
-    @classmethod
-    def verify_password(cls, plain: str, hashed: str) -> bool:
+    @staticmethod
+    def verify_password(plain: str, hashed: str) -> bool:
         return pwd_context.verify(plain, hashed)
 
-    @classmethod
-    def hash_password(cls, password: str) -> str:
+    @staticmethod
+    def hash_password(password: str) -> str:
         return pwd_context.hash(password)
 
-    @classmethod
-    def create_access_token(cls, username: str, role: Role) -> Token:
+    @staticmethod
+    def create_access_token(username: str, role: str) -> Token:
         expire = datetime.utcnow() + timedelta(minutes=480)
         payload = {
             "sub": username,
-            "role": role.value,
+            "role": role,
             "exp": int(expire.timestamp()),
             "iat": int(datetime.utcnow().timestamp()),
         }
         token = jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
         return Token(access_token=token, expires_in=28800)
 
-    @classmethod
-    def decode_token(cls, token: str) -> TokenPayload:
+    @staticmethod
+    def decode_token(token: str) -> TokenPayload:
         try:
             payload = jwt.decode(token, settings.jwt_secret_key, algorithms=["HS256"])
             return TokenPayload(**payload)
@@ -97,67 +53,60 @@ class AuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-    @classmethod
-    def authenticate(cls, username: str, password: str) -> User | None:
-        users = cls._get_users()
-        data = users.get(username)
-        if not data:
+    @staticmethod
+    async def authenticate(db: AsyncSession, username: str, password: str) -> User | None:
+        from src.admin.models import User as DBUser
+
+        result = await db.execute(select(DBUser).where(DBUser.username == username))
+        db_user = result.scalar_one_or_none()
+        if not db_user:
             return None
-        user = User(**data)
-        if not user.is_active:
+        if not db_user.is_active:
             return None
-        if not cls.verify_password(password, user.password_hash):
+        if db_user.locked_until and db_user.locked_until > datetime.utcnow():
             return None
-        user.last_login = datetime.utcnow()
-        users[username] = user.model_dump()
-        cls._save()
-        return user
-
-    @classmethod
-    def get_user(cls, username: str) -> User | None:
-        users = cls._get_users()
-        data = users.get(username)
-        if not data:
+        if not AuthService.verify_password(password, db_user.password_hash):
+            db_user.failed_login_attempts = (db_user.failed_login_attempts or 0) + 1
+            await db.commit()
             return None
-        return User(**data)
+        db_user.failed_login_attempts = 0
+        db_user.last_login = datetime.utcnow()
+        db_user.locked_until = None
+        await db.commit()
+        return User(username=db_user.username, role=Role(db_user.role), is_active=db_user.is_active)
 
-    @classmethod
-    def list_users(cls) -> list[dict[str, Any]]:
-        return [User(**u).dict_safe() for u in cls._get_users().values()]
+    @staticmethod
+    async def get_user(db: AsyncSession, username: str) -> User | None:
+        from src.admin.models import User as DBUser
 
-    @classmethod
-    def create_user(cls, username: str, password: str, role: Role) -> User:
-        users = cls._get_users()
-        if username in users:
-            raise HTTPException(status_code=409, detail="User already exists")
-        user = User(
-            username=username,
-            password_hash=cls.hash_password(password),
-            role=role,
-        )
-        users[username] = user.model_dump()
-        cls._save()
-        return user
+        result = await db.execute(select(DBUser).where(DBUser.username == username))
+        db_user = result.scalar_one_or_none()
+        if not db_user:
+            return None
+        return User(username=db_user.username, role=Role(db_user.role), is_active=db_user.is_active)
 
-    @classmethod
-    def update_user(cls, username: str, **kwargs: Any) -> User:
-        users = cls._get_users()
-        if username not in users:
-            raise HTTPException(status_code=404, detail="User not found")
-        user = User(**users[username])
-        for k, v in kwargs.items():
-            if k == "password":
-                setattr(user, "password_hash", cls.hash_password(v))
-            elif k == "role":
-                setattr(user, "role", Role(v))
-            elif hasattr(user, k):
-                setattr(user, k, v)
-        users[username] = user.model_dump()
-        cls._save()
-        return user
+    @staticmethod
+    async def create_user(db: AsyncSession, username: str, password: str, role: str, email: str | None = None) -> User:
+        from src.admin.models import User as DBUser
 
-    @classmethod
-    def delete_user(cls, username: str) -> None:
-        users = cls._get_users()
-        users.pop(username, None)
-        cls._save()
+        user = DBUser(username=username, password_hash=AuthService.hash_password(password), role=role, email=email)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        return User(username=user.username, role=Role(user.role), is_active=user.is_active)
+
+    @staticmethod
+    async def list_users(db: AsyncSession) -> list[dict[str, Any]]:
+        from src.admin.models import User as DBUser
+
+        result = await db.execute(select(DBUser).order_by(DBUser.created_at.desc()))
+        return [
+            {
+                "username": u.username,
+                "role": u.role,
+                "is_active": u.is_active,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "last_login": u.last_login.isoformat() if u.last_login else None,
+            }
+            for u in result.scalars().all()
+        ]
