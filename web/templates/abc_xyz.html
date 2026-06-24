@@ -93,7 +93,7 @@ async function loadAnalysis() {
             }
         });
         items.sort((a,b) => b.share - a.share);
-        if (window.paretoChart) window.paretoChart.destroy();
+        if (window.paretoChart && typeof window.paretoChart.destroy === 'function') window.paretoChart.destroy();
         window.paretoChart = new Chart(document.getElementById('paretoChart'), {
             type: 'bar',
             data: {
