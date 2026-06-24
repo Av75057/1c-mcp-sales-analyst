@@ -13,6 +13,7 @@ from src.tools import (
     get_purchases_tool,
     get_receivables_tool,
     get_sales_by_manager_tool,
+    get_sales_documents_tool,
     get_sales_tool,
     get_stock_tool,
     list_nomenclature_tool,
@@ -32,6 +33,7 @@ EXISTING_TOOLS_SCHEMA = [
     {"type": "function", "function": {"name": "list_nomenclature", "description": "Поиск номенклатуры", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer"}}, "required": ["query"]}}},
     {"type": "function", "function": {"name": "create_chart", "description": "Построить график", "parameters": {"type": "object", "properties": {"chart_type": {"type": "string", "enum": ["line", "bar", "hbar", "pie", "area"]}, "title": {"type": "string"}, "x_data": {"type": "array"}, "y_data": {"type": "array"}, "x_label": {"type": "string"}, "y_label": {"type": "string"}, "series_names": {"type": "array"}, "color_scheme": {"type": "string", "enum": ["default", "corporate", "vibrant"]}}, "required": ["chart_type", "title", "x_data", "y_data"]}}},
     {"type": "function", "function": {"name": "get_analytics_context", "description": "Получить полный контекст для аналитики одним batch-запросом (итоги, топ-20 товаров, топ-10 клиентов, остатки, неликвиды)", "parameters": {"type": "object", "properties": {"date_from": {"type": "string", "description": "Начальная дата (YYYY-MM-DD)"}, "date_to": {"type": "string", "description": "Конечная дата (YYYY-MM-DD)"}}, "required": ["date_from", "date_to"]}}},
+    {"type": "function", "function": {"name": "get_sales_documents", "description": "Получить список документов реализации с номерами, датами, суммами и контрагентами. Используйте для проверки конкретных сделок, поиска по контрагенту, детализации продаж.", "parameters": {"type": "object", "properties": {"date_from": {"type": "string", "description": "Дата начала периода (YYYY-MM-DD)"}, "date_to": {"type": "string", "description": "Дата окончания периода (YYYY-MM-DD)"}, "counterparty": {"type": "string", "description": "Фильтр по контрагенту (подстрока)"}, "sum_min": {"type": "number", "description": "Минимальная сумма"}, "sum_max": {"type": "number", "description": "Максимальная сумма"}, "posted_only": {"type": "boolean", "description": "Только проведённые"}, "sort_by": {"type": "string", "enum": ["date", "sum", "number"], "description": "Поле сортировки"}, "sort_order": {"type": "string", "enum": ["asc", "desc"], "description": "Направление"}, "page": {"type": "integer", "description": "Номер страницы"}, "page_size": {"type": "integer", "description": "Размер страницы"}}, "required": ["date_from", "date_to"]}}},
 ]
 
 ALL_TOOLS_SCHEMA = EXISTING_TOOLS_SCHEMA + WHATIF_TOOLS_SCHEMA
@@ -51,6 +53,7 @@ TOOLS_REGISTRY: dict[str, Any] = {
     "simulate_scenario": simulate_scenario_tool,
     "list_whatif_scenarios": list_whatif_scenarios_tool,
     "get_analytics_context": get_analytics_context_tool,
+    "get_sales_documents": get_sales_documents_tool,
 }
 
 

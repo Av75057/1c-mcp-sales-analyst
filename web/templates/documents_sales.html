@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-receipt"></i> Документы реализации</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filtersForm" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Дата с</label>
+                    <input type="date" name="date_from" class="form-control" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Дата по</label>
+                    <input type="date" name="date_to" class="form-control" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Контрагент</label>
+                    <input type="text" name="counterparty" class="form-control" placeholder="Подстрока для поиска...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Сумма от</label>
+                    <input type="number" name="sum_min" class="form-control" step="0.01">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Сумма до</label>
+                    <input type="number" name="sum_max" class="form-control" step="0.01">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Найти</button>
+                    <button type="button" id="exportCsvBtn" class="btn btn-secondary"><i class="bi bi-download"></i> CSV</button>
+                    <span class="text-secondary ms-3 small" id="totalInfo"></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="docsTable">
+            <thead>
+                <tr>
+                    <th>Номер</th>
+                    <th>Дата</th>
+                    <th>Контрагент</th>
+                    <th class="text-end">Сумма</th>
+                    <th>Статус</th>
+                    <th class="text-center">Строк</th>
+                </tr>
+            </thead>
+            <tbody id="docsBody">
+                <tr><td colspan="6" class="text-center text-secondary">Задайте период и нажмите «Найти»</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <nav id="paginationNav" class="d-none">
+        <ul class="pagination justify-content-center" id="paginationUl"></ul>
+    </nav>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentParams = {};
+
+document.getElementById('filtersForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    currentParams = Object.fromEntries(fd.entries());
+    currentParams.page = 1;
+    await loadDocs();
+};
+
+async function loadDocs() {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(currentParams)) {
+        if (v) params.set(k, v);
+    }
+    const r = await fetch('/api/documents/sales?' + params.toString());
+    if (!r.ok) { alert('Ошибка загрузки'); return; }
+    const data = await r.json();
+
+    const tbody = document.getElementById('docsBody');
+    tbody.innerHTML = '';
+
+    if (!data.documents || data.documents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary">Нет документов</td></tr>';
+        document.getElementById('totalInfo').textContent = '';
+        document.getElementById('paginationNav').classList.add('d-none');
+        return;
+    }
+
+    for (const doc of data.documents) {
+        const tr = document.createElement('tr');
+        const sum = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: doc.currency || 'RUB' }).format(doc.sum);
+        const dt = doc.date ? doc.date.slice(0, 10) : '';
+        const status = doc.posted ? '<span class="badge bg-success">Проведён</span>' : '<span class="badge bg-warning">Не проведён</span>';
+        tr.innerHTML = `
+            <td><strong>${doc.number || '-'}</strong></td>
+            <td>${dt}</td>
+            <td>${doc.counterparty?.name || '-'}${doc.counterparty?.inn ? '<br><small class="text-secondary">ИНН ' + doc.counterparty.inn + '</small>' : ''}</td>
+            <td class="text-end fw-bold">${sum}</td>
+            <td>${status}</td>
+            <td class="text-center">${doc.items_count || 0}</td>`;
+        tbody.appendChild(tr);
+    }
+
+    const p = data.pagination || {};
+    document.getElementById('totalInfo').textContent = `Всего: ${p.total_count || 0} документов, стр. ${p.page || 1}/${p.total_pages || 1}`;
+
+    renderPagination(p);
+}
+
+function renderPagination(p) {
+    const nav = document.getElementById('paginationNav');
+    const ul = document.getElementById('paginationUl');
+    ul.innerHTML = '';
+    if (!p.total_pages || p.total_pages <= 1) { nav.classList.add('d-none'); return; }
+    nav.classList.remove('d-none');
+
+    for (let i = 1; i <= p.total_pages && i <= 50; i++) {
+        const li = document.createElement('li');
+        li.className = 'page-item' + (i === p.page ? ' active' : '');
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = i;
+        a.onclick = function(e) { e.preventDefault(); currentParams.page = i; loadDocs(); };
+        li.appendChild(a);
+        ul.appendChild(li);
+    }
+}
+
+document.getElementById('exportCsvBtn').onclick = async function() {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(currentParams)) {
+        if (v) params.set(k, v);
+    }
+    params.set('page_size', '10000');
+    const r = await fetch('/api/documents/sales?' + params.toString());
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.documents || data.documents.length === 0) { alert('Нет данных для экспорта'); return; }
+
+    const header = 'Номер;Дата;Контрагент;ИНН;Сумма;Валюта;Статус;Комментарий;Кол-во строк\n';
+    const rows = data.documents.map(d =>
+        `"${d.number || ''}";"${(d.date || '').slice(0,10)}";"${(d.counterparty?.name || '')}";"${(d.counterparty?.inn || '')}";${d.sum};${d.currency || 'RUB'};${d.posted ? 'Проведён' : 'Не проведён'};"${(d.comment || '').replace(/"/g,'""')}";${d.items_count || 0}`
+    ).join('\n');
+
+    const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sales_documents.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+};
+
+// Предзаполняем даты (последние 30 дней)
+(function() {
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(from.getDate() - 30);
+    document.querySelector('input[name="date_from"]').value = from.toISOString().slice(0, 10);
+    document.querySelector('input[name="date_to"]').value = today.toISOString().slice(0, 10);
+})();
+</script>
+{% endblock %}

@@ -32,6 +32,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_stock — остатки товаров на складах
 - get_sales — данные о продажах
 - get_sales_by_manager — продажи в разрезе менеджеров
+- get_sales_documents — список документов реализации с номерами, датами, суммами (с фильтром по дате, контрагенту, сумме)
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
 - get_analytics_context — ПОЛУЧИТЬ ВСЁ СРАЗУ: итоги, топ товаров, топ клиентов, остатки, неликвиды за период. ИСПОЛЬЗУЙ ВМЕСТО get_sales + get_sales_by_manager + get_stock, если нужна общая аналитика.
@@ -362,6 +363,26 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
         "type": "function",
         "function": {
+            "name": "get_sales_documents",
+            "description": "Получить список документов реализации с номерами, датами, суммами и контрагентами. Используй для проверки конкретных сделок, поиска по контрагенту, детализации продаж.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date_from": {"type": "string", "description": "Дата начала периода (YYYY-MM-DD)"},
+                    "date_to": {"type": "string", "description": "Дата окончания периода (YYYY-MM-DD)"},
+                    "counterparty": {"type": "string", "description": "Фильтр по контрагенту (подстрока)"},
+                    "sum_min": {"type": "number", "description": "Минимальная сумма"},
+                    "sum_max": {"type": "number", "description": "Максимальная сумма"},
+                    "page": {"type": "integer", "description": "Номер страницы"},
+                    "page_size": {"type": "integer", "description": "Размер страницы"},
+                },
+                "required": ["date_from", "date_to"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_analytics_context",
             "description": "Получить полный контекст для аналитики одним batch-запросом: итоги (сумма, кол-во заказов, средний чек), топ-20 товаров, топ-10 клиентов, остатки, неликвиды. Используй ВМЕСТО последовательных вызовов get_sales + get_sales_by_manager + get_stock, если нужна общая аналитика за период.",
             "parameters": {
@@ -396,6 +417,7 @@ def _import_tools() -> None:
         get_purchases_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
+        get_sales_documents_tool,
         get_sales_tool,
         get_stock_tool,
         list_nomenclature_tool,
@@ -412,6 +434,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool
     TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
     TOOL_NAME_TO_FUNC["get_analytics_context"] = get_analytics_context_tool
+    TOOL_NAME_TO_FUNC["get_sales_documents"] = get_sales_documents_tool
     TOOL_NAME_TO_FUNC["forecast_sales"] = forecast_sales_tool
     TOOL_NAME_TO_FUNC["forecast_stockout"] = forecast_stockout_tool
     TOOL_NAME_TO_FUNC["compare_forecasts"] = compare_forecasts_tool

@@ -91,6 +91,23 @@ async def list_tools() -> ListToolsResult:
                 "required": ["date_from", "date_to"],
             },
         ),
+        Tool(
+            name="get_sales_documents",
+            description="Получить список документов реализации с номерами, датами, суммами и контрагентами",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "date_from": {"type": "string", "description": "Дата начала периода (YYYY-MM-DD)"},
+                    "date_to": {"type": "string", "description": "Дата окончания периода (YYYY-MM-DD)"},
+                    "counterparty": {"type": "string", "description": "Фильтр по контрагенту"},
+                    "sum_min": {"type": "number", "description": "Минимальная сумма"},
+                    "sum_max": {"type": "number", "description": "Максимальная сумма"},
+                    "page": {"type": "integer", "description": "Номер страницы"},
+                    "page_size": {"type": "integer", "description": "Размер страницы"},
+                },
+                "required": ["date_from", "date_to"],
+            },
+        ),
     ]
     return ListToolsResult(tools=tools)
 
@@ -112,6 +129,7 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResu
         "get_receivables": get_receivables_tool,
         "list_nomenclature": list_nomenclature_tool,
         "get_analytics_context": _get_analytics_context,
+        "get_sales_documents": _get_sales_documents,
     }
 
     func = tool_map.get(name)
@@ -134,6 +152,33 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResu
             content=[TextContent(type="text", text=f"Ошибка: {e!s}")],
             isError=True,
         )
+
+
+async def _get_sales_documents(
+    date_from: str = "",
+    date_to: str = "",
+    counterparty: str | None = None,
+    sum_min: float | None = None,
+    sum_max: float | None = None,
+    posted_only: bool = True,
+    sort_by: str = "date",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 50,
+) -> dict[str, Any]:
+    from src.mcp.tools.documents import get_sales_documents
+    return await get_sales_documents(
+        date_from=date_from,
+        date_to=date_to,
+        counterparty=counterparty,
+        sum_min=sum_min,
+        sum_max=sum_max,
+        posted_only=posted_only,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size,
+    )
 
 
 async def _get_analytics_context(date_from: str = "", date_to: str = "") -> dict[str, Any]:

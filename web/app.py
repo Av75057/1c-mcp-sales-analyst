@@ -157,6 +157,10 @@ async def insights_page():
 async def documents_page():
     return render("documents.html", {"page": "documents"})
 
+@app.get("/documents/sales")
+async def documents_sales_page():
+    return render("documents_sales.html", {"page": "documents_sales"})
+
 
 @app.get("/status")
 async def status_page():
@@ -208,6 +212,35 @@ async def api_health_performance():
         "metrics": metrics.get_summary(),
         "slow_queries": metrics.get_slow_queries(limit=10),
     }
+
+
+@measure_time("api_documents_sales")
+@app.get("/api/documents/sales")
+async def api_documents_sales(
+    date_from: str = "",
+    date_to: str = "",
+    counterparty: str | None = None,
+    sum_min: float | None = None,
+    sum_max: float | None = None,
+    posted_only: bool = True,
+    sort_by: str = "date",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 50,
+):
+    from src.mcp.tools.documents import get_sales_documents
+    return await get_sales_documents(
+        date_from=date_from,
+        date_to=date_to,
+        counterparty=counterparty,
+        sum_min=sum_min,
+        sum_max=sum_max,
+        posted_only=posted_only,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @app.post("/api/documents/upload")

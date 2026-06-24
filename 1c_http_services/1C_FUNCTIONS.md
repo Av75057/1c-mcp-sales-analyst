@@ -43,6 +43,38 @@
 
 ---
 
+## Новые эндпоинты
+
+### GET /hs/api/v1/documents/sales
+
+Список документов реализации с пагинацией и фильтрацией.
+
+**Функция:** `ПолучитьСписокРеализаций(Запрос)` — экспортная
+
+**Параметры:**
+| Параметр | Тип | Обязательный | Описание |
+|---|---|---|---|
+| `date_from` | date | ✅ | Дата начала (YYYY-MM-DD) |
+| `date_to` | date | ✅ | Дата окончания (YYYY-MM-DD) |
+| `counterparty` | string | ❌ | Фильтр по контрагенту (подстрока) |
+| `sum_min` | float | ❌ | Минимальная сумма |
+| `sum_max` | float | ❌ | Максимальная сумма |
+| `posted_only` | bool | ❌ | Только проведённые (по умолч. true) |
+| `sort_by` | string | ❌ | date / sum / number |
+| `sort_order` | string | ❌ | asc / desc |
+| `page` | int | ❌ | Номер страницы (по умолч. 1) |
+| `page_size` | int | ❌ | Размер (по умолч. 50, макс 500) |
+
+**Документ:** `Документ.РеализацияТоваровУслуг`
+
+**Выход:**
+```json
+{
+  "documents": [{"id": "uuid", "number": "ТС-000123", "date": "2026-01-05T10:30:00", "counterparty": {"name": "...", "id": "...", "inn": "..."}, "sum": 150000, "currency": "RUB", "posted": true, "deleted": false, "comment": "", "items_count": 5}],
+  "pagination": {"page": 1, "page_size": 50, "total_count": 1234, "total_pages": 25}
+}
+```
+
 ## Отдельные эндпоинты (существующие)
 
 ### GET /hs/api/stock

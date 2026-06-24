@@ -203,6 +203,39 @@ async def compare_forecasts_tool(nomenclature: str, test_days: int = 14) -> dict
     return await _c(nomenclature=nomenclature, test_days=test_days)
 
 
+@measure_time("get_sales_documents")
+async def get_sales_documents_tool(
+    date_from: str = "",
+    date_to: str = "",
+    counterparty: str | None = None,
+    sum_min: float | None = None,
+    sum_max: float | None = None,
+    posted_only: bool = True,
+    sort_by: str = "date",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 50,
+) -> dict[str, Any]:
+    """Получить список документов реализации с номерами, датами, суммами."""
+    logger.info(
+        "Вызов get_sales_documents: {}-{} counterparty={} page={}",
+        date_from, date_to, counterparty, page,
+    )
+    from src.mcp.tools.documents import get_sales_documents as _doc
+    return await _doc(
+        date_from=date_from,
+        date_to=date_to,
+        counterparty=counterparty,
+        sum_min=sum_min,
+        sum_max=sum_max,
+        posted_only=posted_only,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size,
+    )
+
+
 @measure_time("get_analytics_context")
 async def get_analytics_context_tool(
     date_from: str = "",
