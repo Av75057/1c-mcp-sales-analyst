@@ -79,6 +79,18 @@ async def list_tools() -> ListToolsResult:
                 "required": ["query"],
             },
         ),
+        Tool(
+            name="get_analytics_context",
+            description="Получить полный контекст для аналитики одним batch-запросом (итоги, топ товаров, топ клиентов, остатки, неликвиды)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "date_from": {"type": "string", "description": "Начальная дата (YYYY-MM-DD)"},
+                    "date_to": {"type": "string", "description": "Конечная дата (YYYY-MM-DD)"},
+                },
+                "required": ["date_from", "date_to"],
+            },
+        ),
     ]
     return ListToolsResult(tools=tools)
 
@@ -99,6 +111,7 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResu
         "get_sales_by_manager": get_sales_by_manager_tool,
         "get_receivables": get_receivables_tool,
         "list_nomenclature": list_nomenclature_tool,
+        "get_analytics_context": _get_analytics_context,
     }
 
     func = tool_map.get(name)
@@ -120,6 +133,16 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResu
         return CallToolResult(
             content=[TextContent(type="text", text=f"Ошибка: {e!s}")],
             isError=True,
+        )
+
+
+async def _get_analytics_context(date_from: str = "", date_to: str = "") -> dict[str, Any]:
+    from src.clients.batch_client import BatchC1Client
+
+    async with BatchC1Client() as batch:
+        return await batch.get_analytics_context(
+            date_from=date_from or None,
+            date_to=date_to or None,
         )
 
 

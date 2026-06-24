@@ -20,6 +20,7 @@ from src.logger import logger
 from src.perf import measure_time
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
+from src.metrics import metrics
 from src.whatif.engine.simulator import WhatIfSimulator
 
 
@@ -168,6 +169,16 @@ async def api_status():
     except Exception:
         status_data["c1_connected"] = False
     return status_data
+
+
+@app.get("/api/health/performance")
+async def api_health_performance():
+    """Мониторинг производительности MCP-сервера"""
+    return {
+        "status": "healthy",
+        "metrics": metrics.get_summary(),
+        "slow_queries": metrics.get_slow_queries(limit=10),
+    }
 
 
 @app.post("/api/documents/upload")

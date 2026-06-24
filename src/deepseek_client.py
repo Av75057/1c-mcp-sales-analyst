@@ -26,6 +26,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 5. Если нужно уточнить — задай уточняющий вопрос.
 6. Форматируй ответ читаемо: используй списки, группировки, итоги.
 7. Если запрос требует данных, которые есть в разных инструментах — вызови их последовательно и объедини результат.
+8. Для общей аналитики продаж за период ВСЕГДА используй get_analytics_context вместо последовательных get_sales + get_sales_by_manager + get_stock — это в 10 раз быстрее.
 
 Доступные инструменты:
 - get_stock — остатки товаров на складах
@@ -33,6 +34,7 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_sales_by_manager — продажи в разрезе менеджеров
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
+- get_analytics_context — ПОЛУЧИТЬ ВСЁ СРАЗУ: итоги, топ товаров, топ клиентов, остатки, неликвиды за период. ИСПОЛЬЗУЙ ВМЕСТО get_sales + get_sales_by_manager + get_stock, если нужна общая аналитика.
 - abc_xyz_analysis — ABC/XYZ классификация товаров/клиентов по выручке и стабильности
 - forecast_sales — прогноз продаж товара на N дней
 - forecast_stockout — прогноз окончания товаров на складе
@@ -357,6 +359,27 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_analytics_context",
+            "description": "Получить полный контекст для аналитики одним batch-запросом: итоги (сумма, кол-во заказов, средний чек), топ-20 товаров, топ-10 клиентов, остатки, неликвиды. Используй ВМЕСТО последовательных вызовов get_sales + get_sales_by_manager + get_stock, если нужна общая аналитика за период.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "date_from": {
+                        "type": "string",
+                        "description": "Начальная дата в формате ISO (YYYY-MM-DD)",
+                    },
+                    "date_to": {
+                        "type": "string",
+                        "description": "Конечная дата в формате ISO (YYYY-MM-DD)",
+                    },
+                },
+                "required": ["date_from", "date_to"],
+            },
+        },
+    },
 ]
 
 TOOL_NAME_TO_FUNC: dict[str, Any] = {}
@@ -369,6 +392,7 @@ def _import_tools() -> None:
         create_chart_tool,
         forecast_sales_tool,
         forecast_stockout_tool,
+        get_analytics_context_tool,
         get_purchases_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
@@ -387,6 +411,7 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["create_chart"] = create_chart_tool
     TOOL_NAME_TO_FUNC["simulate_scenario"] = simulate_scenario_tool
     TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
+    TOOL_NAME_TO_FUNC["get_analytics_context"] = get_analytics_context_tool
     TOOL_NAME_TO_FUNC["forecast_sales"] = forecast_sales_tool
     TOOL_NAME_TO_FUNC["forecast_stockout"] = forecast_stockout_tool
     TOOL_NAME_TO_FUNC["compare_forecasts"] = compare_forecasts_tool

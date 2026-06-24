@@ -44,6 +44,36 @@ class Settings:
         default_factory=lambda: os.getenv("USE_MOCK_DATA", "true").lower() == "true"
     )
 
+    # Таймауты и retry
+    c1_timeout_seconds: int = field(
+        default_factory=lambda: int(os.getenv("C1_TIMEOUT_SECONDS", "60"))
+    )
+    c1_connect_timeout_seconds: int = field(
+        default_factory=lambda: int(os.getenv("C1_CONNECT_TIMEOUT_SECONDS", "10"))
+    )
+    c1_max_retries: int = field(
+        default_factory=lambda: int(os.getenv("C1_MAX_RETRIES", "3"))
+    )
+    c1_retry_delay_seconds: int = field(
+        default_factory=lambda: int(os.getenv("C1_RETRY_DELAY_SECONDS", "5"))
+    )
+
+    # Batch
+    c1_batch_max_requests: int = field(
+        default_factory=lambda: int(os.getenv("C1_BATCH_MAX_REQUESTS", "10"))
+    )
+    c1_batch_timeout_seconds: int = field(
+        default_factory=lambda: int(os.getenv("C1_BATCH_TIMEOUT_SECONDS", "120"))
+    )
+
+    # Кэш
+    cache_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("CACHE_TTL_SECONDS", "300"))
+    )
+    cache_max_size: int = field(
+        default_factory=lambda: int(os.getenv("CACHE_MAX_SIZE", "1000"))
+    )
+
     def validate(self) -> None:
         if not self.deepseek_api_key:
             raise ValueError(

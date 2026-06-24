@@ -119,10 +119,9 @@ async def _gen_test_data(price: float = 100, qty: float = 100, elasticity: float
             if real is not None:
                 logger.info("Используются реальные данные из 1С для '{}' ({} записей)", entity_name, len(real))
                 return real, True
-            raise ValueError(f"Нет данных о продажах для '{entity_name}' в 1С. Симуляция изменения цены продажи невозможна — товар не продавался.")
         except Exception as e:
-            logger.warning("{}", e)
-            raise
+            logger.warning("Ошибка загрузки реальных данных для '{}': {}", entity_name, e)
+        raise ValueError(f"Нет данных о продажах для '{entity_name}' в 1С. Симуляция невозможна — товар не продавался.")
     np.random.seed(42)
     dates = pd.date_range("2025-06-22", periods=365, freq="D")
     prices = price + np.random.normal(0, price * 0.05, 365)

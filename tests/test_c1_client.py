@@ -12,12 +12,24 @@ def mock_httpx_client():
         yield mock
 
 
+def _setup_client_mock(mock_httpx_client, json_data, status_code=200):
+    mock_resp = MagicMock(status_code=status_code)
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = json_data
+    mock_resp.text = ""
+
+    mock_client = AsyncMock()
+    mock_client.request = AsyncMock(return_value=mock_resp)
+    mock_httpx_client.return_value = mock_client
+    return mock_client, mock_resp
+
+
 @pytest.mark.asyncio
 async def test_get_stock_success(mock_httpx_client):
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = [{"item": "Гвоздь 100мм", "quantity": 150}]
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(
+        mock_httpx_client,
+        [{"item": "Гвоздь 100мм", "quantity": 150}],
+    )
 
     c = C1Client()
     result = await c.get_stock()
@@ -27,10 +39,10 @@ async def test_get_stock_success(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_get_sales_success(mock_httpx_client):
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = [{"date": "2026-06-18", "item": "Гвоздь", "quantity": 10, "sum": 1250, "manager": "Иванов"}]
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(
+        mock_httpx_client,
+        [{"date": "2026-06-18", "item": "Гвоздь", "quantity": 10, "sum": 1250, "manager": "Иванов"}],
+    )
 
     c = C1Client()
     result = await c.get_sales()
@@ -40,24 +52,21 @@ async def test_get_sales_success(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_get_stock_with_filters(mock_httpx_client):
-    mock_resp = MagicMock(status_code=200)
-    mock_resp.json.return_value = []
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=mock_resp)
-    mock_httpx_client.return_value = mock_client
+    mock_client, _ = _setup_client_mock(mock_httpx_client, [])
 
     c = C1Client()
     await c.get_stock(warehouse="Москва", nomenclature="Гвоздь", min_quantity=100)
 
-    params = mock_client.get.call_args[1].get("params", {})
-    assert params.get("organization") or params.get("item")
+    _, kwargs = mock_client.request.call_args
+    params = kwargs.get("params", {})
+    assert params.get("organization") == "Москва"
+    assert params.get("item") == "Гвоздь"
+    assert params.get("min_quantity") == "100"
 
 
 @pytest.mark.asyncio
 async def test_empty_response(mock_httpx_client):
-    mock_resp = MagicMock(status_code=200)
-    mock_resp.json.return_value = []
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(mock_httpx_client, [])
 
     c = C1Client()
     result = await c.get_stock()
@@ -66,9 +75,10 @@ async def test_empty_response(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_get_receivables(mock_httpx_client):
-    mock_resp = MagicMock(status_code=200)
-    mock_resp.json.return_value = [{"client": "ООО Ромашка", "amount": 125000, "overdue_days": 45}]
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(
+        mock_httpx_client,
+        [{"client": "ООО Ромашка", "amount": 125000, "overdue_days": 45}],
+    )
 
     c = C1Client()
     result = await c.get_receivables()
@@ -77,9 +87,10 @@ async def test_get_receivables(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_list_nomenclature(mock_httpx_client):
-    mock_resp = MagicMock(status_code=200)
-    mock_resp.json.return_value = [{"ref": "NG-001", "name": "Гвоздь 100мм", "unit": "шт"}]
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(
+        mock_httpx_client,
+        [{"ref": "NG-001", "name": "Гвоздь 100мм", "unit": "шт"}],
+    )
 
     c = C1Client()
     result = await c.list_nomenclature("Гвоздь")
@@ -88,8 +99,7 @@ async def test_list_nomenclature(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_ping_success(mock_httpx_client):
-    mock_resp = MagicMock(status_code=200)
-    mock_httpx_client.return_value.get = AsyncMock(return_value=mock_resp)
+    _setup_client_mock(mock_httpx_client, [], status_code=200)
 
     c = C1Client()
     assert await c.ping() is True
@@ -97,7 +107,9 @@ async def test_ping_success(mock_httpx_client):
 
 @pytest.mark.asyncio
 async def test_ping_failure(mock_httpx_client):
-    mock_httpx_client.return_value.get = AsyncMock(side_effect=Exception("Connection failed"))
+    mock_client = AsyncMock()
+    mock_client.request = AsyncMock(side_effect=Exception("Connection failed"))
+    mock_httpx_client.return_value = mock_client
 
     c = C1Client()
     assert await c.ping() is False

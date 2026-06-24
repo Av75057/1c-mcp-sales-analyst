@@ -201,3 +201,19 @@ async def compare_forecasts_tool(nomenclature: str, test_days: int = 14) -> dict
     logger.info("compare_forecasts: {} test_days={}", nomenclature, test_days)
     from src.forecasting.tool import compare_forecasts_tool as _c
     return await _c(nomenclature=nomenclature, test_days=test_days)
+
+
+@measure_time("get_analytics_context")
+async def get_analytics_context_tool(
+    date_from: str = "",
+    date_to: str = "",
+) -> dict[str, Any]:
+    """Получить полный контекст для AI-аналитики одним batch-запросом."""
+    logger.info("Вызов get_analytics_context: date_from={}, date_to={}", date_from, date_to)
+    from src.clients.batch_client import BatchC1Client
+
+    async with BatchC1Client() as batch:
+        return await batch.get_analytics_context(
+            date_from=date_from or None,
+            date_to=date_to or None,
+        )

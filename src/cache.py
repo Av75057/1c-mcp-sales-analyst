@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from src.logger import logger
+from src.metrics import metrics
 
 
 class C1UnavailableError(Exception):
@@ -15,9 +16,10 @@ class C1UnavailableError(Exception):
 
 
 class MemoryCache:
-    def __init__(self, ttl: int = 60) -> None:
+    def __init__(self, ttl: int = 60, max_size: int = 1000) -> None:
         self._store: dict[str, tuple[float, Any]] = {}
         self._ttl = ttl
+        self._max_size = max_size
 
     def get(self, key: str) -> Any | None:
         if key in self._store:
@@ -28,10 +30,16 @@ class MemoryCache:
         return None
 
     def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        if len(self._store) >= self._max_size:
+            self._store.clear()
         self._store[key] = (time.time() + (ttl or self._ttl), value)
 
     def clear(self) -> None:
         self._store.clear()
+
+    @property
+    def size(self) -> int:
+        return len(self._store)
 
 
 cache = MemoryCache(ttl=60)
@@ -86,13 +94,18 @@ class CachedC1Client:
     async def ping(self) -> bool:
         return await self._client.ping()
 
+    async def close(self) -> None:
+        await self._client.close()
+
     async def _with_cache(self, key: str, method: Any, **kwargs: Any) -> Any:
         cached_val = cache.get(key)
         if cached_val is not None:
             result_size = len(json.dumps(cached_val, default=str))
             logger.info("[PERF] Cache HIT: {} size={}b", key, result_size)
+            metrics.record_cache_hit()
             return cached_val
 
+        metrics.record_cache_miss()
         start = time.perf_counter()
         try:
             result = await method(**kwargs)
@@ -106,22 +119,6 @@ class CachedC1Client:
                 logger.warning("[PERF] SLOW 1С: {} {:.3f}s", key, elapsed)
             cache.set(key, result, ttl=self._ttl)
             return result
-        except httpx.ReadTimeout:
-            elapsed = time.perf_counter() - start
-            logger.error("[PERF] 1С TIMEOUT: {} {:.3f}s", key, elapsed)
-            await self._client.reset()
-            raise C1UnavailableError(f"1С не отвечает: {key} ({elapsed:.1f}s)")
-        except httpx.ConnectError:
-            elapsed = time.perf_counter() - start
-            logger.error("[PERF] 1С UNREACHABLE: {} {:.3f}s", key, elapsed)
-            await self._client.reset()
-            raise C1UnavailableError(f"1С недоступна: {key} ({elapsed:.1f}s)")
-        except httpx.HTTPStatusError as e:
-            elapsed = time.perf_counter() - start
-            body = e.response.text[:1000] if e.response else "(нет ответа)"
-            logger.error("[PERF] 1С HTTP {}: {} {:.3f}s body={}", e.response.status_code, key, elapsed, body)
-            await self._client.reset()
-            raise C1UnavailableError(f"1С вернула {e.response.status_code}: {key} ({elapsed:.1f}s)") from e
         except C1UnavailableError:
             raise
         except Exception as e:
