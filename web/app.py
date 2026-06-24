@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
@@ -20,7 +20,7 @@ from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
 
-app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
+app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0", default_response_class=ORJSONResponse)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
