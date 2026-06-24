@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ИП Бакланова Елена Владимировна дейст:receivables_amount:2026:26",
+  "detector": "receivables_alert",
+  "entity_id": "ИП Бакланова Елена Владимировна дейст",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-24T12:34:15.231141+00:00",
+  "title": "Задолженность: ИП Бакланова Елена Владимировна дейст"
+}

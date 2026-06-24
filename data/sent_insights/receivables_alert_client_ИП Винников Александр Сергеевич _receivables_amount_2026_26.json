@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ИП Винников Александр Сергеевич :receivables_amount:2026:26",
+  "detector": "receivables_alert",
+  "entity_id": "ИП Винников Александр Сергеевич ",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-24T12:34:15.232680+00:00",
+  "title": "Задолженность: ИП Винников Александр Сергеевич "
+}

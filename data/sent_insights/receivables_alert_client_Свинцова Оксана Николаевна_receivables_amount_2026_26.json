@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Свинцова Оксана Николаевна:receivables_amount:2026:26",
+  "detector": "receivables_alert",
+  "entity_id": "Свинцова Оксана Николаевна",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-24T12:34:15.232747+00:00",
+  "title": "Задолженность: Свинцова Оксана Николаевна"
+}

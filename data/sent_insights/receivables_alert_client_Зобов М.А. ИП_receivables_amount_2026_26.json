@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Зобов М.А. ИП:receivables_amount:2026:26",
+  "detector": "receivables_alert",
+  "entity_id": "Зобов М.А. ИП",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-24T12:34:15.233527+00:00",
+  "title": "Задолженность: Зобов М.А. ИП"
+}
