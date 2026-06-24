@@ -206,9 +206,10 @@ class C1Client:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         client = await self._get_client()
+        # Используем POST, чтобы избежать проблем с URL-кодированием UTF-8 через IIS
         params = {"q": query, "limit": str(limit)}
-        logger.debug("GET /nomenclature/search params={}", params)
-        resp = await client.get(f"{self.base_url}/nomenclature/search", params=params)
+        logger.debug("POST /nomenclature/search params={}", params)
+        resp = await client.post(f"{self.base_url}/nomenclature/search", data=params)
         resp.raise_for_status()
         data: list[dict[str, Any]] = resp.json()
 
