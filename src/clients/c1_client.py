@@ -206,17 +206,9 @@ class C1Client:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         client = await self._get_client()
-        # 1C на IIS не декодирует UTF-8 в GET-параметрах.
-        # Кодируем в CP1251 (Windows-1251) — русский IIS декодирует корректно.
-        import urllib.parse
-        try:
-            q_bytes = query.encode('cp1251')
-        except (UnicodeEncodeError, LookupError):
-            q_bytes = query.encode('utf-8')
-        q_encoded = urllib.parse.quote_from_bytes(q_bytes, safe='')
-        url = f"{self.base_url}/nomenclature/search?q={q_encoded}&limit={limit}"
-        logger.debug("GET /nomenclature/search q_encoded={}", q_encoded)
-        resp = await client.get(url)
+        params = {"q": query, "limit": str(limit)}
+        logger.debug("GET /nomenclature/search params={}", params)
+        resp = await client.get(f"{self.base_url}/nomenclature/search", params=params)
         resp.raise_for_status()
         data: list[dict[str, Any]] = resp.json()
 
