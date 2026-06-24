@@ -85,19 +85,33 @@ class CachedC1Client:
     async def _with_cache(self, key: str, method: Any, **kwargs: Any) -> Any:
         cached_val = cache.get(key)
         if cached_val is not None:
-            logger.debug("Cache HIT: {}", key)
+            result_size = len(json.dumps(cached_val, default=str))
+            logger.info("[PERF] Cache HIT: {} size={}b", key, result_size)
             return cached_val
+
+        start = time.perf_counter()
         try:
             result = await method(**kwargs)
+            elapsed = time.perf_counter() - start
+            result_size = len(json.dumps(result, default=str))
+            status = "TIMEOUT" if isinstance(result, list) and not result else "OK"
+            logger.info(
+                "[PERF] 1С {}: {:.3f}s size={}b {}",
+                key, elapsed, result_size, status,
+            )
+            if elapsed > 3.0:
+                logger.warning("[PERF] SLOW 1С: {} {:.3f}s", key, elapsed)
             cache.set(key, result, ttl=self._ttl)
-            logger.debug("Cache MISS: {}", key)
             return result
         except httpx.ReadTimeout:
-            logger.error("Timeout 1С: {}", key)
+            elapsed = time.perf_counter() - start
+            logger.error("[PERF] 1С TIMEOUT: {} {:.3f}s", key, elapsed)
             return []
         except httpx.ConnectError:
-            logger.error("1С недоступна: {}", key)
+            elapsed = time.perf_counter() - start
+            logger.error("[PERF] 1С UNREACHABLE: {} {:.3f}s", key, elapsed)
             return []
         except Exception as e:
-            logger.error("Ошибка 1С: {} - {}", key, e)
+            elapsed = time.perf_counter() - start
+            logger.error("[PERF] 1С ERROR: {} {:.3f}s - {}", key, elapsed, e)
             return []

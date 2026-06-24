@@ -7,6 +7,7 @@ from src.clients.c1_client import C1Client
 from src.clients.mock_c1_client import MockC1Client
 from src.config import settings
 from src.logger import logger
+from src.perf import measure_time
 
 C1ClientProtocol = C1Client | MockC1Client | CachedC1Client
 
@@ -36,6 +37,7 @@ async def close_client() -> None:
         _client_instance = None
 
 
+@measure_time("get_stock")
 async def get_stock_tool(
     warehouse: str | None = None,
     nomenclature: str | None = None,
@@ -50,6 +52,7 @@ async def get_stock_tool(
     )
 
 
+@measure_time("get_sales")
 async def get_sales_tool(
     date_from: str | None = None,
     date_to: str | None = None,
@@ -66,6 +69,7 @@ async def get_sales_tool(
     )
 
 
+@measure_time("get_sales_by_manager")
 async def get_sales_by_manager_tool(
     date_from: str | None = None,
     date_to: str | None = None,
@@ -80,6 +84,7 @@ async def get_sales_by_manager_tool(
     )
 
 
+@measure_time("get_receivables")
 async def get_receivables_tool(
     min_amount: float | None = None,
     date_from: str | None = None,
@@ -92,6 +97,7 @@ async def get_receivables_tool(
     )
 
 
+@measure_time("list_nomenclature")
 async def list_nomenclature_tool(
     query: str,
     limit: int = 10,
@@ -101,6 +107,7 @@ async def list_nomenclature_tool(
     return await client.list_nomenclature(query=query, limit=limit)
 
 
+@measure_time("get_purchases")
 async def get_purchases_tool(
     date_from: str | None = None,
     date_to: str | None = None,

@@ -7,6 +7,7 @@ import pandas as pd
 from src.forecasting.models import HoltWintersModel, LinearModel, ProphetModel, auto_select
 from src.forecasting.metrics import calc_metrics
 from src.logger import logger
+from src.perf import measure_time
 
 
 def prepare_sales_data(sales: list[dict[str, Any]], item_name: str) -> pd.DataFrame:
@@ -23,6 +24,7 @@ def prepare_sales_data(sales: list[dict[str, Any]], item_name: str) -> pd.DataFr
     return df.sort_values("date").reset_index(drop=True)
 
 
+@measure_time("forecast_sales")
 async def forecast_sales_tool(nomenclature: str, days: int = 30, method: str = "auto") -> dict[str, Any]:
     logger.info("forecast_sales: {} | {} дней | метод={}", nomenclature, days, method)
 
@@ -119,6 +121,7 @@ async def compare_forecasts_tool(nomenclature: str, test_days: int = 14) -> dict
     }
 
 
+@measure_time("forecast_stockout")
 async def forecast_stockout_tool(
     lead_time_days: int = 7, safety_stock_days: int = 3, days_horizon: int = 60
 ) -> dict[str, Any]:

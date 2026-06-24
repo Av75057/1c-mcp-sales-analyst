@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 from src.cache import CachedC1Client
 from src.clients.c1_client import C1Client
 from src.logger import logger
+from src.perf import measure_time
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
@@ -103,6 +104,7 @@ async def status_page():
     return render("status.html", {"page": "status"})
 
 
+@measure_time("api_status")
 @app.get("/api/status")
 async def api_status():
     import os
@@ -252,6 +254,7 @@ async def api_dashboard():
     }
 
 
+@measure_time("api_stock")
 @app.get("/api/stock")
 async def api_stock(nomenclature: str = "", min_quantity: int = 0):
     client = await get_c1()
@@ -262,18 +265,21 @@ async def api_stock(nomenclature: str = "", min_quantity: int = 0):
     return {"data": data, "total": len(data)}
 
 
+@measure_time("api_forecast_sales")
 @app.get("/api/forecast/sales")
 async def api_forecast_sales(nomenclature: str = "", days: int = 30, method: str = "auto"):
     from src.forecasting.tool import forecast_sales_tool
     return await forecast_sales_tool(nomenclature=nomenclature, days=days, method=method)
 
 
+@measure_time("api_forecast_stockout")
 @app.get("/api/forecast/stockout")
 async def api_forecast_stockout(lead_time: int = 7, safety_stock: int = 3):
     from src.forecasting.tool import forecast_stockout_tool
     return await forecast_stockout_tool(lead_time_days=lead_time, safety_stock_days=safety_stock)
 
 
+@measure_time("api_abc_xyz")
 @app.get("/api/analysis/abc-xyz")
 async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "nomenclature"):
     try:
@@ -291,6 +297,7 @@ async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "n
         return {"error": str(e)}
 
 
+@measure_time("api_nomenclature")
 @app.get("/api/nomenclature")
 async def api_nomenclature(query: str = ""):
     client = await get_c1()
@@ -298,6 +305,7 @@ async def api_nomenclature(query: str = ""):
     return {"data": data, "total": len(data)}
 
 
+@measure_time("api_sales")
 @app.get("/api/sales")
 async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
     client = await get_c1()

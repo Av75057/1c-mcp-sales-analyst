@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import time
 from typing import Any
 
 import httpx
@@ -23,9 +24,14 @@ class C1Client:
         self._client: httpx.AsyncClient | None = None
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        start = time.perf_counter()
         client = await self._get_client()
         resp = await client.request(method, path, **kwargs)
+        elapsed = time.perf_counter() - start
         resp.raise_for_status()
+        logger.info("[PERF] HTTP {} {}: {:.3f}s status={}", method, path, elapsed, resp.status_code)
+        if elapsed > 3.0:
+            logger.warning("[PERF] SLOW HTTP {} {}: {:.3f}s", method, path, elapsed)
         return resp
 
     async def _get_client(self) -> httpx.AsyncClient:

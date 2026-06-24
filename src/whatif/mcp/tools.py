@@ -7,6 +7,7 @@ import pandas as pd
 
 from src.config import settings
 from src.logger import logger
+from src.perf import measure_time
 from src.whatif.engine.simulator import WhatIfSimulator
 from src.whatif.mcp.chart_builder import WhatIfChartBuilder
 
@@ -19,6 +20,7 @@ def list_whatif_scenarios_tool() -> dict[str, Any]:
     return {"scenarios": _simulator.list_scenarios(), "total": 4}
 
 
+@measure_time("simulate_scenario")
 async def simulate_scenario_tool(
     scenario_type: str,
     entity_name: str = "",
