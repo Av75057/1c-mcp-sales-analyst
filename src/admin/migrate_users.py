@@ -13,8 +13,15 @@ USERS_JSON = Path(__file__).resolve().parent.parent / "auth" / "users.json"
 
 
 async def migrate():
+    from sqlalchemy import select
+
+    async with async_session() as db:
+        result = await db.execute(select(User).where(User.username == "admin"))
+        if result.scalar_one_or_none():
+            print("Пользователи уже есть в БД, миграция не требуется")
+            return
+
     if not USERS_JSON.exists():
-        print("users.json не найден, создаю админа по умолчанию")
         async with async_session() as db:
             admin = User(
                 username="admin",
@@ -33,9 +40,6 @@ async def migrate():
     async with async_session() as db:
         count = 0
         for username, user_data in data.items():
-            existing = await db.get(User, username)
-            if existing:
-                continue
             user = User(
                 username=username,
                 password_hash=user_data.get("password_hash", AuthService.hash_password("password")),

@@ -37,6 +37,9 @@ from src.admin.routes.users import router as admin_users_router
 from src.admin.routes.audit import router as admin_audit_router
 from src.admin.routes.monitoring import router as admin_monitoring_router
 from src.admin.routes.system import router as admin_system_router
+from src.admin.routes.settings import router as admin_settings_router
+from src.admin.routes.integrations import router as admin_integrations_router
+from src.admin.routes.tools_route import router as admin_tools_router
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -70,10 +73,14 @@ app = FastAPI(title="1C MCP Sales Analyst", version="1.3.0")
 
 @app.on_event("startup")
 async def on_startup():
-    from src.admin.database import init_db
+    from src.admin.database import init_db, async_session
     from src.admin.migrate_users import migrate
+    from src.admin.services.settings_service import SettingsService
     await init_db()
     await migrate()
+    async with async_session() as db:
+        svc = SettingsService(db)
+        await svc.seed_defaults()
 
 
 # Middleware (порядок: от внешнего к внутреннему)
@@ -97,6 +104,9 @@ app.include_router(admin_dashboard_router)
 app.include_router(admin_users_router)
 app.include_router(admin_audit_router)
 app.include_router(admin_monitoring_router)
+app.include_router(admin_settings_router)
+app.include_router(admin_integrations_router)
+app.include_router(admin_tools_router)
 app.include_router(admin_system_router)
 
 BASE = Path(__file__).resolve().parent
