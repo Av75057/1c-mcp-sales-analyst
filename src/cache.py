@@ -116,6 +116,12 @@ class CachedC1Client:
             logger.error("[PERF] 1С UNREACHABLE: {} {:.3f}s", key, elapsed)
             await self._client.reset()
             raise C1UnavailableError(f"1С недоступна: {key} ({elapsed:.1f}s)")
+        except httpx.HTTPStatusError as e:
+            elapsed = time.perf_counter() - start
+            body = e.response.text[:1000] if e.response else "(нет ответа)"
+            logger.error("[PERF] 1С HTTP {}: {} {:.3f}s body={}", e.response.status_code, key, elapsed, body)
+            await self._client.reset()
+            raise C1UnavailableError(f"1С вернула {e.response.status_code}: {key} ({elapsed:.1f}s)") from e
         except C1UnavailableError:
             raise
         except Exception as e:

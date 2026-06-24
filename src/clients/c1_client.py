@@ -28,6 +28,12 @@ class C1Client:
         client = await self._get_client()
         resp = await client.request(method, path, **kwargs)
         elapsed = time.perf_counter() - start
+        if resp.status_code >= 400:
+            try:
+                body = resp.text[:500]
+            except Exception:
+                body = "(тело нечитаемо)"
+            logger.error("[PERF] HTTP {} {} ERROR {}: {}", method, path, resp.status_code, body)
         resp.raise_for_status()
         logger.info("[PERF] HTTP {} {}: {:.3f}s status={}", method, path, elapsed, resp.status_code)
         if elapsed > 3.0:
