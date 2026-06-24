@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, ORJSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
+
+import numpy as np
 
 from src.cache import CachedC1Client, C1UnavailableError
 from src.clients.c1_client import C1Client
@@ -20,7 +22,34 @@ from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.whatif.engine.simulator import WhatIfSimulator
 
-app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0", default_response_class=ORJSONResponse)
+
+def _convert_numpy(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _convert_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_convert_numpy(v) for v in obj]
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj
+
+
+# Патч jsonable_encoder для поддержки numpy
+import fastapi.encoders as _encoders
+_original_je = _encoders.jsonable_encoder
+
+def _patched_je(obj: Any, *args: Any, **kwargs: Any) -> Any:
+    return _original_je(_convert_numpy(obj), *args, **kwargs)
+
+_encoders.jsonable_encoder = _patched_je
+
+
+app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
