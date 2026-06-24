@@ -40,6 +40,7 @@ from src.admin.routes.system import router as admin_system_router
 from src.admin.routes.settings import router as admin_settings_router
 from src.admin.routes.integrations import router as admin_integrations_router
 from src.admin.routes.tools_route import router as admin_tools_router
+from src.admin.routes.api_keys import router as admin_api_keys_router
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -106,6 +107,7 @@ app.include_router(admin_audit_router)
 app.include_router(admin_monitoring_router)
 app.include_router(admin_settings_router)
 app.include_router(admin_integrations_router)
+app.include_router(admin_api_keys_router)
 app.include_router(admin_tools_router)
 app.include_router(admin_system_router)
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Any
 
@@ -9,9 +10,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.admin.models import Setting, SettingsHistory
 
 
+def _apply_to_runtime(key: str, value: str) -> None:
+    env_map = {
+        "CACHE_TTL_SECONDS": "CACHE_TTL_SECONDS",
+        "CACHE_MAX_SIZE": "CACHE_MAX_SIZE",
+        "C1_TIMEOUT_SECONDS": "C1_TIMEOUT_SECONDS",
+        "C1_CONNECT_TIMEOUT_SECONDS": "C1_CONNECT_TIMEOUT_SECONDS",
+        "C1_MAX_RETRIES": "C1_MAX_RETRIES",
+        "C1_RETRY_DELAY_SECONDS": "C1_RETRY_DELAY_SECONDS",
+        "LLM_TEMPERATURE": "LLM_TEMPERATURE",
+        "LLM_MAX_TOKENS": "LLM_MAX_TOKENS",
+        "LOG_LEVEL": "LOG_LEVEL",
+    }
+    env_name = env_map.get(key)
+    if env_name:
+        os.environ[env_name] = value
+        from src.config import settings
+
+        settings.reload()
+
+
 class SettingsService:
-    def __init__(self, db: AsyncSession):
-        self.db = db
 
     async def get_all(self, category: str | None = None) -> list[dict[str, Any]]:
         q = select(Setting)
@@ -74,6 +93,7 @@ class SettingsService:
 
         await self.db.commit()
         await self.db.refresh(setting)
+        _apply_to_runtime(key, value)
         return {"id": setting.id, "key": setting.key, "value": "***" if is_secret else value, "category": setting.category}
 
     async def get_history(self, key: str, limit: int = 50) -> list[dict[str, Any]]:
@@ -118,6 +138,7 @@ class SettingsService:
         setting.updated_by = changed_by
         await self.db.commit()
         await self.db.refresh(setting)
+        _apply_to_runtime(setting.key, setting.value)
         return {"id": setting.id, "key": setting.key, "value": setting.value}
 
     async def get_categories(self) -> list[str]:

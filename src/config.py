@@ -85,6 +85,13 @@ class Settings:
         default_factory=lambda: int(os.getenv("CACHE_MAX_SIZE", "1000"))
     )
 
+    def reload(self) -> None:
+        for field_name in self.__dataclass_fields__:
+            env_name = field_name.upper()
+            factory = self.__dataclass_fields__[field_name].default_factory
+            if factory:
+                setattr(self, field_name, factory())
+
     def validate(self) -> None:
         if not self.deepseek_api_key:
             raise ValueError(
