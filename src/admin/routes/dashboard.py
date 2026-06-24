@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from src.admin.dependencies import require_admin
 from src.admin.services.metrics_service import MetricsService
@@ -12,6 +12,9 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/")
 async def admin_dashboard(request: Request, _=Depends(require_admin)):
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        return RedirectResponse(url="/admin")
     metrics_svc = MetricsService()
     audit_svc = AuditService()
     return {
