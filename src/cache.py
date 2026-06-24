@@ -98,10 +98,9 @@ class CachedC1Client:
             result = await method(**kwargs)
             elapsed = time.perf_counter() - start
             result_size = len(json.dumps(result, default=str))
-            status = "TIMEOUT" if isinstance(result, list) and not result else "OK"
             logger.info(
-                "[PERF] 1С {}: {:.3f}s size={}b {}",
-                key, elapsed, result_size, status,
+                "[PERF] 1С {}: {:.3f}s size={}b OK",
+                key, elapsed, result_size,
             )
             if elapsed > 3.0:
                 logger.warning("[PERF] SLOW 1С: {} {:.3f}s", key, elapsed)
@@ -110,14 +109,17 @@ class CachedC1Client:
         except httpx.ReadTimeout:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С TIMEOUT: {} {:.3f}s", key, elapsed)
+            await self._client.reset()
             raise C1UnavailableError(f"1С не отвечает: {key} ({elapsed:.1f}s)")
         except httpx.ConnectError:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С UNREACHABLE: {} {:.3f}s", key, elapsed)
+            await self._client.reset()
             raise C1UnavailableError(f"1С недоступна: {key} ({elapsed:.1f}s)")
         except C1UnavailableError:
             raise
         except Exception as e:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С ERROR: {} {:.3f}s - {}", key, elapsed, e)
+            await self._client.reset()
             raise C1UnavailableError(f"Ошибка 1С: {key} — {e}") from e

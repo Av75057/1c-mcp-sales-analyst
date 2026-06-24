@@ -287,3 +287,7 @@ class C1Client:
         if self._client:
             await self._client.aclose()
             self._client = None
+
+    async def reset(self) -> None:
+        await self.close()
+        logger.info("[PERF] C1Client сброшен (пересоздание httpx клиента)")
