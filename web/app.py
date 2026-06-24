@@ -228,7 +228,7 @@ async def api_documents_sales(
     page: int = 1,
     page_size: int = 50,
 ):
-    from src.mcp.tools.documents import get_sales_documents
+    from src.mcp.documents_tool import get_sales_documents
     return await get_sales_documents(
         date_from=date_from,
         date_to=date_to,

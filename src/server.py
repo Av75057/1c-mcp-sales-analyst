@@ -166,7 +166,7 @@ async def _get_sales_documents(
     page: int = 1,
     page_size: int = 50,
 ) -> dict[str, Any]:
-    from src.mcp.tools.documents import get_sales_documents
+    from src.mcp.documents_tool import get_sales_documents
     return await get_sales_documents(
         date_from=date_from,
         date_to=date_to,

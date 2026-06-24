@@ -221,7 +221,7 @@ async def get_sales_documents_tool(
         "Вызов get_sales_documents: {}-{} counterparty={} page={}",
         date_from, date_to, counterparty, page,
     )
-    from src.mcp.tools.documents import get_sales_documents as _doc
+    from src.mcp.documents_tool import get_sales_documents as _doc
     return await _doc(
         date_from=date_from,
         date_to=date_to,

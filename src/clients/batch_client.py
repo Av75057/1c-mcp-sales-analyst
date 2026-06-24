@@ -193,11 +193,9 @@ class BatchC1Client:
             params["date_to"] = date_to
 
         requests = [
-            {"id": "sales_summary", "method": "GET", "path": "/sales/summary", "params": params},
-            {"id": "top_products", "method": "GET", "path": "/sales/by-product", "params": {**params, "limit": "20"}},
-            {"id": "top_customers", "method": "GET", "path": "/customers/top", "params": {**params, "limit": "10"}},
-            {"id": "inventory", "method": "GET", "path": "/inventory/stock", "params": {"min_quantity": "1"}},
-            {"id": "slow_moving", "method": "GET", "path": "/sales/slow-moving", "params": params},
+            {"id": "sales", "method": "GET", "path": "/sales", "params": {**params, "limit": "20"}},
+            {"id": "sales_by_manager", "method": "GET", "path": "/sales/by_manager", "params": params},
+            {"id": "stock", "method": "GET", "path": "/stock", "params": {"limit": "10"}},
         ]
 
         batch_result = await self.execute_batch(requests)
@@ -217,14 +215,20 @@ class BatchC1Client:
         return context
 
     async def get_sales_summary(self, date_from: str | None = None, date_to: str | None = None) -> dict[str, Any]:
-        """Сводка по продажам через batch (или fallback)."""
         result = await self.get_analytics_context(date_from=date_from, date_to=date_to)
-        return result.get("sales_summary", {})
+        return {"sales": result.get("sales", []), "sales_by_manager": result.get("sales_by_manager", [])}
 
     async def get_top_products(self, date_from: str | None = None, date_to: str | None = None, limit: int = 20) -> list[Any]:
         result = await self.get_analytics_context(date_from=date_from, date_to=date_to)
-        return result.get("top_products", [])
+        sales = result.get("sales", [])
+        return sorted(sales, key=lambda x: x.get("sum", 0), reverse=True)[:limit]
 
     async def get_top_customers(self, date_from: str | None = None, date_to: str | None = None, limit: int = 10) -> list[Any]:
         result = await self.get_analytics_context(date_from=date_from, date_to=date_to)
-        return result.get("top_customers", [])
+        all_sales = result.get("sales", [])
+        customers: dict[str, float] = {}
+        for s in all_sales:
+            c = s.get("client", "")
+            customers[c] = customers.get(c, 0) + s.get("sum", 0)
+        sorted_c = sorted(customers.items(), key=lambda x: x[1], reverse=True)[:limit]
+        return [{"customer": k, "total_sales": v} for k, v in sorted_c]
