@@ -10,6 +10,17 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install deps
-        run: pip install -e ".[dev]" && pip install plotly pandas scikit-learn numpy joblib pillow kaleido 2>/dev/null || true
-      - name: Test
-        run: USE_MOCK_DATA=true python -m pytest tests/test_mock_client.py tests/test_c1_client.py tests/test_insights.py tests/test_tools.py tests/test_abc_xyz.py tests/test_docparser.py tests/test_whatif_scenarios.py tests/test_forecasting.py tests/test_api.py -v --tb=short 2>&1
+        run: |
+          pip install -e ".[dev]"
+          pip install plotly pandas scikit-learn numpy joblib pillow kaleido 2>/dev/null || true
+      - name: Run tests (non-admin)
+        run: USE_MOCK_DATA=true python -m pytest tests/ --ignore=tests/test_admin.py --ignore=tests/test_charts.py --ignore=tests/test_deepseek_client.py -v --tb=short
+      - name: Run admin tests
+        run: USE_MOCK_DATA=true python -m pytest tests/test_admin.py -v --tb=short
+      - name: Coverage report
+        run: USE_MOCK_DATA=true python -m pytest tests/ --cov=src --cov=web --cov-report=term-missing --cov-report=html --tb=short 2>&1 | tail -20
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/

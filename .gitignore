@@ -17,6 +17,9 @@ logs/
 *.log
 src/auth/users.json
 data/*.db
+htmlcov/
+.coverage
+.coverage.*
 
 static/charts/*.png
 static/charts/*.pdf

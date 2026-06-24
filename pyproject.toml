@@ -32,6 +32,21 @@ web = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+]
+
+[tool.coverage.run]
+source = ["src", "web"]
+omit = [".venv/*", "tests/*", "src/admin/migrate_users.py"]
+concurrency = ["thread"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "def __repr__",
+    "return None  # pragma: no cover",
 ]
 
 [tool.setuptools.packages.find]
