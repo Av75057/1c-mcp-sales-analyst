@@ -81,7 +81,7 @@ class C1Client:
         warehouse: str | None = None,
     ) -> list[dict[str, Any]]:
         client = await self._get_client()
-        params: dict[str, str] = {}
+        params: dict[str, str] = {"limit": "1000"}
         if date_from:
             params["date_from"] = date_from
         if date_to:
@@ -115,7 +115,7 @@ class C1Client:
         manager: str | None = None,
     ) -> list[dict[str, Any]]:
         client = await self._get_client()
-        params: dict[str, str] = {}
+        params: dict[str, str] = {"limit": "1000"}
         if date_from:
             params["date_from"] = date_from
         if date_to:
