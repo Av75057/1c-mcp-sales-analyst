@@ -111,9 +111,9 @@ async def api_status():
     insights_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
     insights_count = len(list(insights_dir.glob("*.json"))) if insights_dir.exists() else 0
     status_data = {
-        "stock_count": "?",
-        "sales_count": "?",
-        "sales_sum": "?",
+        "stock_count": 0,
+        "sales_count": 0,
+        "sales_sum": 0,
         "insights_count": insights_count,
         "deepseek_key": bool(os.getenv("DEEPSEEK_API_KEY")),
         "telegram_token": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
@@ -126,11 +126,17 @@ async def api_status():
     }
     try:
         client = await get_c1()
-        stock = await asyncio.wait_for(client.get_stock(), timeout=5.0)
-        status_data["stock_count"] = len(stock)
-        status_data["c1_connected"] = True
+        stock_coro = asyncio.wait_for(client.get_stock(), timeout=5.0)
+        sales_coro = asyncio.wait_for(client.get_sales(), timeout=5.0)
+        results = await asyncio.gather(stock_coro, sales_coro, return_exceptions=True)
+        stock_res, sales_res = results
+        if isinstance(stock_res, list):
+            status_data["stock_count"] = len(stock_res)
+        if isinstance(sales_res, list):
+            status_data["sales_count"] = len(sales_res)
+            status_data["sales_sum"] = sum(s.get("sum", 0) for s in sales_res)
+        status_data["c1_connected"] = isinstance(stock_res, list) or isinstance(sales_res, list)
     except Exception:
-        status_data["stock_count"] = 0
         status_data["c1_connected"] = False
     return status_data
 
