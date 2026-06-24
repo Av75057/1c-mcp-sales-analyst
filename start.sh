@@ -20,10 +20,25 @@ source "$VENV/bin/activate"
 
 _cmd() { nohup "$@" > "$PID_DIR/$2.log" 2>&1 & echo $! > "$PID_DIR/$2.pid"; }
 
+_port_check() {
+    local p="${1:-8000}"
+    if ss -tlnp "sport = :$p" 2>/dev/null | grep -q .; then
+        err "Порт $p уже занят. Выполните: $0 stop"
+        return 1
+    fi
+    return 0
+}
+
 start_web() {
     PORT="${PORT:-8000}"
+    _port_check "$PORT" || return 1
     _cmd uvicorn web.app:app --host 0.0.0.0 --port "$PORT" --proxy-headers --log-level info web
-    ok "Web UI запущен (PID $(cat "$PID_DIR/web.pid")) — http://localhost:$PORT"
+    sleep 1
+    if kill -0 "$(cat "$PID_DIR/web.pid")" 2>/dev/null; then
+        ok "Web UI запущен (PID $(cat "$PID_DIR/web.pid")) — http://localhost:$PORT"
+    else
+        err "Ошибка запуска. Лог: $PID_DIR/web.log"; tail -5 "$PID_DIR/web.log"
+    fi
 }
 
 start_mcp() {
