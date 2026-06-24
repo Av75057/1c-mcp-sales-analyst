@@ -151,6 +151,10 @@ async def get_sim() -> WhatIfSimulator:
 async def login_page():
     return render("login.html", {"page": "login"})
 
+@app.get("/admin")
+async def admin_page():
+    return render("admin.html", {"page": "admin"})
+
 @app.get("/")
 async def dashboard():
     return render("dashboard.html", {"page": "dashboard"})

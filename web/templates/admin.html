@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2">
+            <div class="list-group mb-4">
+                <a class="list-group-item list-group-item-action active" href="#dashboard" onclick="showTab('dashboard')">📊 Dashboard</a>
+                <a class="list-group-item list-group-item-action" href="#users" onclick="showTab('users')">👥 Users</a>
+                <a class="list-group-item list-group-item-action" href="#audit" onclick="showTab('audit')">📋 Audit</a>
+                <a class="list-group-item list-group-item-action" href="#monitoring" onclick="showTab('monitoring')">📈 Monitoring</a>
+                <a class="list-group-item list-group-item-action" href="#settings" onclick="showTab('settings')">⚙️ Settings</a>
+                <a class="list-group-item list-group-item-action" href="#integrations" onclick="showTab('integrations')">🔌 Integrations</a>
+                <a class="list-group-item list-group-item-action" href="#tools" onclick="showTab('tools')">🛠️ Tools</a>
+                <a class="list-group-item list-group-item-action" href="#system" onclick="showTab('system')">🖥️ System</a>
+            </div>
+        </div>
+        <div class="col-md-10" id="adminContent">
+            <div class="text-center text-secondary py-5"><h3>📊 Админ-панель</h3><p>Выберите раздел слева</p></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+function showTab(tab) {
+    document.querySelectorAll('.list-group-item').forEach(e => e.classList.remove('active'));
+    event?.target?.classList?.add('active') || document.querySelector(`[href="#${tab}"]`)?.classList.add('active');
+    const c = document.getElementById('adminContent');
+    if (tab === 'dashboard') loadDashboard(c);
+    else if (tab === 'users') loadUsers(c);
+    else if (tab === 'audit') loadAudit(c);
+    else if (tab === 'monitoring') loadMonitoring(c);
+    else if (tab === 'settings') loadSettings(c);
+    else if (tab === 'integrations') loadIntegrations(c);
+    else if (tab === 'tools') loadTools(c);
+    else if (tab === 'system') loadSystem(c);
+}
+
+async function api(path) {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+}
+
+// === Dashboard ===
+async function loadDashboard(c) {
+    const d = await api('/admin/');
+    c.innerHTML = `
+        <h3>📊 Dashboard</h3>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Avg Response</small><h3>${d.metrics.avg_response_time_ms}ms</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">P95</small><h3>${d.metrics.p95_response_time_ms}ms</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Cache Hit</small><h3>${d.metrics.cache_hit_rate_percent}%</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Errors / h</small><h3>${d.metrics.error_count_last_hour}</h3></div></div>
+        </div>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Timeouts / h</small><h3>${d.metrics.timeout_count_last_hour}</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Active Req</small><h3>${d.metrics.active_requests}</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Total Req</small><h3>${d.metrics.total_requests}</h3></div></div>
+            <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Login OK/Fail</small><h3>${d.audit_stats?.login_success || 0}/${d.audit_stats?.login_failed || 0}</h3></div></div>
+        </div>
+        ${d.alerts?.length ? '<div class="alert alert-warning">' + d.alerts.map(a => '<div>' + a.message + '</div>').join('') + '</div>' : ''}
+        ${d.slow_queries?.length ? '<h5>Slow Queries</h5><pre>' + JSON.stringify(d.slow_queries, null, 2) + '</pre>' : ''}
+    `;
+}
+
+// === Users ===
+async function loadUsers(c) {
+    const users = await api('/admin/users/');
+    c.innerHTML = `
+        <h3>👥 Users</h3>
+        <button class="btn btn-primary btn-sm mb-3" onclick="showCreateUser()">+ New User</button>
+        <div id="userForm"></div>
+        <table class="table table-sm"><thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Active</th><th>Last Login</th><th>Actions</th></tr></thead><tbody>
+        ${users.map(u => `<tr>
+            <td>${u.id}</td>
+            <td>${u.username}</td>
+            <td><span class="badge ${u.role === 'admin' ? 'bg-danger' : u.role === 'analyst' ? 'bg-primary' : 'bg-secondary'}">${u.role}</span></td>
+            <td>${u.is_active ? '✅' : '❌'}</td>
+            <td>${u.last_login ? new Date(u.last_login).toLocaleString() : '-'}</td>
+            <td>
+                ${u.locked_until ? '<button class="btn btn-sm btn-warning" onclick="unblockUser(' + u.id + ')">Unblock</button>' : ''}
+                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">Delete</button>
+            </td>
+        </tr>`).join('')}
+        </tbody></table>
+    `;
+}
+
+window.showCreateUser = function() {
+    document.getElementById('userForm').innerHTML = `
+        <div class="card p-3 mb-3">
+            <h6>New User</h6>
+            <input id="nu_name" class="form-control mb-2" placeholder="Username">
+            <input id="nu_pass" class="form-control mb-2" type="password" placeholder="Password">
+            <select id="nu_role" class="form-control mb-2"><option value="analyst">Analyst</option><option value="admin">Admin</option><option value="viewer">Viewer</option></select>
+            <button class="btn btn-success btn-sm" onclick="createUser()">Create</button>
+        </div>`;
+};
+
+window.createUser = async function() {
+    await fetch(API + '/admin/users/', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({username: document.getElementById('nu_name').value, password: document.getElementById('nu_pass').value, role: document.getElementById('nu_role').value})});
+    loadUsers(document.getElementById('adminContent'));
+};
+
+window.deleteUser = async function(id, name) {
+    if (!confirm('Delete user ' + name + '?')) return;
+    await fetch(API + '/admin/users/' + id, {method:'DELETE'});
+    loadUsers(document.getElementById('adminContent'));
+};
+
+window.unblockUser = async function(id) {
+    await fetch(API + '/admin/users/' + id + '/unblock', {method:'POST'});
+    loadUsers(document.getElementById('adminContent'));
+};
+
+// === Audit ===
+async function loadAudit(c) {
+    const d = await api('/admin/audit/?limit=100');
+    const s = await api('/admin/audit/stats');
+    c.innerHTML = `
+        <h3>📋 Audit Log</h3>
+        <div class="row g-2 mb-3">
+            <div class="col-auto"><span class="badge bg-info">Total: ${s.total || 0}</span></div>
+            <div class="col-auto"><span class="badge bg-success">OK: ${s.login_success || 0}</span></div>
+            <div class="col-auto"><span class="badge bg-danger">Fail: ${s.login_failed || 0}</span></div>
+            <div class="col-auto"><span class="badge bg-warning">Denied: ${s.access_denied || 0}</span></div>
+            <div class="col-auto"><span class="badge bg-secondary">Rate Limited: ${s.rate_limit_exceeded || 0}</span></div>
+        </div>
+        <table class="table table-sm"><thead><tr><th>Time</th><th>Event</th><th>User</th><th>IP</th><th>Resource</th></tr></thead><tbody>
+        ${(d.logs || []).slice(0,50).map(l => `<tr>
+            <td>${new Date(l.timestamp).toLocaleString()}</td>
+            <td><span class="badge ${l.event_type === 'login_failed' ? 'bg-danger' : 'bg-secondary'}">${l.event_type}</span></td>
+            <td>${l.username || '-'}</td>
+            <td>${l.ip_address || '-'}</td>
+            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${l.resource || '-'}</td>
+        </tr>`).join('')}
+        </tbody></table>
+        <a href="${API}/admin/audit/export" class="btn btn-sm btn-secondary">Export CSV</a>
+    `;
+}
+
+// === Monitoring ===
+async function loadMonitoring(c) {
+    const d = await api('/admin/monitoring/');
+    c.innerHTML = `
+        <h3>📈 Monitoring</h3>
+        <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="card p-3"><small class="text-secondary">Avg</small><h4>${d.dashboard.avg_response_time_ms}ms</h4></div></div>
+            <div class="col-md-4"><div class="card p-3"><small class="text-secondary">P95</small><h4>${d.dashboard.p95_response_time_ms}ms</h4></div></div>
+            <div class="col-md-4"><div class="card p-3"><small class="text-secondary">Cache Hit</small><h4>${d.dashboard.cache_hit_rate_percent}%</h4></div></div>
+        </div>
+        ${d.slow_queries?.length ? '<h5>Top 20 Slow Queries</h5><div style="max-height:400px;overflow-y:auto"><pre>' + JSON.stringify(d.slow_queries, null, 2) + '</pre></div>' : '<p class="text-secondary">No slow queries</p>'}
+        <h5 class="mt-3">Endpoint Stats</h5><pre>${JSON.stringify(d.endpoint_stats || {}, null, 2)}</pre>
+    `;
+}
+
+// === Settings ===
+async function loadSettings(c) {
+    const d = await api('/admin/settings/');
+    c.innerHTML = `
+        <h3>⚙️ Settings</h3>
+        <div class="mb-2">
+            <select id="settingsFilter" class="form-select form-select-sm d-inline w-auto" onchange="loadSettings()">
+                <option value="">All categories</option>
+                ${(d.categories || []).map(cat => '<option value="' + cat + '">' + cat + '</option>').join('')}
+            </select>
+            <button class="btn btn-sm btn-secondary" onclick="seedSettings()">Seed Defaults</button>
+        </div>
+        <table class="table table-sm"><thead><tr><th>Key</th><th>Value</th><th>Category</th><th>Actions</th></tr></thead><tbody>
+        ${(d.settings || []).map(s => `<tr>
+            <td><code>${s.key}</code></td>
+            <td>${s.is_secret ? '***' : '<input class="form-control form-control-sm d-inline w-auto" id="val_'+s.id+'" value="'+s.value+'" style="max-width:200px">'}</td>
+            <td><span class="badge bg-info">${s.category}</span></td>
+            <td>${s.is_secret ? '' : '<button class="btn btn-sm btn-primary" onclick="updateSetting('+s.id+',\''+s.key+'\')">Save</button> <button class="btn btn-sm btn-info" onclick="showHistory(\''+s.key+'\')">History</button>'}</td>
+        </tr>`).join('')}
+        </tbody></table>
+        <div id="settingHistory"></div>
+    `;
+}
+
+window.updateSetting = async function(id, key) {
+    const val = document.getElementById('val_'+id).value;
+    await fetch(API + '/admin/settings/' + key, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({value: val})});
+};
+
+window.seedSettings = async function() {
+    await fetch(API + '/admin/settings/seed', {method:'POST'});
+    loadSettings(document.getElementById('adminContent'));
+};
+
+window.showHistory = async function(key) {
+    const d = await api('/admin/settings/' + key + '/history');
+    document.getElementById('settingHistory').innerHTML = '<h6>History: ' + key + '</h6><pre>' + JSON.stringify(d.history || [], null, 2) + '</pre>';
+};
+
+// === Integrations ===
+async function loadIntegrations(c) {
+    const d = await api('/admin/integrations/');
+    const h = await api('/admin/integrations/check');
+    c.innerHTML = `
+        <h3>🔌 Integrations</h3>
+        <table class="table table-sm"><thead><tr><th>Service</th><th>Status</th><th>Response</th></tr></thead><tbody>
+        ${Object.entries(h).map(([name,info]) => `<tr>
+            <td><strong>${name}</strong></td>
+            <td><span class="badge ${info.status === 'healthy' ? 'bg-success' : info.status === 'degraded' ? 'bg-warning' : 'bg-danger'}">${info.status}</span></td>
+            <td>${info.response_time_ms ? info.response_time_ms + 'ms' : info.error || '-'}</td>
+        </tr>`).join('')}
+        </tbody></table>
+        <button class="btn btn-sm btn-secondary" onclick="loadIntegrations(document.getElementById('adminContent'))">Refresh</button>
+    `;
+}
+
+// === Tools ===
+async function loadTools(c) {
+    const d = await api('/admin/tools/');
+    c.innerHTML = `
+        <h3>🛠️ MCP Tools (${d.tools.length})</h3>
+        <table class="table table-sm"><thead><tr><th>Name</th><th>Description</th><th>Params</th></tr></thead><tbody>
+        ${d.tools.map(t => `<tr><td><code>${t.name}</code></td><td><small>${t.doc || '-'}</small></td><td><small>${(t.parameters || []).map(p => p.name + (p.required ? '*' : '')).join(', ') || '-'}</small></td></tr>`).join('')}
+        </tbody></table>
+    `;
+}
+
+// === System ===
+async function loadSystem(c) {
+    const d = await api('/admin/system/');
+    c.innerHTML = `
+        <h3>🖥️ System</h3>
+        <div class="row g-3">
+            <div class="col-md-6"><div class="card p-3"><small class="text-secondary">CPU</small><h4>${d.cpu_usage_percent}%</h4></div></div>
+            <div class="col-md-6"><div class="card p-3"><small class="text-secondary">Memory</small><h4>${d.memory_usage_percent}%</h4></div></div>
+            <div class="col-md-6"><div class="card p-3"><small class="text-secondary">Disk</small><h4>${d.disk_usage_percent}%</h4></div></div>
+            <div class="col-md-6"><div class="card p-3"><small class="text-secondary">Python</small><h4>${d.python_version.split(' ')[0]}</h4></div></div>
+        </div>
+        <pre class="mt-3">${JSON.stringify(d, null, 2)}</pre>
+    `;
+}
+
+// Hash routing
+window.onhashchange = function() {
+    const tab = location.hash.slice(1) || 'dashboard';
+    showTab(tab);
+};
+if (location.hash) onhashchange();
+</script>
+{% endblock %}
