@@ -16,6 +16,7 @@ build/
 logs/
 *.log
 src/auth/users.json
+data/*.db
 
 static/charts/*.png
 static/charts/*.pdf
