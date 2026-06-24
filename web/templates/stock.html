@@ -11,7 +11,8 @@
 </div>
 <div class="card p-3">
     <div style="height:250px"><canvas id="stockBarChart"></canvas></div>
-    <div class="table-responsive mt-3">
+    <div class="mt-2"><small class="text-secondary" id="stockInfo"></small></div>
+    <div class="table-responsive mt-2">
         <table class="table table-sm table-hover" id="stockTable">
             <thead><tr><th>#</th><th>Товар</th><th>Организация</th><th class="text-end">Количество</th></tr></thead>
             <tbody id="stockBody"></tbody>
@@ -26,11 +27,13 @@ async function loadStock() {
     const min = document.getElementById('minQty').value;
     const r = await fetch(`/api/stock?nomenclature=${encodeURIComponent(name)}&min_quantity=${min}`);
     const d = await r.json();
-    const rows = d.data;
+    const all = d.data;
+    const rows = all.slice(0, 10);
     document.getElementById('stockBody').innerHTML = rows.map((i, idx) =>
         `<tr><td>${idx + 1}</td><td>${i.nomenclature}</td><td>${i.warehouse}</td><td class="text-end">${i.quantity}</td></tr>`
     ).join('');
-    const top = rows.slice(0, 15).reverse();
+    document.getElementById('stockInfo').textContent = all.length > 10 ? `Показано 10 из ${all.length}` : `Всего: ${all.length}`;
+    const top = rows.slice().reverse();
     if (window.stockChart) window.stockChart.destroy();
     window.stockChart = new Chart(document.getElementById('stockBarChart'), {
         type: 'bar',

@@ -10,6 +10,10 @@ import httpx
 from src.logger import logger
 
 
+class C1UnavailableError(Exception):
+    """1С HTTP API недоступна (таймаут или ошибка соединения)."""
+
+
 class MemoryCache:
     def __init__(self, ttl: int = 60) -> None:
         self._store: dict[str, tuple[float, Any]] = {}
@@ -106,12 +110,14 @@ class CachedC1Client:
         except httpx.ReadTimeout:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С TIMEOUT: {} {:.3f}s", key, elapsed)
-            return []
+            raise C1UnavailableError(f"1С не отвечает: {key} ({elapsed:.1f}s)")
         except httpx.ConnectError:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С UNREACHABLE: {} {:.3f}s", key, elapsed)
-            return []
+            raise C1UnavailableError(f"1С недоступна: {key} ({elapsed:.1f}s)")
+        except C1UnavailableError:
+            raise
         except Exception as e:
             elapsed = time.perf_counter() - start
             logger.error("[PERF] 1С ERROR: {} {:.3f}s - {}", key, elapsed, e)
-            return []
+            raise C1UnavailableError(f"Ошибка 1С: {key} — {e}") from e

@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
-from src.cache import CachedC1Client
+from src.cache import CachedC1Client, C1UnavailableError
 from src.clients.c1_client import C1Client
 from src.logger import logger
 from src.perf import measure_time
@@ -258,11 +258,14 @@ async def api_dashboard():
 @app.get("/api/stock")
 async def api_stock(nomenclature: str = "", min_quantity: int = 0):
     client = await get_c1()
-    data = await client.get_stock(
-        nomenclature=nomenclature or None,
-        min_quantity=min_quantity or None,
-    )
-    return {"data": data, "total": len(data)}
+    try:
+        data = await client.get_stock(
+            nomenclature=nomenclature or None,
+            min_quantity=min_quantity or None,
+        )
+        return {"data": data, "total": len(data)}
+    except C1UnavailableError:
+        return {"data": [], "total": 0}
 
 
 @measure_time("api_forecast_sales")
@@ -301,19 +304,25 @@ async def api_abc_xyz(date_from: str = "", date_to: str = "", group_by: str = "n
 @app.get("/api/nomenclature")
 async def api_nomenclature(query: str = ""):
     client = await get_c1()
-    data = await client.list_nomenclature(query=query or "", limit=50)
-    return {"data": data, "total": len(data)}
+    try:
+        data = await client.list_nomenclature(query=query or "", limit=50)
+        return {"data": data, "total": len(data)}
+    except C1UnavailableError:
+        return {"data": [], "total": 0}
 
 
 @measure_time("api_sales")
 @app.get("/api/sales")
 async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
     client = await get_c1()
-    data, by_mgr = await asyncio.gather(
-        client.get_sales(date_from=date_from or None, date_to=date_to or None, manager=manager or None),
-        client.get_sales_by_manager(date_from=date_from or None, date_to=date_to or None),
-    )
-    return {"data": data, "total": len(data), "by_manager": by_mgr}
+    try:
+        data, by_mgr = await asyncio.gather(
+            client.get_sales(date_from=date_from or None, date_to=date_to or None, manager=manager or None),
+            client.get_sales_by_manager(date_from=date_from or None, date_to=date_to or None),
+        )
+        return {"data": data, "total": len(data), "by_manager": by_mgr}
+    except C1UnavailableError:
+        return {"data": [], "total": 0, "by_manager": []}
 
 
 @app.post("/api/chat")
