@@ -85,10 +85,10 @@
                 <li class="nav-item mt-3">
                     <a class="nav-link {{ 'active' if page == 'status' }}" href="/status"><i class="bi bi-gear"></i><span>Статус</span></a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="loginBtn" onclick="showLogin()"><i class="bi bi-person"></i><span id="userDisplay">Войти</span></a>
+                </li>
             </ul>
-            <div class="position-absolute bottom-0 start-0 end-0 p-3">
-                <small class="text-secondary" id="sysStatus">1C:УНФ + DeepSeek</small>
-            </div>
         </nav>
         <main class="content">
             {% block content %}{% endblock %}
@@ -96,5 +96,34 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block scripts %}{% endblock %}
+    <script>
+    async function checkAuth() {
+        try {
+            const r = await fetch('/api/auth/me');
+            if (r.ok) {
+                const u = await r.json();
+                document.getElementById('userDisplay').innerHTML = '<i class="bi bi-person-circle"></i> ' + u.username + ' <small>(' + u.role + ')</small> <a href="#" onclick="logout()" class="text-danger ms-2">выйти</a>';
+                document.getElementById('loginBtn').href = '#';
+            } else {
+                document.getElementById('userDisplay').textContent = 'Войти';
+                document.getElementById('loginBtn').onclick = showLogin;
+            }
+        } catch { document.getElementById('userDisplay').textContent = 'Войти'; }
+    }
+    async function showLogin() {
+        const user = prompt('Имя пользователя:');
+        if (!user) return;
+        const pass = prompt('Пароль:');
+        if (!pass) return;
+        const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'username='+encodeURIComponent(user)+'&password='+encodeURIComponent(pass) });
+        if (r.ok) { checkAuth(); location.reload(); }
+        else { const e = await r.json(); alert('Ошибка: ' + (e.detail || 'неверный логин/пароль')); }
+    }
+    async function logout() {
+        await fetch('/api/auth/logout', { method:'POST' });
+        location.reload();
+    }
+    checkAuth();
+    </script>
 </body>
 </html>

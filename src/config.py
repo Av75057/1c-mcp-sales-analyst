@@ -66,6 +66,17 @@ class Settings:
         default_factory=lambda: int(os.getenv("C1_BATCH_TIMEOUT_SECONDS", "120"))
     )
 
+    # Безопасность
+    jwt_secret_key: str = field(
+        default_factory=lambda: os.getenv("JWT_SECRET_KEY", "change-me-in-production-use-random-64-bytes!!")
+    )
+    allowed_origins: list[str] = field(
+        default_factory=lambda: os.getenv("ALLOWED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
+    )
+    auth_enabled: bool = field(
+        default_factory=lambda: os.getenv("AUTH_ENABLED", "true").lower() == "true"
+    )
+
     # Кэш
     cache_ttl_seconds: int = field(
         default_factory=lambda: int(os.getenv("CACHE_TTL_SECONDS", "300"))

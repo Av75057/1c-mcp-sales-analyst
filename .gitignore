@@ -14,6 +14,8 @@ build/
 .idea/
 .vscode/
 logs/
+*.log
+src/auth/users.json
 
 static/charts/*.png
 static/charts/*.pdf

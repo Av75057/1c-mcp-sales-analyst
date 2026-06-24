@@ -7,8 +7,9 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
@@ -16,12 +17,20 @@ import numpy as np
 
 from src.cache import CachedC1Client, C1UnavailableError
 from src.clients.c1_client import C1Client
+from src.config import settings
 from src.logger import logger
 from src.perf import measure_time
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.metrics import metrics
 from src.whatif.engine.simulator import WhatIfSimulator
+
+from src.auth.middleware import AuthMiddleware
+from src.auth.routes import router as auth_router
+from src.audit.middleware import AuditMiddleware
+from src.audit.logger import audit_logger
+from src.security.headers import SecurityHeadersMiddleware
+from src.security.rate_limit import init_rate_limiter, limiter
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -51,6 +60,22 @@ _encoders.jsonable_encoder = _patched_je
 
 
 app = FastAPI(title="1C MCP Sales Analyst", version="1.0.0")
+
+# Middleware (порядок: от внешнего к внутреннему)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+if settings.auth_enabled:
+    app.add_middleware(AuditMiddleware)
+    app.add_middleware(AuthMiddleware)
+
+init_rate_limiter(app)
+app.include_router(auth_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
@@ -89,6 +114,10 @@ async def get_sim() -> WhatIfSimulator:
 
 
 # ---- Pages ----
+
+@app.get("/login")
+async def login_page():
+    return render("login.html", {"page": "login"})
 
 @app.get("/")
 async def dashboard():
