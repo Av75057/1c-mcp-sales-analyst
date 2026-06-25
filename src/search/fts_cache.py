@@ -125,25 +125,23 @@ async def ensure_fresh(max_age: int = 3600) -> bool:
 
         c1 = C1Client()
         try:
-            items = await c1.list_nomenclature(query="", limit=5000)
+            # Build nomenclature from stock + sales data (which we can always fetch)
+            items: list[dict[str, Any]] = []
 
-            # Merge stock data: enrich nomenclature with stock_qty
+            # Get stock items for names
             try:
                 stock_items = await c1.get_stock()
-                stock_by_name: dict[str, float] = {}
+                seen = set()
                 for s in stock_items:
                     name = s.get("nomenclature", "")
                     qty = s.get("quantity", 0)
-                    if name:
-                        stock_by_name[name] = stock_by_name.get(name, 0) + float(qty)
-                for item in items:
-                    name = item.get("name", "")
-                    if name in stock_by_name:
-                        item["stock_qty"] = stock_by_name[name]
-            except Exception:
-                pass
+                    if name and name not in seen:
+                        seen.add(name)
+                        items.append({"name": name, "stock_qty": float(qty), "ref": name, "article": ""})
+            except Exception as e:
+                logger.warning("Stock fetch failed: {}", e)
 
-            # Try to get price data from sales
+            # Enrich with price data from sales
             try:
                 from datetime import date, timedelta
                 sales = await c1.get_sales(
@@ -153,20 +151,23 @@ async def ensure_fresh(max_age: int = 3600) -> bool:
                 price_by_name: dict[str, float] = {}
                 for s in sales:
                     name = s.get("nomenclature", "")
-                    price = s.get("sum", 0)
-                    qty = s.get("quantity", 0)
-                    if name and qty > 0:
-                        price_by_name[name] = price / qty
+                    sprice = s.get("sum", 0)
+                    sqty = s.get("quantity", 0)
+                    if name and float(sqty) > 0:
+                        price_by_name[name] = float(sprice) / float(sqty)
                 for item in items:
                     name = item.get("name", "")
                     if name in price_by_name:
                         item["price"] = round(price_by_name[name], 2)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Price enrichment failed: {}", e)
         finally:
             await c1.close()
-        refresh(items)
-        return True
+
+        if items:
+            refresh(items)
+            return True
+        return False
     except Exception as e:
         logger.warning("FTS cache refresh failed: {}", e)
         return False
