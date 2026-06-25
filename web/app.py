@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +15,7 @@ from jinja2 import Environment, FileSystemLoader
 
 import numpy as np
 
+from src.admin.database import get_db
 from src.cache import CachedC1Client, C1UnavailableError
 from src.clients.c1_client import C1Client
 from src.config import settings
@@ -32,7 +33,6 @@ from src.audit.logger import audit_logger
 from src.security.headers import SecurityHeadersMiddleware
 from src.security.rate_limit import init_rate_limiter, limiter
 
-from src.chat.routes import router as chat_router
 from src.admin.routes.dashboard import router as admin_dashboard_router
 from src.admin.routes.users import router as admin_users_router
 from src.admin.routes.audit import router as admin_audit_router
@@ -86,9 +86,11 @@ async def on_startup():
     async with async_session() as db:
         svc = SettingsService(db)
         await svc.seed_defaults()
-    # Init chat DB
-    chat_engine = create_engine("sqlite:///data/chat_history.db")
-    ChatBase.metadata.create_all(chat_engine)
+    # Init chat tables in same admin DB
+    from src.admin.database import engine as admin_engine
+    from sqlalchemy import text
+    async with admin_engine.begin() as conn:
+        await conn.run_sync(ChatBase.metadata.create_all)
 
 
 # Middleware (порядок: от внешнего к внутреннему)
@@ -106,8 +108,6 @@ if settings.auth_enabled:
 
 init_rate_limiter(app)
 app.include_router(auth_router)
-app.include_router(chat_router)
-
 # Admin routes
 app.include_router(admin_dashboard_router)
 app.include_router(admin_users_router)
@@ -478,6 +478,106 @@ async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
         return {"data": data, "total": len(data), "by_manager": by_mgr}
     except C1UnavailableError:
         return {"data": [], "total": 0, "by_manager": []}
+
+
+# --- Chat API Routes ---
+
+@app.get("/api/chat/sessions")
+async def chat_list_sessions(request: Request, db: AsyncSession = Depends(get_db)):
+    from src.chat.service import ChatService
+    from src.chat.routes import _get_user
+    user_id = _get_user(request)
+    svc = ChatService(db)
+    sessions = await svc.repo.list_sessions(user_id=user_id)
+    return {"sessions": sessions}
+
+
+@app.post("/api/chat/sessions")
+async def chat_create_session(request: Request, db: AsyncSession = Depends(get_db)):
+    from src.chat.service import ChatService
+    from src.chat.routes import _get_user
+    user_id = _get_user(request)
+    body = await request.json() if request.headers.get("content-type") == "application/json" else {}
+    svc = ChatService(db)
+    session = await svc.repo.create_session(user_id=user_id, title=body.get("title", "Новый чат"))
+    return {"id": session.id, "title": session.title, "created_at": session.created_at.isoformat()}
+
+
+@app.get("/api/chat/sessions/{session_id}")
+async def chat_get_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    from src.chat.repository import ChatRepository
+    repo = ChatRepository(db)
+    session = await repo.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"id": session.id, "title": session.title, "created_at": session.created_at.isoformat(), "updated_at": session.updated_at.isoformat(), "is_archived": session.is_archived}
+
+
+@app.put("/api/chat/sessions/{session_id}")
+async def chat_update_session(session_id: str, body: dict, db: AsyncSession = Depends(get_db)):
+    from src.chat.repository import ChatRepository
+    repo = ChatRepository(db)
+    ok = await repo.update_session(session_id, **{k: v for k, v in body.items() if k in ("title", "is_archived")})
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"message": "Updated"}
+
+
+@app.delete("/api/chat/sessions/{session_id}")
+async def chat_delete_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    from src.chat.repository import ChatRepository
+    repo = ChatRepository(db)
+    ok = await repo.delete_session(session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"message": "Deleted"}
+
+
+@app.get("/api/chat/sessions/{session_id}/messages")
+async def chat_get_messages(session_id: str, page: int = Query(1, ge=1), limit: int = Query(50, le=200), db: AsyncSession = Depends(get_db)):
+    from src.chat.repository import ChatRepository
+    repo = ChatRepository(db)
+    messages, total = await repo.get_messages(session_id, page=page, limit=limit)
+    msg_list = []
+    for m in messages:
+        tool_calls = await repo.get_tool_calls(m.id) if m.role == "assistant" else []
+        msg_list.append({"id": m.id, "role": m.role, "content": m.content, "tokens_used": m.tokens_used, "response_time_ms": m.response_time_ms, "created_at": m.created_at.isoformat(), "tool_calls": tool_calls})
+    return {"messages": msg_list, "total": total, "page": page, "pages": max(1, (total + limit - 1) // limit)}
+
+
+@app.post("/api/chat/sessions/{session_id}/messages")
+async def chat_send_message(session_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+    from src.chat.service import ChatService
+    from src.chat.routes import _get_user
+    user_id = _get_user(request)
+    content = body.get("content", "")
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Message content is required")
+    svc = ChatService(db)
+    return await svc.process_message(session_id=session_id, user_id=user_id, content=content)
+
+
+@app.get("/api/chat/search")
+async def chat_search(q: str = Query(""), session_id: str | None = Query(None), limit: int = Query(50, le=200), request: Request = None, db: AsyncSession = Depends(get_db)):
+    if not q.strip():
+        return {"results": []}
+    from src.chat.repository import ChatRepository
+    from src.chat.routes import _get_user
+    user_id = _get_user(request)
+    repo = ChatRepository(db)
+    results = await repo.search_messages(user_id=user_id, query=q, session_id=session_id, limit=limit)
+    return {"results": results, "total": len(results)}
+
+
+@app.get("/api/chat/sessions/{session_id}/export")
+async def chat_export_session(session_id: str, db: AsyncSession = Depends(get_db)):
+    from src.chat.repository import ChatRepository
+    repo = ChatRepository(db)
+    session = await repo.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    messages, _ = await repo.get_messages(session_id, page=1, limit=10000)
+    return {"session": {"id": session.id, "title": session.title, "created_at": session.created_at.isoformat()}, "messages": [{"role": m.role, "content": m.content, "tokens_used": m.tokens_used} for m in messages]}
 
 
 @app.post("/api/chat")
