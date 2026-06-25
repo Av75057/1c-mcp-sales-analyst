@@ -167,6 +167,10 @@ async def login_page():
 async def admin_page():
     return render("admin.html", {"page": "admin"})
 
+@app.get("/search")
+async def search_page():
+    return render("search.html", {"page": "search"})
+
 @app.get("/")
 async def dashboard():
     return render("dashboard.html", {"page": "dashboard"})

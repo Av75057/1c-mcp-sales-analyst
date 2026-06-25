@@ -13,6 +13,7 @@
                 <a class="list-group-item list-group-item-action" href="#tools" onclick="showTab('tools')">🛠️ Tools</a>
                 <a class="list-group-item list-group-item-action" href="#apikeys" onclick="showTab('apikeys')">🔑 API Keys</a>
                 <a class="list-group-item list-group-item-action" href="#ipblocks" onclick="showTab('ipblocks')">🚫 IP Blocks</a>
+                <a class="list-group-item list-group-item-action" href="#search-analytics" onclick="showTab('search-analytics')">🔍 Search Analytics</a>
                 <a class="list-group-item list-group-item-action" href="#system" onclick="showTab('system')">🖥️ System</a>
             </div>
         </div>
@@ -38,6 +39,7 @@ function showTab(tab) {
     else if (tab === 'tools') loadTools(c);
     else if (tab === 'apikeys') loadApiKeys(c);
     else if (tab === 'ipblocks') loadIpBlocks(c);
+    else if (tab === 'search-analytics') loadSearchAnalytics(c);
     else if (tab === 'system') loadSystem(c);
 }
 
@@ -305,6 +307,32 @@ window.unblockIp = async function(id) {
     await fetch(API + '/admin/ip-blocks/' + id + '/unblock', {method:'POST'});
     loadIpBlocks(document.getElementById('adminContent'));
 };
+
+// === Search Analytics ===
+async function loadSearchAnalytics(c) {
+    const [top, nores] = await Promise.all([
+        api('/api/search/analytics/top?days=7&limit=20'),
+        api('/api/search/analytics/no-results?days=7&limit=20'),
+    ]);
+    c.innerHTML = `
+        <h3>🔍 Search Analytics</h3>
+        <div class="mb-3"><span class="badge bg-info">Total searches: ${top.total || 0}</span></div>
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Top Queries (7d)</h6>
+                <table class="table table-sm"><thead><tr><th>Query</th><th>Count</th><th>Avg ms</th></tr></thead><tbody>
+                ${(top.queries || []).map(q => `<tr><td>${q.query}</td><td>${q.count}</td><td>${q.avg_time_ms || 0}</td></tr>`).join('')}
+                </tbody></table>
+            </div>
+            <div class="col-md-6">
+                <h6>No Results (7d)</h6>
+                <table class="table table-sm"><thead><tr><th>Query</th><th>Count</th></tr></thead><tbody>
+                ${(nores.queries || []).map(q => `<tr><td class="text-warning">${q.query}</td><td>${q.count}</td></tr>`).join('')}
+                </tbody></table>
+            </div>
+        </div>
+    `;
+}
 
 // === System ===
 async function loadSystem(c) {

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h3 class="mb-4"><i class="bi bi-search"></i> Поиск номенклатуры</h3>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <input class="form-control" id="searchInput" placeholder="Что ищем? (ноут, яблоко, бумага...)" oninput="debounceSearch()" onkeydown="if(event.key==='Enter') doSearch()">
+                <button class="btn btn-primary" onclick="doSearch()"><i class="bi bi-search"></i></button>
+            </div>
+            <div id="autocompleteList" class="list-group position-absolute" style="z-index:100;max-width:500px"></div>
+        </div>
+        <div class="col-md-6">
+            <button class="btn btn-sm btn-outline-secondary" onclick="toggleFilters()">⚙️ Фильтры</button>
+            <span class="text-secondary ms-2" id="searchInfo"></span>
+        </div>
+    </div>
+
+    <div id="filtersBlock" class="row g-2 mb-3 d-none">
+        <div class="col-md-2">
+            <input class="form-control form-control-sm" id="filterGroup" placeholder="Группа">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control form-control-sm" id="filterType" placeholder="Тип">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control form-control-sm" id="filterPriceMin" type="number" placeholder="Цена от">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control form-control-sm" id="filterPriceMax" type="number" placeholder="Цена до">
+        </div>
+        <div class="col-md-2">
+            <select class="form-select form-select-sm" id="filterStock">
+                <option value="">Любое наличие</option>
+                <option value="true">В наличии</option>
+                <option value="false">Нет в наличии</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-sm btn-secondary w-100" onclick="doSearch()">Применить</button>
+        </div>
+    </div>
+
+    <div id="resultsBlock" class="d-none">
+        <div class="row">
+            <div class="col-md-9">
+                <table class="table table-hover" id="resultsTable">
+                    <thead><tr><th>Наименование</th><th>Артикул</th><th>Группа</th><th class="text-end">Цена</th><th class="text-end">Остаток</th><th>Score</th></tr></thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+                <nav id="paginationNav" class="d-none"><ul class="pagination pagination-sm justify-content-center" id="paginationUl"></ul></nav>
+            </div>
+            <div class="col-md-3">
+                <div class="card p-3">
+                    <h6>Фасеты</h6>
+                    <div id="facetsBlock"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resultsInfo" class="text-center text-secondary py-5"><h5>🔍 Введите запрос для поиска</h5></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let acTimeout = null;
+
+function debounceSearch() {
+    clearTimeout(acTimeout);
+    acTimeout = setTimeout(loadAutocomplete, 200);
+}
+
+async function loadAutocomplete() {
+    const q = document.getElementById('searchInput').value.trim();
+    const el = document.getElementById('autocompleteList');
+    if (q.length < 2) { el.innerHTML = ''; return; }
+    try {
+        const r = await fetch('/api/search/autocomplete?q=' + encodeURIComponent(q) + '&limit=5');
+        const d = await r.json();
+        el.innerHTML = (d.suggestions || []).map(s =>
+            '<button class="list-group-item list-group-item-action py-1" onclick="setQuery(\'' + s.replace(/'/g,"\\'") + '\')">' + s + '</button>'
+        ).join('');
+    } catch(e) { el.innerHTML = ''; }
+}
+
+function setQuery(q) {
+    document.getElementById('searchInput').value = q;
+    document.getElementById('autocompleteList').innerHTML = '';
+    doSearch();
+}
+
+function toggleFilters() {
+    document.getElementById('filtersBlock').classList.toggle('d-none');
+}
+
+function doSearch(page) {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    currentPage = page || 1;
+    document.getElementById('autocompleteList').innerHTML = '';
+    document.getElementById('resultsInfo').innerHTML = '<div class="spinner-border"></div>';
+
+    const filters = {};
+    const fg = document.getElementById('filterGroup').value.trim();
+    if (fg) filters.group = fg;
+    const ft = document.getElementById('filterType').value.trim();
+    if (ft) filters.item_type = ft;
+    const fpMin = document.getElementById('filterPriceMin').value;
+    if (fpMin) filters.price_min = parseFloat(fpMin);
+    const fpMax = document.getElementById('filterPriceMax').value;
+    if (fpMax) filters.price_max = parseFloat(fpMax);
+    const fs = document.getElementById('filterStock').value;
+    if (fs) filters.in_stock = fs === 'true' ? true : false;
+
+    fetch('/api/search/nomenclature', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query: q, filters, page: currentPage, limit: 20})
+    })
+    .then(r => r.json())
+    .then(d => {
+        const block = document.getElementById('resultsBlock');
+        block.classList.remove('d-none');
+        document.getElementById('resultsInfo').innerHTML = '';
+        renderResults(d);
+    })
+    .catch(e => {
+        document.getElementById('resultsInfo').innerHTML = '<div class="text-danger">Ошибка: ' + e.message + '</div>';
+    });
+}
+
+function renderResults(d) {
+    const tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = (d.results || []).map(item => `
+        <tr>
+            <td><strong>${escapeHtml(item.name)}</strong></td>
+            <td>${item.article || '-'}</td>
+            <td>${item.group || '-'}</td>
+            <td class="text-end">${item.price ? item.price.toLocaleString() + ' ₽' : '-'}</td>
+            <td class="text-end">${item.stock_qty || 0}</td>
+            <td><span class="badge ${item.score > 0.5 ? 'bg-success' : 'bg-secondary'}">${item.score.toFixed(2)}</span></td>
+        </tr>
+    `).join('');
+
+    document.getElementById('searchInfo').textContent = `Всего: ${d.total} · ${d.search_time_ms}ms`;
+
+    // Facets
+    const fc = document.getElementById('facetsBlock');
+    const f = d.facets || {};
+    fc.innerHTML = `
+        <div class="small mb-2"><strong>Группы</strong><br>${(f.groups || []).map(g => `${g.name} (${g.count})`).join('<br>') || '-'}</div>
+        <div class="small mb-2"><strong>Типы</strong><br>${(f.types || []).map(t => `${t.name} (${t.count})`).join('<br>') || '-'}</div>
+        <div class="small mb-2"><strong>Цены</strong><br>${f.price_range ? `${f.price_range.min.toLocaleString()} — ${f.price_range.max.toLocaleString()}` : '-'}</div>
+        <div class="small"><strong>Наличие</strong><br>В наличии: ${f.stock?.in_stock || 0} / Нет: ${f.stock?.out_of_stock || 0}</div>
+    `;
+
+    // Pagination
+    const nav = document.getElementById('paginationNav');
+    const ul = document.getElementById('paginationUl');
+    ul.innerHTML = '';
+    if (d.pages <= 1) { nav.classList.add('d-none'); return; }
+    nav.classList.remove('d-none');
+    for (let i = 1; i <= d.pages && i <= 20; i++) {
+        const li = document.createElement('li');
+        li.className = 'page-item' + (i === d.page ? ' active' : '');
+        li.innerHTML = `<a class="page-link" href="#" onclick="doSearch(${i});return false">${i}</a>`;
+        ul.appendChild(li);
+    }
+}
+
+function escapeHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+{% endblock %}
