@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timedelta
 from typing import Any
 
 from src.logger import logger
@@ -109,6 +110,41 @@ def compute_facets(items: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+_popularity_data: dict[str, float] = {}
+_popularity_loaded: float = 0.0
+
+
+async def _load_popularity() -> dict[str, float]:
+    """Загружает popularity_score из продаж 1С."""
+    global _popularity_data, _popularity_loaded
+    now = time.time()
+    if _popularity_loaded > now - 3600 and _popularity_data:
+        return _popularity_data
+
+    try:
+        from src.clients.c1_client import C1Client
+
+        c1 = C1Client()
+        try:
+            sales = await c1.get_sales(date_from=(datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d"), date_to=datetime.utcnow().strftime("%Y-%m-%d"))
+        finally:
+            await c1.close()
+
+        counts: dict[str, float] = {}
+        for s in sales:
+            name = s.get("nomenclature", "")
+            if name:
+                counts[name] = counts.get(name, 0) + s.get("quantity", 0)
+        if counts:
+            max_count = max(counts.values())
+            _popularity_data = {k: v / max_count for k, v in counts.items()}
+        _popularity_loaded = now
+    except Exception as e:
+        logger.warning("Failed to load popularity: {}", e)
+
+    return _popularity_data
+
+
 async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]] | None = None) -> SearchResponse:
     """Основной поиск номенклатуры."""
     start = time.perf_counter()
@@ -184,4 +220,12 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     response = SearchResponse(results=results, facets=facets, total=total, page=page, pages=pages, search_time_ms=round(elapsed, 2))
 
     search_cache.set(cache_key, response.model_dump())
+
+    # Log query async
+    try:
+        from src.search.analytics import log_query
+        log_query(user_id="api", query=query, filters=request.filters.model_dump() if request.filters else {}, results_count=total, search_time_ms=elapsed, strategy=request.strategy)
+    except Exception:
+        pass
+
     return response

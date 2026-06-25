@@ -623,6 +623,18 @@ async def api_search_synonyms_delete(word: str):
     return {"message": "Deleted"}
 
 
+@app.get("/api/search/analytics/top")
+async def api_search_analytics_top(days: int = 7, limit: int = 20):
+    from src.search.analytics import top_queries, total_count
+    return {"queries": top_queries(days=days, limit=limit), "total": total_count(days=days)}
+
+
+@app.get("/api/search/analytics/no-results")
+async def api_search_analytics_no_results(days: int = 7, limit: int = 20):
+    from src.search.analytics import no_results_queries
+    return {"queries": no_results_queries(days=days, limit=limit)}
+
+
 @app.post("/api/chat")
 async def api_chat(query: str = Form("")):
     if not query:
