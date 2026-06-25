@@ -40,12 +40,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 token = cookie
 
         if not token:
+            from fastapi.responses import JSONResponse
+
             accept = request.headers.get("accept", "")
             if "text/html" in accept:
                 return RedirectResponse(url="/login")
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Not authenticated",
+                content={"detail": "Not authenticated"},
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
