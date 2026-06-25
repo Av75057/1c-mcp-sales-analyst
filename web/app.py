@@ -589,6 +589,20 @@ async def chat_export_session(session_id: str, db: AsyncSession = Depends(get_db
     return {"session": {"id": session.id, "title": session.title, "created_at": session.created_at.isoformat()}, "messages": [{"role": m.role, "content": m.content, "tokens_used": m.tokens_used} for m in messages]}
 
 
+@app.post("/api/search/reindex")
+async def api_search_reindex():
+    from src.search.fts_cache import init, refresh
+    from src.clients.c1_client import C1Client
+    init()
+    c1 = C1Client()
+    try:
+        items = await c1.list_nomenclature(query="", limit=5000)
+    finally:
+        await c1.close()
+    count = refresh(items)
+    return {"status": "ok", "items_count": count}
+
+
 @app.post("/api/search/nomenclature")
 async def api_search_nomenclature(body: dict):
     from src.search.models import SearchRequest, SearchFilters

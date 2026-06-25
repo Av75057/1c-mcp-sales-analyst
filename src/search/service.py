@@ -145,19 +145,43 @@ async def _load_popularity() -> dict[str, float]:
     return _popularity_data
 
 
+_fts_initialized = False
+
+
+async def _ensure_fts() -> bool:
+    global _fts_initialized
+    if not _fts_initialized:
+        from src.search.fts_cache import init, ensure_fresh
+        init()
+        _fts_initialized = True
+    from src.search.fts_cache import ensure_fresh
+    return await ensure_fresh(max_age=3600)
+
+
 async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]] | None = None) -> SearchResponse:
     """Основной поиск номенклатуры."""
     start = time.perf_counter()
 
     query = request.query[:SEARCH_CONFIG.max_query_length]
 
-    # Check cache
+    # Check mem cache
     cache_key = search_cache._make_key(query=query, filters=request.filters.model_dump() if request.filters else {}, page=request.page, limit=request.limit)
     cached = search_cache.get(cache_key)
     if cached is not None:
         return SearchResponse(**cached)
 
-    # Try 1С batch first
+    # Try FTS5 cache first
+    try:
+        await _ensure_fts()
+        from src.search.fts_cache import search as fts_search, search_count as fts_count
+
+        fts_results = fts_search(query, limit=request.limit * request.page)
+        if fts_results:
+            items = fts_results
+    except Exception as e:
+        logger.warning("FTS5 search failed, fallback: {}", e)
+
+    # Fallback: 1С batch
     if items is None:
         try:
             from src.clients.batch_client import BatchC1Client
@@ -174,6 +198,7 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
         except Exception as e:
             logger.warning("Batch search failed, fallback: {}", e)
 
+    # Fallback: direct 1С
     if items is None:
         from src.clients.c1_client import C1Client
         c1 = C1Client()
