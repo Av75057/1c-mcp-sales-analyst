@@ -122,6 +122,43 @@ async def ensure_fresh(max_age: int = 3600) -> bool:
         c1 = C1Client()
         try:
             items = await c1.list_nomenclature(query="", limit=5000)
+
+            # Merge stock data: enrich nomenclature with stock_qty
+            try:
+                stock_items = await c1.get_stock()
+                stock_by_name: dict[str, float] = {}
+                for s in stock_items:
+                    name = s.get("nomenclature", "")
+                    qty = s.get("quantity", 0)
+                    if name:
+                        stock_by_name[name] = stock_by_name.get(name, 0) + float(qty)
+                for item in items:
+                    name = item.get("name", "")
+                    if name in stock_by_name:
+                        item["stock_qty"] = stock_by_name[name]
+            except Exception:
+                pass
+
+            # Try to get price data from sales
+            try:
+                from datetime import date, timedelta
+                sales = await c1.get_sales(
+                    date_from=(date.today() - timedelta(days=90)).isoformat(),
+                    date_to=date.today().isoformat(),
+                )
+                price_by_name: dict[str, float] = {}
+                for s in sales:
+                    name = s.get("nomenclature", "")
+                    price = s.get("sum", 0)
+                    qty = s.get("quantity", 0)
+                    if name and qty > 0:
+                        price_by_name[name] = price / qty
+                for item in items:
+                    name = item.get("name", "")
+                    if name in price_by_name:
+                        item["price"] = round(price_by_name[name], 2)
+            except Exception:
+                pass
         finally:
             await c1.close()
         refresh(items)
