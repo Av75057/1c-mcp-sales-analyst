@@ -226,10 +226,11 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
 
     # Enrich with stock data from 1С
     try:
+        import asyncio
         from src.clients.c1_client import C1Client
         c1 = C1Client()
         try:
-            stock_items = await c1.get_stock()
+            stock_items = await asyncio.wait_for(c1.get_stock(), timeout=10.0)
             stock_by_name: dict[str, float] = {}
             stock_by_lower: dict[str, float] = {}
             for s in stock_items:

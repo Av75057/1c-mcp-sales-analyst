@@ -591,34 +591,68 @@ async def chat_export_session(session_id: str, db: AsyncSession = Depends(get_db
 
 @app.post("/api/search/reindex")
 async def api_search_reindex():
-    import asyncio
     import traceback
     from src.search.fts_cache import init, refresh
     from src.clients.c1_client import C1Client
     from src.logger import logger
+    from datetime import date, timedelta
 
     init()
+    import asyncio
     try:
         c1 = C1Client()
         try:
-            items = await asyncio.wait_for(
-                c1.list_nomenclature(query="", limit=200),
-                timeout=30.0,
-            )
+            items: list[dict] = []
+            seen: set[str] = set()
+
+            # Build from stock
+            try:
+                stock = await asyncio.wait_for(c1.get_stock(), timeout=15.0)
+                for s in stock:
+                    name = s.get("nomenclature", "")
+                    qty = s.get("quantity", 0)
+                    if name and name not in seen:
+                        seen.add(name)
+                        items.append({"name": name, "stock_qty": float(qty), "ref": name})
+            except Exception as e:
+                logger.warning("Reindex stock fetch failed: {}", e)
+
+            # Enrich with prices from sales (last 7 days only for speed)
+            try:
+                sales = await asyncio.wait_for(
+                    c1.get_sales(
+                        date_from=(date.today() - timedelta(days=7)).isoformat(),
+                        date_to=date.today().isoformat(),
+                    ),
+                    timeout=15.0,
+                )
+                price_map: dict[str, float] = {}
+                for s in sales:
+                    name = s.get("nomenclature", "")
+                    sprice = s.get("sum", 0)
+                    sqty = s.get("quantity", 0)
+                    if name and float(sqty) > 0:
+                        price_map[name] = float(sprice) / float(sqty)
+                for item in items:
+                    name = item.get("name", "")
+                    if name in price_map:
+                        item["price"] = round(price_map[name], 2)
+            except asyncio.TimeoutError:
+                logger.warning("Reindex sales fetch timed out")
+            except Exception as e:
+                logger.warning("Reindex price enrichment failed: {}", e)
         finally:
             await c1.close()
+
         if not items:
-            return {"status": "error", "message": "No items received from 1С"}
+            return {"status": "error", "message": "No items received"}
         count = refresh(items)
-        # Also build autocomplete
         try:
             from src.search.autocomplete import autocomplete
             autocomplete.build(items)
         except Exception:
             pass
         return {"status": "ok", "items_count": count}
-    except asyncio.TimeoutError:
-        return {"status": "error", "message": "Timeout fetching data from 1С"}
     except Exception as e:
         logger.error("Reindex failed: {}\n{}", e, traceback.format_exc())
         return {"status": "error", "message": str(e)}
