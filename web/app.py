@@ -91,6 +91,7 @@ async def on_startup():
     from sqlalchemy import text
     async with admin_engine.begin() as conn:
         await conn.run_sync(ChatBase.metadata.create_all)
+        await conn.execute(text("UPDATE chat_sessions SET is_archived = 0 WHERE is_archived IS NULL"))
 
 
 # Middleware (порядок: от внешнего к внутреннему)

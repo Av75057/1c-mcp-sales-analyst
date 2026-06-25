@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatSession(BaseModel):
@@ -15,6 +15,15 @@ class ChatSession(BaseModel):
     is_archived: bool = False
     messages_count: int = 0
     last_message_preview: str = ""
+
+    @field_validator("is_archived", mode="before")
+    @classmethod
+    def coerce_is_archived(cls, v: object) -> bool:
+        if v is None:
+            return False
+        if isinstance(v, int):
+            return bool(v)
+        return v
 
 
 class ChatMessage(BaseModel):
