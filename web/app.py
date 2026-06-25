@@ -585,6 +585,16 @@ async def chat_export_session(session_id: str, db: AsyncSession = Depends(get_db
     return {"session": {"id": session.id, "title": session.title, "created_at": session.created_at.isoformat()}, "messages": [{"role": m.role, "content": m.content, "tokens_used": m.tokens_used} for m in messages]}
 
 
+@app.post("/api/search/nomenclature")
+async def api_search_nomenclature(body: dict):
+    from src.search.models import SearchRequest, SearchFilters
+    from src.search.service import search_nomenclature
+    filters = SearchFilters(**body.get("filters", {}))
+    request = SearchRequest(query=body.get("query", ""), strategy=body.get("strategy", "hybrid"), filters=filters, page=body.get("page", 1), limit=body.get("limit", 50))
+    result = await search_nomenclature(request)
+    return result.model_dump()
+
+
 @app.post("/api/chat")
 async def api_chat(query: str = Form("")):
     if not query:

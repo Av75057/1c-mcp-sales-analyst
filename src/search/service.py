@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import time
+from typing import Any
+
+from src.logger import logger
+from src.search.config import SEARCH_CONFIG
+from src.search.models import SearchRequest, SearchResponse, SearchResultItem
+
+
+def multiword_score(query: str, item: dict[str, Any], field_weights: dict[str, float] | None = None) -> float:
+    """Мультисловный поиск с весами полей."""
+    if field_weights is None:
+        field_weights = SEARCH_CONFIG.field_weights
+    words = query.lower().split()
+    score = 0.0
+
+    for word in words:
+        for field_name, weight in field_weights.items():
+            field_value = str(item.get(field_name, "")).lower()
+            if not field_value:
+                continue
+            words_in_field = field_value.split()
+            if word in words_in_field:
+                score += 10 * weight
+            elif any(w.startswith(word) for w in words_in_field):
+                score += 5 * weight
+            elif word in field_value:
+                score += 3 * weight
+    return score
+
+
+def fuzzy_score(query: str, item: dict[str, Any], threshold: int = 80) -> float:
+    """Нечёткий поиск через rapidfuzz."""
+    try:
+        from rapidfuzz import fuzz
+    except ImportError:
+        return 0.0
+
+    name = str(item.get("name", ""))
+    desc = str(item.get("description", ""))
+    best = 0.0
+    for field in (name, desc):
+        if not field:
+            continue
+        ratio = fuzz.WRatio(query.lower(), field.lower()) / 100.0
+        if ratio > best:
+            best = ratio
+    return best if best * 100 >= threshold else 0.0
+
+
+def compute_popularity_score(item: dict[str, Any]) -> float:
+    sales = item.get("sales_30d", 0)
+    return min(sales / 1000.0, 1.0)
+
+
+def calculate_score(item: dict[str, Any], query: str) -> dict[str, float]:
+    mw = multiword_score(query, item)
+    fz = fuzzy_score(query, item)
+    pop = compute_popularity_score(item)
+    w = SEARCH_CONFIG.weights
+    total = w["fts"] * mw / 100.0 + w["semantic"] * fz + w["popularity"] * pop
+    return {"total": total, "multiword": mw, "fuzzy": fz, "popularity": pop}
+
+
+def apply_filters(items: list[dict[str, Any]], filters: Any) -> list[dict[str, Any]]:
+    if not filters:
+        return items
+    result = items
+    if filters.group:
+        fg = filters.group.lower()
+        result = [i for i in result if fg in str(i.get("group", "")).lower()]
+    if filters.item_type:
+        t = filters.item_type.lower()
+        result = [i for i in result if t in str(i.get("item_type", "")).lower()]
+    if filters.in_stock is not None:
+        result = [i for i in result if (i.get("stock_qty", 0) > 0) == filters.in_stock]
+    if filters.price_min is not None:
+        result = [i for i in result if i.get("price", 0) >= filters.price_min]
+    if filters.price_max is not None:
+        result = [i for i in result if i.get("price", 0) <= filters.price_max]
+    return result
+
+
+def compute_facets(items: list[dict[str, Any]]) -> dict[str, Any]:
+    groups: dict[str, int] = {}
+    types: dict[str, int] = {}
+    prices = []
+    in_stock = 0
+    for item in items:
+        g = str(item.get("group", "") or "")
+        if g:
+            groups[g] = groups.get(g, 0) + 1
+        t = str(item.get("item_type", "") or "")
+        if t:
+            types[t] = types.get(t, 0) + 1
+        p = item.get("price", 0)
+        if p:
+            prices.append(p)
+        if item.get("stock_qty", 0) > 0:
+            in_stock += 1
+    return {
+        "groups": [{"name": k, "count": v} for k, v in sorted(groups.items(), key=lambda x: -x[1])[:10]],
+        "types": [{"name": k, "count": v} for k, v in sorted(types.items(), key=lambda x: -x[1])[:5]],
+        "price_range": {"min": min(prices) if prices else 0, "max": max(prices) if prices else 0, "avg": sum(prices) / len(prices) if prices else 0},
+        "stock": {"in_stock": in_stock, "out_of_stock": len(items) - in_stock},
+    }
+
+
+async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]] | None = None) -> SearchResponse:
+    """Основной поиск номенклатуры."""
+    start = time.perf_counter()
+
+    if items is None:
+        from src.clients.c1_client import C1Client
+        c1 = C1Client()
+        try:
+            raw = await c1.list_nomenclature(query="", limit=5000)
+        finally:
+            await c1.close()
+        items = raw
+
+    query = request.query[:SEARCH_CONFIG.max_query_length]
+
+    scored = []
+    for item in items:
+        scores = calculate_score(item, query)
+        if scores["total"] > 0:
+            scored.append({**item, "score": scores["total"], "score_breakdown": scores})
+
+    scored.sort(key=lambda x: -x["score"])
+
+    filtered = apply_filters(scored, request.filters)
+
+    total = len(filtered)
+    pages = max(1, (total + request.limit - 1) // request.limit)
+    page = min(request.page, pages)
+    offset = (page - 1) * request.limit
+    page_items = filtered[offset : offset + request.limit]
+
+    results = []
+    for item in page_items:
+        results.append(SearchResultItem(
+            id=item.get("ref", item.get("id", "")),
+            name=item.get("name", ""),
+            article=item.get("article", ""),
+            barcode=item.get("barcode", ""),
+            group=item.get("group", ""),
+            item_type=item.get("item_type", ""),
+            price=item.get("price", 0.0),
+            stock_qty=item.get("stock_qty", 0.0),
+            score=item["score"],
+            score_breakdown=item.get("score_breakdown", {}),
+        ))
+
+    facets = compute_facets(filtered)
+    elapsed = (time.perf_counter() - start) * 1000
+
+    return SearchResponse(
+        results=results,
+        facets=facets,
+        total=total,
+        page=page,
+        pages=pages,
+        search_time_ms=round(elapsed, 2),
+    )
