@@ -481,13 +481,17 @@ async def api_sales(date_from: str = "", date_to: str = "", manager: str = ""):
         return {"data": [], "total": 0, "by_manager": []}
 
 
+def _get_chat_user(request: Request) -> str:
+    payload = getattr(request.state, "user", None)
+    return payload.sub if payload else "anonymous"
+
+
 # --- Chat API Routes ---
 
 @app.get("/api/chat/sessions")
 async def chat_list_sessions(request: Request, db: AsyncSession = Depends(get_db)):
     from src.chat.service import ChatService
-    from src.chat.routes import _get_user
-    user_id = _get_user(request)
+    user_id = _get_chat_user(request)
     svc = ChatService(db)
     sessions = await svc.repo.list_sessions(user_id=user_id)
     return {"sessions": sessions}
@@ -496,8 +500,8 @@ async def chat_list_sessions(request: Request, db: AsyncSession = Depends(get_db
 @app.post("/api/chat/sessions")
 async def chat_create_session(request: Request, db: AsyncSession = Depends(get_db)):
     from src.chat.service import ChatService
-    from src.chat.routes import _get_user
-    user_id = _get_user(request)
+    _get_chat_user
+    user_id = _get_chat_user(request)
     body = await request.json() if request.headers.get("content-type") == "application/json" else {}
     svc = ChatService(db)
     session = await svc.repo.create_session(user_id=user_id, title=body.get("title", "Новый чат"))
@@ -549,8 +553,8 @@ async def chat_get_messages(session_id: str, page: int = Query(1, ge=1), limit: 
 @app.post("/api/chat/sessions/{session_id}/messages")
 async def chat_send_message(session_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
     from src.chat.service import ChatService
-    from src.chat.routes import _get_user
-    user_id = _get_user(request)
+    _get_chat_user
+    user_id = _get_chat_user(request)
     content = body.get("content", "")
     if not content.strip():
         raise HTTPException(status_code=400, detail="Message content is required")
@@ -563,8 +567,8 @@ async def chat_search(q: str = Query(""), session_id: str | None = Query(None), 
     if not q.strip():
         return {"results": []}
     from src.chat.repository import ChatRepository
-    from src.chat.routes import _get_user
-    user_id = _get_user(request)
+    _get_chat_user
+    user_id = _get_chat_user(request)
     repo = ChatRepository(db)
     results = await repo.search_messages(user_id=user_id, query=q, session_id=session_id, limit=limit)
     return {"results": results, "total": len(results)}
