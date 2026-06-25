@@ -2,19 +2,35 @@
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-3 col-lg-2">
-            <button class="btn btn-primary btn-sm w-100 mb-2" onclick="newSession()">+ Новый чат</button>
-            <div class="mb-2"><input class="form-control form-control-sm" id="searchSessions" placeholder="🔍 Поиск..." oninput="renderSessions()"></div>
-            <div id="sessionList" class="list-group list-group-flush" style="max-height: 70vh; overflow-y: auto;"></div>
+        <div class="col-md-3 col-lg-2" style="min-width:240px">
+            <div class="d-flex gap-1 mb-2">
+                <button class="btn btn-primary btn-sm flex-grow-1" onclick="newSession()">+ Новый чат</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleSearch()" title="Поиск">🔍</button>
+            </div>
+            <div id="searchBlock" class="mb-2 d-none">
+                <input class="form-control form-control-sm" id="searchInput" placeholder="Поиск по сообщениям..." oninput="debounceSearch()">
+                <div id="searchResults" class="mt-1 small" style="max-height:200px;overflow-y:auto"></div>
+            </div>
+            <div id="sessionList" class="list-group list-group-flush" style="max-height: 65vh; overflow-y: auto;"></div>
         </div>
         <div class="col-md-9 col-lg-10">
-            <div id="chatMessages" class="mb-3" style="max-height: 60vh; overflow-y: auto; padding: 1rem;"></div>
-            <div id="loadingIndicator" class="text-center py-3 d-none"><div class="spinner-border spinner-border-sm"></div> AI печатает...</div>
+            <div id="chatHeader" class="d-none mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <input class="form-control form-control-sm" id="sessionTitle" style="max-width:300px;font-weight:bold" onchange="renameSession()">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentSession()" title="Удалить сессию">🗑</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportSession()" title="Экспорт JSON">📥</button>
+                    <span class="text-secondary small ms-auto" id="usageDisplay"></span>
+                </div>
+            </div>
+            <div id="chatMessages" class="mb-3" style="max-height: 55vh; overflow-y: auto; padding: 0.5rem; border: 1px solid #2d3139; border-radius: 8px;"></div>
+            <div id="loadingIndicator" class="text-center py-2 d-none">
+                <div class="spinner-border spinner-border-sm text-primary"></div>
+                <span class="text-secondary ms-2">AI печатает...</span>
+            </div>
             <div class="input-group">
                 <input class="form-control" id="chatInput" placeholder="Задайте вопрос..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}">
                 <button class="btn btn-primary" onclick="sendMsg()"><i class="bi bi-send"></i></button>
             </div>
-            <div id="usageInfo" class="small text-secondary mt-1"></div>
         </div>
     </div>
 </div>
@@ -23,53 +39,37 @@
 <script>
 let currentSessionId = null;
 let sessions = [];
+let searchTimeout = null;
 
-// === Initialize ===
 (async function() {
     await loadSessions();
-    // Auto-create first session
-    if (sessions.length === 0) {
-        await newSession();
-    } else {
-        selectSession(sessions[0].id);
-    }
+    if (sessions.length === 0) await newSession();
+    else selectSession(sessions[0].id);
 })();
 
 async function api(path, opts = {}) {
     const r = await fetch(path, { headers: {'Content-Type': 'application/json', ...(opts.headers || {})}, ...opts });
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) { const e = await r.text(); throw new Error(e); }
     return r.json();
 }
 
 // === Sessions ===
 async function loadSessions() {
-    try {
-        const d = await api('/api/chat/sessions');
-        sessions = d.sessions || [];
-        renderSessions();
-    } catch(e) { console.error(e); }
+    try { const d = await api('/api/chat/sessions'); sessions = d.sessions || []; renderSessions(); } catch(e) { console.error(e); }
 }
 
 function renderSessions() {
-    const q = (document.getElementById('searchSessions').value || '').toLowerCase();
-    const filtered = q ? sessions.filter(s => s.title.toLowerCase().includes(q)) : sessions;
     const el = document.getElementById('sessionList');
-    el.innerHTML = filtered.map(s => `
-        <a class="list-group-item list-group-item-action ${s.id === currentSessionId ? 'active' : ''}" href="#" onclick="selectSession('${s.id}')" oncontextmenu="showSessionMenu(event,'${s.id}')">
-            <div style="font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title}</div>
-            <small class="text-secondary">${s.messages_count || 0} msg · ${s.last_message_preview ? s.last_message_preview.substring(0,40)+'...' : ''}</small>
+    el.innerHTML = sessions.map(s => `
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${s.id === currentSessionId ? 'active' : ''}" href="#"
+           onclick="selectSession('${s.id}')">
+            <div style="flex:1;min-width:0">
+                <div style="font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.title)}</div>
+                <small class="text-secondary">${s.messages_count || 0} msg</small>
+            </div>
+            <button class="btn btn-sm text-danger" onclick="event.stopPropagation();deleteSession('${s.id}')" title="Удалить">×</button>
         </a>
     `).join('');
-}
-
-function saveSessionScroll() {
-    const el = document.getElementById('sessionList');
-    sessionStorage.setItem('sessionScroll', el.scrollTop);
-}
-
-function restoreSessionScroll() {
-    const t = sessionStorage.getItem('sessionScroll');
-    if (t) document.getElementById('sessionList').scrollTop = parseInt(t);
 }
 
 async function newSession() {
@@ -83,30 +83,50 @@ async function selectSession(id) {
     currentSessionId = id;
     renderSessions();
     document.getElementById('chatMessages').innerHTML = '';
-    document.getElementById('usageInfo').textContent = '';
+    document.getElementById('usageDisplay').textContent = '';
+    document.getElementById('chatHeader').classList.remove('d-none');
+    const s = sessions.find(x => x.id === id);
+    document.getElementById('sessionTitle').value = s ? s.title : '';
     try {
         const d = await api(`/api/chat/sessions/${id}/messages?page=1&limit=200`);
         renderMessages(d.messages || []);
-        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        const el = document.getElementById('chatMessages');
+        el.scrollTop = el.scrollHeight;
     } catch(e) { console.error(e); }
 }
 
-async function deleteSession(id, e) {
-    if (!confirm('Удалить сессию?')) return;
-    await api(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+function renameSession() {
+    const title = document.getElementById('sessionTitle').value;
+    if (!title || !currentSessionId) return;
+    fetch('/api/chat/sessions/' + currentSessionId, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({title}) }).catch(()=>{});
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (s) s.title = title;
+    renderSessions();
+}
+
+function deleteCurrentSession() {
+    if (!currentSessionId || !confirm('Удалить сессию?')) return;
+    deleteSession(currentSessionId);
+}
+
+async function deleteSession(id) {
+    await api('/api/chat/sessions/' + id, { method: 'DELETE' });
     sessions = sessions.filter(s => s.id !== id);
     if (id === currentSessionId) {
         currentSessionId = null;
+        document.getElementById('chatHeader').classList.add('d-none');
         if (sessions.length) selectSession(sessions[0].id);
         else document.getElementById('chatMessages').innerHTML = '<div class="text-center text-secondary py-5">Создайте новый чат</div>';
     }
     renderSessions();
 }
 
-function showSessionMenu(e, id) {
-    e.preventDefault();
-    const action = confirm('Удалить сессию?') ? 'delete' : null;
-    if (action === 'delete') deleteSession(id);
+async function exportSession() {
+    if (!currentSessionId) return;
+    const d = await api('/api/chat/sessions/' + currentSessionId + '/export');
+    const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chat_export.json'; a.click();
+    URL.revokeObjectURL(a.href);
 }
 
 // === Messages ===
@@ -114,52 +134,72 @@ function renderMessages(messages) {
     const el = document.getElementById('chatMessages');
     el.innerHTML = messages.map(m => {
         const isUser = m.role === 'user';
-        const html = `
-            <div class="d-flex mb-3 ${isUser ? 'justify-content-end' : ''}">
-                <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%">
-                    <div style="white-space:pre-wrap">${escapeHtml(m.content)}</div>
-                    ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.tool_name + '</span>').join('') + '</div>' : ''}
-                    <div class="mt-1 small text-secondary">${new Date(m.created_at).toLocaleTimeString()}${m.tokens_used ? ' · ' + m.tokens_used + ' tokens' : ''}${m.response_time_ms ? ' · ' + (m.response_time_ms/1000).toFixed(1)+'s' : ''}</div>
-                </div>
+        return `<div class="d-flex mb-3 ${isUser ? 'justify-content-end' : ''}">
+            <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%;white-space:pre-wrap">
+                ${escapeHtml(m.content)}
+                ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.tool_name + '</span>').join('') + '</div>' : ''}
+                <div class="mt-1 small text-secondary">${new Date(m.created_at).toLocaleTimeString()}${m.tokens_used ? ' · ' + m.tokens_used + ' tokens' : ''}${m.response_time_ms ? ' · ' + (m.response_time_ms/1000).toFixed(1)+'s' : ''}</div>
             </div>
-        `;
-        return html;
+        </div>`;
     }).join('');
 }
 
 async function sendMsg() {
     const input = document.getElementById('chatInput');
     const content = input.value.trim();
-    if (!content || !currentSessionId) return;
+    if (!content) return;
+    if (!currentSessionId) { await newSession(); }
     input.value = '';
     document.getElementById('loadingIndicator').classList.remove('d-none');
 
-    // Add user message to UI
     const el = document.getElementById('chatMessages');
-    el.innerHTML += `<div class="d-flex justify-content-end mb-3"><div class="bg-primary text-white p-3 rounded" style="max-width:80%"><div style="white-space:pre-wrap">${escapeHtml(content)}</div></div></div>`;
+    el.innerHTML += `<div class="d-flex justify-content-end mb-3"><div class="bg-primary text-white p-3 rounded" style="max-width:80%;white-space:pre-wrap">${escapeHtml(content)}</div></div>`;
     el.scrollTop = el.scrollHeight;
 
     try {
         const d = await api(`/api/chat/sessions/${currentSessionId}/messages`, { method: 'POST', body: JSON.stringify({content}) });
         document.getElementById('loadingIndicator').classList.add('d-none');
-        // Add assistant message
-        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%"><div style="white-space:pre-wrap">${escapeHtml(d.answer)}</div>${d.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🤖 Инструменты: ' + d.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.name + '</span>').join('') + '</div>' : ''}</div></div>`;
+
+        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%;white-space:pre-wrap">${escapeHtml(d.answer)}
+            ${d.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🤖 Инструменты: ' + d.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.name + '</span>').join('') + '</div>' : ''}</div></div>`;
         el.scrollTop = el.scrollHeight;
 
         const usage = d.usage || {};
-        document.getElementById('usageInfo').textContent = `💰 Tokens: ${usage.prompt_tokens || 0} in / ${usage.completion_tokens || 0} out`;
+        document.getElementById('usageDisplay').textContent = `💰 ${usage.prompt_tokens || 0} in / ${usage.completion_tokens || 0} out`;
 
-        // Reload sessions to update titles/previews
         await loadSessions();
+        const s = sessions.find(x => x.id === currentSessionId);
+        if (s) document.getElementById('sessionTitle').value = s.title;
     } catch(e) {
         document.getElementById('loadingIndicator').classList.add('d-none');
-        alert('Ошибка: ' + e.message);
+        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-danger text-white p-3 rounded">❌ Ошибка: ${escapeHtml(e.message)}</div></div>`;
     }
 }
 
-function escapeHtml(s) {
-    if (!s) return '';
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// === Search ===
+function toggleSearch() {
+    const el = document.getElementById('searchBlock');
+    el.classList.toggle('d-none');
+    if (!el.classList.contains('d-none')) document.getElementById('searchInput').focus();
 }
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(doSearch, 300);
+}
+
+async function doSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    const el = document.getElementById('searchResults');
+    if (!q) { el.innerHTML = ''; return; }
+    try {
+        const d = await api('/api/chat/search?q=' + encodeURIComponent(q) + '&limit=20');
+        el.innerHTML = d.results?.length
+            ? d.results.slice(0,10).map(r => `<div class="p-1 border-bottom border-secondary" style="cursor:pointer" onclick="selectSession('${r.session_id}')">🔍 <span class="text-info">${escapeHtml(r.session_title || '')}</span>: ${escapeHtml((r.content || '').substring(0,80))}</div>`).join('')
+            : '<div class="text-secondary">Ничего не найдено</div>';
+    } catch(e) { el.innerHTML = '<div class="text-danger">Ошибка поиска</div>'; }
+}
+
+function escapeHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 {% endblock %}

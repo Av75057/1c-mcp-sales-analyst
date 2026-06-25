@@ -62,7 +62,7 @@ class ChatRepository:
         session_id = str(uuid.uuid4())
         now = datetime.utcnow()
         await self.db.execute(
-            text("INSERT INTO chat_sessions (id, user_id, title, created_at, updated_at) VALUES (:id, :uid, :title, :now, :now)"),
+            text("INSERT INTO chat_sessions (id, user_id, title, is_archived, created_at, updated_at) VALUES (:id, :uid, :title, 0, :now, :now)"),
             {"id": session_id, "uid": user_id, "title": title, "now": now},
         )
         await self.db.commit()
@@ -70,38 +70,38 @@ class ChatRepository:
 
     async def get_session(self, session_id: str) -> ChatSession | None:
         row = await self.db.execute(text("SELECT * FROM chat_sessions WHERE id = :id"), {"id": session_id})
-        r = row.mappings().first()
+        r = dict(row.mappings().first() or {})
         if not r:
             return None
+        if r.get("is_archived") is None:
+            r["is_archived"] = False
         return ChatSession(**r)
 
     async def list_sessions(self, user_id: str, limit: int = 100) -> list[dict[str, Any]]:
         rows = await self.db.execute(
-            text("""
-                SELECT cs.*,
-                    (SELECT COUNT(*) FROM chat_messages cm WHERE cm.session_id = cs.id) as messages_count,
-                    (SELECT content FROM chat_messages cm WHERE cm.session_id = cs.id ORDER BY created_at DESC LIMIT 1) as last_msg
-                FROM chat_sessions cs
-                WHERE cs.user_id = :uid AND cs.is_archived = 0
-                ORDER BY cs.updated_at DESC
-                LIMIT :lim
-            """),
+            text("SELECT * FROM chat_sessions WHERE user_id = :uid AND is_archived = 0 ORDER BY updated_at DESC LIMIT :lim"),
             {"uid": user_id, "lim": limit},
         )
         result = []
         for r in rows.mappings().all():
             d = dict(r)
-            last = d.pop("last_msg", "") or ""
-            d["last_message_preview"] = last[:80] if last else ""
-            del d["messages_count"]  # counted above but we recalculate
-            s = ChatSession(**d)
+            if d.get("is_archived") is None:
+                d["is_archived"] = False
+            # Get message count
+            cnt_row = await self.db.execute(text("SELECT COUNT(*) as cnt FROM chat_messages WHERE session_id = :sid"), {"sid": d["id"]})
+            cnt = cnt_row.mappings().first()["cnt"]
+            # Get last message preview
+            last_row = await self.db.execute(text("SELECT content FROM chat_messages WHERE session_id = :sid ORDER BY created_at DESC LIMIT 1"), {"sid": d["id"]})
+            last = last_row.mappings().first()
+            last_msg = last["content"][:80] if last else ""
+
             result.append({
-                "id": s.id,
-                "title": s.title,
-                "created_at": s.created_at.isoformat(),
-                "updated_at": s.updated_at.isoformat(),
-                "messages_count": d.get("messages_count", 0),
-                "last_message_preview": s.last_message_preview,
+                "id": d["id"],
+                "title": d["title"],
+                "created_at": d["created_at"].isoformat() if hasattr(d["created_at"], "isoformat") else str(d["created_at"]),
+                "updated_at": d["updated_at"].isoformat() if hasattr(d["updated_at"], "isoformat") else str(d["updated_at"]),
+                "messages_count": cnt,
+                "last_message_preview": last_msg,
             })
         return result
 

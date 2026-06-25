@@ -12,7 +12,7 @@ class ChatSession(BaseModel):
     title: str = "Новый чат"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    is_archived: bool | int = False
+    is_archived: bool = False
     messages_count: int = 0
     last_message_preview: str = ""
 
