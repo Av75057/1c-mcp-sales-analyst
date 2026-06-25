@@ -230,16 +230,29 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
         c1 = C1Client()
         try:
             stock_items = await c1.get_stock()
+            # Build lookup by name (exact) and by prefix (partial)
             stock_by_name: dict[str, float] = {}
+            stock_by_lower: dict[str, float] = {}
             for s in stock_items:
                 name = s.get("nomenclature", "")
                 qty = s.get("quantity", 0)
                 if name:
-                    stock_by_name[name] = stock_by_name.get(name, 0) + float(qty)
+                    fqty = float(qty)
+                    stock_by_name[name] = stock_by_name.get(name, 0) + fqty
+                    stock_by_lower[name.lower().strip()] = stock_by_lower.get(name.lower().strip(), 0) + fqty
             for item in page_items:
-                name = item.get("name", "")
+                name = str(item.get("name", ""))
+                # Exact match first
                 if name in stock_by_name:
                     item["stock_qty"] = stock_by_name[name]
+                elif name.lower().strip() in stock_by_lower:
+                    item["stock_qty"] = stock_by_lower[name.lower().strip()]
+                else:
+                    # Partial match: find stock item that contains or is contained in the name
+                    for stock_name, qty in stock_by_name.items():
+                        if name.lower() in stock_name.lower() or stock_name.lower() in name.lower():
+                            item["stock_qty"] = qty
+                            break
         except Exception:
             pass
         finally:
