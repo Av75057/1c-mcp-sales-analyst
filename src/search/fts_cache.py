@@ -89,12 +89,16 @@ def refresh(items: list[dict[str, Any]]) -> int:
         conn.execute("DELETE FROM nomenclature")
         conn.execute("DELETE FROM nomenclature_fts")
         for item in items:
+            ref = item.get("ref", item.get("id", str(count)))
+            article = item.get("article", item.get("code", ""))
+            if not article or article == ref:
+                article = item.get("article", "")
             conn.execute(
                 "INSERT OR REPLACE INTO nomenclature (id, name, article, barcode, group_name, item_type, price, stock_qty, description, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
-                    item.get("ref", item.get("id", str(count))),
+                    ref,
                     item.get("name", ""),
-                    item.get("article", ""),
+                    article,
                     item.get("barcode", ""),
                     item.get("group", item.get("item_type", "")),
                     item.get("item_type", ""),

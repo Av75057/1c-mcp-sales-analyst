@@ -214,6 +214,8 @@ class C1Client:
                 "name": d.get("name", d.get("title", "")),
                 "unit": d.get("unit", d.get("measure", "")),
                 "item_type": d.get("item_type", ""),
+                "article": d.get("article", d.get("code", d.get("Артикул", ""))),
+                "code": d.get("code", d.get("Код", "")),
             }
             for d in data
         ]
