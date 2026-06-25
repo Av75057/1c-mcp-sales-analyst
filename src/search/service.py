@@ -224,12 +224,35 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     offset = (page - 1) * request.limit
     page_items = filtered[offset : offset + request.limit]
 
+    # Enrich with stock data from 1С
+    try:
+        from src.clients.c1_client import C1Client
+        c1 = C1Client()
+        try:
+            stock_items = await c1.get_stock()
+            stock_by_name: dict[str, float] = {}
+            for s in stock_items:
+                name = s.get("nomenclature", "")
+                qty = s.get("quantity", 0)
+                if name:
+                    stock_by_name[name] = stock_by_name.get(name, 0) + float(qty)
+            for item in page_items:
+                name = item.get("name", "")
+                if name in stock_by_name:
+                    item["stock_qty"] = stock_by_name[name]
+        except Exception:
+            pass
+        finally:
+            await c1.close()
+    except Exception:
+        pass
+
     results = []
     for item in page_items:
         results.append(SearchResultItem(
             id=item.get("ref", item.get("id", "")),
             name=item.get("name", ""),
-            article=item.get("article", ""),
+            article=item.get("article", str(item.get("code", ""))),
             barcode=item.get("barcode", ""),
             group=item.get("group", item.get("item_type", "")),
             item_type=item.get("item_type", ""),
