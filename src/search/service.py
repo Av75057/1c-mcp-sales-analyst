@@ -224,13 +224,12 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     offset = (page - 1) * request.limit
     page_items = filtered[offset : offset + request.limit]
 
-    # Enrich with stock data from 1С
+    # Enrich with stock and price data from 1С
     try:
         from src.clients.c1_client import C1Client
         c1 = C1Client()
         try:
             stock_items = await c1.get_stock()
-            # Build lookup by name (exact) and by prefix (partial)
             stock_by_name: dict[str, float] = {}
             stock_by_lower: dict[str, float] = {}
             for s in stock_items:
@@ -242,17 +241,40 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
                     stock_by_lower[name.lower().strip()] = stock_by_lower.get(name.lower().strip(), 0) + fqty
             for item in page_items:
                 name = str(item.get("name", ""))
-                # Exact match first
                 if name in stock_by_name:
                     item["stock_qty"] = stock_by_name[name]
                 elif name.lower().strip() in stock_by_lower:
                     item["stock_qty"] = stock_by_lower[name.lower().strip()]
                 else:
-                    # Partial match: find stock item that contains or is contained in the name
                     for stock_name, qty in stock_by_name.items():
                         if name.lower() in stock_name.lower() or stock_name.lower() in name.lower():
                             item["stock_qty"] = qty
                             break
+
+            # Enrich with price data from sales
+            from datetime import date, timedelta
+            sales = await c1.get_sales(
+                date_from=(date.today() - timedelta(days=90)).isoformat(),
+                date_to=date.today().isoformat(),
+            )
+            price_by_name: dict[str, float] = {}
+            price_by_lower: dict[str, float] = {}
+            for s in sales:
+                sname = s.get("nomenclature", "")
+                sprice = s.get("sum", 0)
+                sqty = s.get("quantity", 0)
+                if sname and sqty > 0:
+                    unit_price = float(sprice) / float(sqty)
+                    if unit_price > 0:
+                        if sname not in price_by_name:
+                            price_by_name[sname] = unit_price
+                            price_by_lower[sname.lower().strip()] = unit_price
+            for item in page_items:
+                name = str(item.get("name", ""))
+                if name in price_by_name:
+                    item["price"] = round(price_by_name[name], 2)
+                elif name.lower().strip() in price_by_lower:
+                    item["price"] = round(price_by_lower[name.lower().strip()], 2)
         except Exception:
             pass
         finally:
