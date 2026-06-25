@@ -591,16 +591,37 @@ async def chat_export_session(session_id: str, db: AsyncSession = Depends(get_db
 
 @app.post("/api/search/reindex")
 async def api_search_reindex():
+    import asyncio
+    import traceback
     from src.search.fts_cache import init, refresh
     from src.clients.c1_client import C1Client
+    from src.logger import logger
+
     init()
-    c1 = C1Client()
     try:
-        items = await c1.list_nomenclature(query="", limit=5000)
-    finally:
-        await c1.close()
-    count = refresh(items)
-    return {"status": "ok", "items_count": count}
+        c1 = C1Client()
+        try:
+            items = await asyncio.wait_for(
+                c1.list_nomenclature(query="", limit=200),
+                timeout=30.0,
+            )
+        finally:
+            await c1.close()
+        if not items:
+            return {"status": "error", "message": "No items received from 1С"}
+        count = refresh(items)
+        # Also build autocomplete
+        try:
+            from src.search.autocomplete import autocomplete
+            autocomplete.build(items)
+        except Exception:
+            pass
+        return {"status": "ok", "items_count": count}
+    except asyncio.TimeoutError:
+        return {"status": "error", "message": "Timeout fetching data from 1С"}
+    except Exception as e:
+        logger.error("Reindex failed: {}\n{}", e, traceback.format_exc())
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/search/nomenclature")
