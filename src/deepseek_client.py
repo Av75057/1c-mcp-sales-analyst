@@ -477,12 +477,7 @@ class DeepSeekClient:
         response = await self.client.chat.completions.create(**kwargs)
         return response
 
-    async def process_query(self, user_query: str) -> dict[str, Any]:
-        messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_query},
-        ]
-
+    async def _run_conversation_loop(self, messages: list[ChatCompletionMessageParam]) -> dict[str, Any]:
         all_tool_calls: list[dict[str, Any]] = []
         total_input_tokens = 0
         total_output_tokens = 0
@@ -498,18 +493,11 @@ class DeepSeekClient:
             if choice.finish_reason == "stop":
                 final_answer = choice.message.content or ""
                 logger.info("LLM завершила с final ответом")
-                return {
-                    "answer": final_answer,
-                    "tool_calls": all_tool_calls,
-                    "usage": {
-                        "prompt_tokens": total_input_tokens,
-                        "completion_tokens": total_output_tokens,
-                    },
-                }
+                return {"answer": final_answer, "tool_calls": all_tool_calls, "usage": {"prompt_tokens": total_input_tokens, "completion_tokens": total_output_tokens}}
 
             if choice.finish_reason == "tool_calls":
                 msg = choice.message
-                messages.append(msg)  # type: ignore[arg-type]
+                messages.append(msg)
 
                 for tc in msg.tool_calls or []:
                     func_name = tc.function.name
@@ -519,7 +507,6 @@ class DeepSeekClient:
                         args = {}
 
                     logger.info("LLM вызывает tool: {} с args={}", func_name, args)
-
                     func = TOOL_NAME_TO_FUNC.get(func_name)
                     if func is None:
                         result_text = f"Ошибка: неизвестный инструмент {func_name}"
@@ -535,41 +522,28 @@ class DeepSeekClient:
 
                     tool_entry: dict[str, Any] = {"name": func_name, "args": args}
                     if func_name == "create_chart" and result and "image_base64" in result:
-                        tool_entry["result"] = {
-                            "chart_id": result.get("chart_id"),
-                            "image_base64": result["image_base64"],
-                            "image_url": result.get("image_url"),
-                            "chart_type": result.get("metadata", {}).get("chart_type"),
-                        }
+                        tool_entry["result"] = {"chart_id": result.get("chart_id"), "image_base64": result["image_base64"], "image_url": result.get("image_url"), "chart_type": result.get("metadata", {}).get("chart_type")}
                     all_tool_calls.append(tool_entry)
 
                     logger.debug("Результат tool {}: {}", func_name, result_text[:200])
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": result_text,
-                    })
+                    messages.append({"role": "tool", "tool_call_id": tc.id, "content": result_text})
                 continue
 
             if choice.finish_reason == "length":
                 final_answer = msg.content if (msg := choice.message).content else ""
-                return {
-                    "answer": final_answer + "\n\n[Ответ обрезан из-за ограничения длины]",
-                    "tool_calls": all_tool_calls,
-                    "usage": {
-                        "prompt_tokens": total_input_tokens,
-                        "completion_tokens": total_output_tokens,
-                    },
-                }
+                return {"answer": final_answer + "\n\n[Ответ обрезан из-за ограничения длины]", "tool_calls": all_tool_calls, "usage": {"prompt_tokens": total_input_tokens, "completion_tokens": total_output_tokens}}
 
-        return {
-            "answer": "Превышено максимальное количество итераций. Попробуйте уточнить запрос.",
-            "tool_calls": all_tool_calls,
-            "usage": {
-                "prompt_tokens": total_input_tokens,
-                "completion_tokens": total_output_tokens,
-            },
-        }
+        return {"answer": "Превышено максимальное количество итераций. Попробуйте уточнить запрос.", "tool_calls": all_tool_calls, "usage": {"prompt_tokens": total_input_tokens, "completion_tokens": total_output_tokens}}
+
+    async def process_query(self, user_query: str) -> dict[str, Any]:
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_query},
+        ]
+        return await self._run_conversation_loop(messages)
+
+    async def process_query_with_messages(self, messages: list[ChatCompletionMessageParam]) -> dict[str, Any]:
+        return await self._run_conversation_loop(messages)
 
     async def ping(self) -> bool:
         try:

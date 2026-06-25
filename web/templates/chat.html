@@ -1,47 +1,165 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">💬 AI Аналитик</h4>
-</div>
-<div class="row g-2 mb-3">
-    <div class="col-md-8"><input class="form-control" id="chatInput" placeholder="Задайте вопрос на русском языке..." onkeydown="if(event.key==='Enter') sendChat()"></div>
-    <div class="col-md-2"><button class="btn btn-primary w-100" onclick="sendChat()"><i class="bi bi-send"></i> Спросить</button></div>
-</div>
-<div class="mb-3">
-    <small class="text-secondary">Примеры: </small>
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Покажи топ-10 товаров по остаткам')">Топ-10 товаров</button>
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Какая выручка за последние 30 дней?')">Выручка за 30д</button>
-    <button class="btn btn-sm btn-outline-secondary me-1" onclick="setQuery('Продажи по менеджерам')">Продажи по менеджерам</button>
-</div>
-<div id="chatHistory" class="mb-3"></div>
-<div id="chatResult" class="card p-3" style="display:none">
-    <div id="chatAnswer" class="mb-3"></div>
-    <div id="chartContainer" class="mb-3"></div>
-    <div id="toolCalls" class="small text-secondary"></div>
-    <div id="usageInfo" class="small text-secondary mt-2"></div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <button class="btn btn-primary btn-sm w-100 mb-2" onclick="newSession()">+ Новый чат</button>
+            <div class="mb-2"><input class="form-control form-control-sm" id="searchSessions" placeholder="🔍 Поиск..." oninput="renderSessions()"></div>
+            <div id="sessionList" class="list-group list-group-flush" style="max-height: 70vh; overflow-y: auto;"></div>
+        </div>
+        <div class="col-md-9 col-lg-10">
+            <div id="chatMessages" class="mb-3" style="max-height: 60vh; overflow-y: auto; padding: 1rem;"></div>
+            <div id="loadingIndicator" class="text-center py-3 d-none"><div class="spinner-border spinner-border-sm"></div> AI печатает...</div>
+            <div class="input-group">
+                <input class="form-control" id="chatInput" placeholder="Задайте вопрос..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}">
+                <button class="btn btn-primary" onclick="sendMsg()"><i class="bi bi-send"></i></button>
+            </div>
+            <div id="usageInfo" class="small text-secondary mt-1"></div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-function setQuery(q) { document.getElementById('chatInput').value = q; sendChat(); }
-async function sendChat() {
+let currentSessionId = null;
+let sessions = [];
+
+// === Initialize ===
+(async function() {
+    await loadSessions();
+    // Auto-create first session
+    if (sessions.length === 0) {
+        await newSession();
+    } else {
+        selectSession(sessions[0].id);
+    }
+})();
+
+async function api(path, opts = {}) {
+    const r = await fetch(path, { headers: {'Content-Type': 'application/json', ...(opts.headers || {})}, ...opts });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+}
+
+// === Sessions ===
+async function loadSessions() {
+    try {
+        const d = await api('/api/chat/sessions');
+        sessions = d.sessions || [];
+        renderSessions();
+    } catch(e) { console.error(e); }
+}
+
+function renderSessions() {
+    const q = (document.getElementById('searchSessions').value || '').toLowerCase();
+    const filtered = q ? sessions.filter(s => s.title.toLowerCase().includes(q)) : sessions;
+    const el = document.getElementById('sessionList');
+    el.innerHTML = filtered.map(s => `
+        <a class="list-group-item list-group-item-action ${s.id === currentSessionId ? 'active' : ''}" href="#" onclick="selectSession('${s.id}')" oncontextmenu="showSessionMenu(event,'${s.id}')">
+            <div style="font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.title}</div>
+            <small class="text-secondary">${s.messages_count || 0} msg · ${s.last_message_preview ? s.last_message_preview.substring(0,40)+'...' : ''}</small>
+        </a>
+    `).join('');
+}
+
+function saveSessionScroll() {
+    const el = document.getElementById('sessionList');
+    sessionStorage.setItem('sessionScroll', el.scrollTop);
+}
+
+function restoreSessionScroll() {
+    const t = sessionStorage.getItem('sessionScroll');
+    if (t) document.getElementById('sessionList').scrollTop = parseInt(t);
+}
+
+async function newSession() {
+    const d = await api('/api/chat/sessions', { method: 'POST', body: '{}' });
+    sessions.unshift({id: d.id, title: d.title, messages_count: 0, last_message_preview: ''});
+    renderSessions();
+    selectSession(d.id);
+}
+
+async function selectSession(id) {
+    currentSessionId = id;
+    renderSessions();
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('usageInfo').textContent = '';
+    try {
+        const d = await api(`/api/chat/sessions/${id}/messages?page=1&limit=200`);
+        renderMessages(d.messages || []);
+        document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+    } catch(e) { console.error(e); }
+}
+
+async function deleteSession(id, e) {
+    if (!confirm('Удалить сессию?')) return;
+    await api(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+    sessions = sessions.filter(s => s.id !== id);
+    if (id === currentSessionId) {
+        currentSessionId = null;
+        if (sessions.length) selectSession(sessions[0].id);
+        else document.getElementById('chatMessages').innerHTML = '<div class="text-center text-secondary py-5">Создайте новый чат</div>';
+    }
+    renderSessions();
+}
+
+function showSessionMenu(e, id) {
+    e.preventDefault();
+    const action = confirm('Удалить сессию?') ? 'delete' : null;
+    if (action === 'delete') deleteSession(id);
+}
+
+// === Messages ===
+function renderMessages(messages) {
+    const el = document.getElementById('chatMessages');
+    el.innerHTML = messages.map(m => {
+        const isUser = m.role === 'user';
+        const html = `
+            <div class="d-flex mb-3 ${isUser ? 'justify-content-end' : ''}">
+                <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%">
+                    <div style="white-space:pre-wrap">${escapeHtml(m.content)}</div>
+                    ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.tool_name + '</span>').join('') + '</div>' : ''}
+                    <div class="mt-1 small text-secondary">${new Date(m.created_at).toLocaleTimeString()}${m.tokens_used ? ' · ' + m.tokens_used + ' tokens' : ''}${m.response_time_ms ? ' · ' + (m.response_time_ms/1000).toFixed(1)+'s' : ''}</div>
+                </div>
+            </div>
+        `;
+        return html;
+    }).join('');
+}
+
+async function sendMsg() {
     const input = document.getElementById('chatInput');
-    const q = input.value.trim();
-    if (!q) return;
-    const history = document.getElementById('chatHistory');
-    history.innerHTML += `<div class="mb-2 text-end"><span class="badge bg-primary">${q}</span></div>`;
+    const content = input.value.trim();
+    if (!content || !currentSessionId) return;
     input.value = '';
-    document.getElementById('chatResult').style.display = 'none';
-    document.getElementById('chatResult').innerHTML = '<div class="text-center py-4"><div class="spinner-border"></div><div class="mt-2">Анализирую...</div></div>';
-    document.getElementById('chatResult').style.display = 'block';
-    const r = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: `query=${encodeURIComponent(q)}` });
-    const d = await r.json();
-    document.getElementById('chatResult').innerHTML = `
-        <div class="mb-3" style="white-space:pre-wrap">${d.answer}</div>
-        ${d.chart_html ? `<div class="mb-3">${d.chart_html}</div>` : ''}
-        ${d.tool_calls?.length ? `<div class="small text-secondary">🤖 Инструменты: ${d.tool_calls.map(t => t.name).join(', ')}</div>` : ''}
-        ${d.usage ? `<div class="small text-secondary mt-1">💰 Токены: ${d.usage.prompt_tokens} in / ${d.usage.completion_tokens} out</div>` : ''}
-    `;
+    document.getElementById('loadingIndicator').classList.remove('d-none');
+
+    // Add user message to UI
+    const el = document.getElementById('chatMessages');
+    el.innerHTML += `<div class="d-flex justify-content-end mb-3"><div class="bg-primary text-white p-3 rounded" style="max-width:80%"><div style="white-space:pre-wrap">${escapeHtml(content)}</div></div></div>`;
+    el.scrollTop = el.scrollHeight;
+
+    try {
+        const d = await api(`/api/chat/sessions/${currentSessionId}/messages`, { method: 'POST', body: JSON.stringify({content}) });
+        document.getElementById('loadingIndicator').classList.add('d-none');
+        // Add assistant message
+        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%"><div style="white-space:pre-wrap">${escapeHtml(d.answer)}</div>${d.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🤖 Инструменты: ' + d.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.name + '</span>').join('') + '</div>' : ''}</div></div>`;
+        el.scrollTop = el.scrollHeight;
+
+        const usage = d.usage || {};
+        document.getElementById('usageInfo').textContent = `💰 Tokens: ${usage.prompt_tokens || 0} in / ${usage.completion_tokens || 0} out`;
+
+        // Reload sessions to update titles/previews
+        await loadSessions();
+    } catch(e) {
+        document.getElementById('loadingIndicator').classList.add('d-none');
+        alert('Ошибка: ' + e.message);
+    }
+}
+
+function escapeHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 {% endblock %}

@@ -32,6 +32,7 @@ from src.audit.logger import audit_logger
 from src.security.headers import SecurityHeadersMiddleware
 from src.security.rate_limit import init_rate_limiter, limiter
 
+from src.chat.routes import router as chat_router
 from src.admin.routes.dashboard import router as admin_dashboard_router
 from src.admin.routes.users import router as admin_users_router
 from src.admin.routes.audit import router as admin_audit_router
@@ -78,11 +79,16 @@ async def on_startup():
     from src.admin.database import init_db, async_session
     from src.admin.migrate_users import migrate
     from src.admin.services.settings_service import SettingsService
+    from src.chat.repository import ChatBase
+    from sqlalchemy import create_engine
     await init_db()
     await migrate()
     async with async_session() as db:
         svc = SettingsService(db)
         await svc.seed_defaults()
+    # Init chat DB
+    chat_engine = create_engine("sqlite:///data/chat_history.db")
+    ChatBase.metadata.create_all(chat_engine)
 
 
 # Middleware (порядок: от внешнего к внутреннему)
@@ -100,6 +106,7 @@ if settings.auth_enabled:
 
 init_rate_limiter(app)
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 # Admin routes
 app.include_router(admin_dashboard_router)

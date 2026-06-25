@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:Интернет решения ООО:receivables_amount:2026:26",
-  "detector": "receivables_alert",
-  "entity_id": "Интернет решения ООО",
-  "metric_name": "receivables_amount",
-  "priority": "info",
-  "sent_at": "2026-06-24T12:34:15.231461+00:00",
-  "title": "Задолженность: Интернет решения ООО"
-}
