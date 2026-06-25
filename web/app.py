@@ -595,6 +595,34 @@ async def api_search_nomenclature(body: dict):
     return result.model_dump()
 
 
+@app.get("/api/search/autocomplete")
+async def api_search_autocomplete(q: str = "", limit: int = Query(10, le=20)):
+    from src.search.autocomplete import autocomplete
+    await autocomplete.ensure_built()
+    suggestions = autocomplete.suggest(prefix=q, limit=limit)
+    return {"suggestions": suggestions, "query": q}
+
+
+@app.get("/api/search/synonyms")
+async def api_search_synonyms():
+    from src.search.synonyms import get_all, add, remove
+    return {"synonyms": get_all()}
+
+
+@app.post("/api/search/synonyms")
+async def api_search_synonyms_add(body: dict):
+    from src.search.synonyms import add
+    add(body.get("word", ""), body.get("synonyms", []))
+    return {"message": "Added"}
+
+
+@app.delete("/api/search/synonyms/{word}")
+async def api_search_synonyms_delete(word: str):
+    from src.search.synonyms import remove
+    remove(word)
+    return {"message": "Deleted"}
+
+
 @app.post("/api/chat")
 async def api_chat(query: str = Form("")):
     if not query:

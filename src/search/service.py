@@ -4,8 +4,10 @@ import time
 from typing import Any
 
 from src.logger import logger
+from src.search.cache import search_cache
 from src.search.config import SEARCH_CONFIG
 from src.search.models import SearchRequest, SearchResponse, SearchResultItem
+from src.search.synonyms import expand_query
 
 
 def multiword_score(query: str, item: dict[str, Any], field_weights: dict[str, float] | None = None) -> float:
@@ -111,16 +113,39 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     """Основной поиск номенклатуры."""
     start = time.perf_counter()
 
+    query = request.query[:SEARCH_CONFIG.max_query_length]
+
+    # Check cache
+    cache_key = search_cache._make_key(query=query, filters=request.filters.model_dump() if request.filters else {}, page=request.page, limit=request.limit)
+    cached = search_cache.get(cache_key)
+    if cached is not None:
+        return SearchResponse(**cached)
+
+    # Try 1С batch first
+    if items is None:
+        try:
+            from src.clients.batch_client import BatchC1Client
+            async with BatchC1Client() as batch:
+                batch_result = await batch.execute_batch([{
+                    "id": "search",
+                    "method": "GET",
+                    "path": "/nomenclature/search",
+                    "params": {"q": query, "limit": str(min(request.limit * request.page, 500))},
+                }])
+                result_data = batch_result.get("results", [{}])[0].get("data") if batch_result.get("results") else None
+                if result_data:
+                    items = result_data
+        except Exception as e:
+            logger.warning("Batch search failed, fallback: {}", e)
+
     if items is None:
         from src.clients.c1_client import C1Client
         c1 = C1Client()
         try:
-            raw = await c1.list_nomenclature(query="", limit=5000)
+            raw = await c1.list_nomenclature(query=query, limit=500)
         finally:
             await c1.close()
         items = raw
-
-    query = request.query[:SEARCH_CONFIG.max_query_length]
 
     scored = []
     for item in items:
@@ -145,7 +170,7 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
             name=item.get("name", ""),
             article=item.get("article", ""),
             barcode=item.get("barcode", ""),
-            group=item.get("group", ""),
+            group=item.get("group", item.get("item_type", "")),
             item_type=item.get("item_type", ""),
             price=item.get("price", 0.0),
             stock_qty=item.get("stock_qty", 0.0),
@@ -156,11 +181,7 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     facets = compute_facets(filtered)
     elapsed = (time.perf_counter() - start) * 1000
 
-    return SearchResponse(
-        results=results,
-        facets=facets,
-        total=total,
-        page=page,
-        pages=pages,
-        search_time_ms=round(elapsed, 2),
-    )
+    response = SearchResponse(results=results, facets=facets, total=total, page=page, pages=pages, search_time_ms=round(elapsed, 2))
+
+    search_cache.set(cache_key, response.model_dump())
+    return response
