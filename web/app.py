@@ -28,6 +28,7 @@ from src.whatif.engine.simulator import WhatIfSimulator
 
 from src.observability.middleware import MetricsMiddleware
 from src.auth.middleware import AuthMiddleware
+from src.data_quality.routes import router as data_quality_router
 from src.auth.routes import router as auth_router
 from src.audit.middleware import AuditMiddleware
 from src.audit.logger import audit_logger
@@ -89,10 +90,17 @@ async def on_startup():
         await svc.seed_defaults()
     # Init chat tables in same admin DB
     from src.admin.database import engine as admin_engine
-    from sqlalchemy import text
+    from sqlalchemy import text as _text
     async with admin_engine.begin() as conn:
         await conn.run_sync(ChatBase.metadata.create_all)
-        await conn.execute(text("UPDATE chat_sessions SET is_archived = 0 WHERE is_archived IS NULL"))
+        await conn.execute(_text("UPDATE chat_sessions SET is_archived = 0 WHERE is_archived IS NULL"))
+
+    # Init data lineage DB
+    try:
+        from src.data_quality.lineage.tracker import lineage_tracker
+        await lineage_tracker.init_db()
+    except Exception as e:
+        logger.warning("Lineage DB init failed: {}", e)
 
 
 # Middleware (порядок: от внешнего к внутреннему)
@@ -122,6 +130,9 @@ app.include_router(admin_api_keys_router)
 app.include_router(admin_ip_blocks_router)
 app.include_router(admin_tools_router)
 app.include_router(admin_system_router)
+
+# Data Quality routes
+app.include_router(data_quality_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
