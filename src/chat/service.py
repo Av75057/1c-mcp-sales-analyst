@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.chat.models import ChatMessage
 from src.chat.repository import ChatRepository
 from src.deepseek_client import DeepSeekClient
+from src.guardrails.injection_detector import injection_detector
+from src.guardrails.number_verifier import number_verifier
 from src.logger import logger
 
 
@@ -24,6 +26,10 @@ class ChatService:
         content: str,
         max_context_tokens: int = 3000,
     ) -> dict[str, Any]:
+        # 0. Check prompt injection
+        if injection_detector.detect(content):
+            return {"session_id": session_id, "answer": "⚠️ Обнаружена подозрительная активность. Запрос отклонён.", "tool_calls": [], "usage": {"prompt_tokens": 0, "completion_tokens": 0}}
+
         # 1. Check session exists, create if not
         session = await self.repo.get_session(session_id)
         if not session:
@@ -55,7 +61,13 @@ class ChatService:
                 response_time_ms=int(elapsed),
             )
 
-            # 7. Save tool calls
+            # 7. Verify numbers with guardrails
+            try:
+                number_verifier.verify_and_log(result["answer"], result)
+            except Exception:
+                pass
+
+            # 8. Save tool calls
             tool_calls_saved = []
             for tc in result.get("tool_calls", []):
                 saved = await self.repo.add_tool_call(
