@@ -10,6 +10,8 @@ import httpx
 from src.config import settings
 from src.logger import logger
 from src.metrics import metrics
+from src.observability.metrics import c1_requests_total, c1_request_duration_seconds, c1_errors_total
+from src.resilience.circuit_breaker import c1_cb, CircuitBreakerOpenError
 
 
 class C1ClientError(Exception):
@@ -45,6 +47,9 @@ class C1Client:
         metrics.inc_active()
         start = time.perf_counter()
 
+        if c1_cb.is_open:
+            raise C1ConnectionError("1С временно недоступна. Попробуйте позже.")
+
         for attempt in range(self._max_retries):
             try:
                 client = await self._get_client()
@@ -79,6 +84,9 @@ class C1Client:
                 )
                 if elapsed > 3.0:
                     logger.warning("[PERF] SLOW HTTP {} {}: {:.3f}s", method, path, elapsed)
+                c1_cb._on_success()
+                c1_requests_total.labels(endpoint=endpoint, status="ok").inc()
+                c1_request_duration_seconds.labels(endpoint=endpoint).observe(elapsed)
                 return resp
 
             except httpx.TimeoutException:
@@ -88,7 +96,9 @@ class C1Client:
                     method, path, elapsed, attempt + 1, self._max_retries,
                 )
                 metrics.record_timeout(endpoint, elapsed)
+                c1_errors_total.labels(error_type="timeout", endpoint=endpoint).inc()
                 if attempt == self._max_retries - 1:
+                    c1_cb._on_failure(httpx.TimeoutException("1С timeout"))
                     raise C1TimeoutError(
                         f"1С не отвечает: {path} ({elapsed:.1f}s)"
                     )
@@ -101,7 +111,9 @@ class C1Client:
                     "[PERF] HTTP CONNECT ERROR {} {}: {:.3f}s attempt {}/{}",
                     method, path, elapsed, attempt + 1, self._max_retries,
                 )
+                c1_errors_total.labels(error_type="connect", endpoint=endpoint).inc()
                 if attempt == self._max_retries - 1:
+                    c1_cb._on_failure(httpx.ConnectError("1С connection failed"))
                     raise C1ConnectionError(
                         f"Не удалось подключиться к 1С: {path} ({elapsed:.1f}s)"
                     )

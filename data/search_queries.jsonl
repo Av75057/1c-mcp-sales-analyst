@@ -52,3 +52,7 @@
 {"timestamp": "2026-06-25T20:01:49.673243", "user_id": "api", "query": "Кофе молотый", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 1, "search_time_ms": 106.83, "strategy": "hybrid"}
 {"timestamp": "2026-06-25T20:02:05.129396", "user_id": "api", "query": "Кофе", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 1, "search_time_ms": 127.98, "strategy": "hybrid"}
 {"timestamp": "2026-06-25T20:02:38.935431", "user_id": "api", "query": "шоколад", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 20, "search_time_ms": 282.49, "strategy": "hybrid"}
+{"timestamp": "2026-06-26T18:15:26.338539", "user_id": "user1", "query": "яблоко", "filters": {}, "results_count": 5, "search_time_ms": 100.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-26T18:15:26.338623", "user_id": "user1", "query": "груша", "filters": {}, "results_count": 0, "search_time_ms": 50.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-26T18:15:26.338661", "user_id": "user2", "query": "яблоко", "filters": {"in_stock": true}, "results_count": 3, "search_time_ms": 200.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-26T18:15:26.338769", "user_id": "user2", "query": "ананас", "filters": {}, "results_count": 0, "search_time_ms": 30.0, "strategy": "hybrid"}
