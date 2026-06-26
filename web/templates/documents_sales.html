@@ -98,7 +98,7 @@ async function loadDocs() {
         tr.innerHTML = `
             <td><strong>${doc.number || '-'}</strong></td>
             <td>${dt}</td>
-            <td>${doc.counterparty?.name || '-'}${doc.counterparty?.inn ? '<br><small class="text-secondary">ИНН ' + doc.counterparty.inn + '</small>' : ''}</td>
+            <td>${typeof doc.counterparty === 'object' ? (doc.counterparty?.name || '-') : (doc.counterparty || '-')}</td>
             <td class="text-end fw-bold">${sum}</td>
             <td>${status}</td>
             <td class="text-center">${doc.items_count || 0}</td>`;
@@ -144,7 +144,7 @@ document.getElementById('exportCsvBtn').onclick = async function() {
 
     const header = 'Номер;Дата;Контрагент;ИНН;Сумма;Валюта;Статус;Комментарий;Кол-во строк\n';
     const rows = data.documents.map(d =>
-        `"${d.number || ''}";"${(d.date || '').slice(0,10)}";"${(d.counterparty?.name || '')}";"${(d.counterparty?.inn || '')}";${d.sum};${d.currency || 'RUB'};${d.posted ? 'Проведён' : 'Не проведён'};"${(d.comment || '').replace(/"/g,'""')}";${d.items_count || 0}`
+        `"${d.number || ''}";"${(d.date || '').slice(0,10)}";"${typeof d.counterparty === 'object' ? (d.counterparty?.name || '') : (d.counterparty || '')}";"${d.counterparty?.inn || ''}";${d.sum};${d.currency || 'RUB'};${d.posted ? 'Проведён' : 'Не проведён'};"${(d.comment || '').replace(/"/g,'""')}";${d.items_count || 0}`
     ).join('\n');
 
     const blob = new Blob(['\ufeff' + header + rows], { type: 'text/csv;charset=utf-8;' });
