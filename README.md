@@ -2,266 +2,207 @@
 
 AI-аналитик склада и продаж на базе 1С:УНФ, MCP и DeepSeek. Замена ручного построения отчётов на текстовые запросы, AI-инсайты, симуляцию сценариев и распознавание документов.
 
-## 📸 Графики и визуализация
-
-| Пример | Описание |
-|--------|----------|
-| ![Топ-10 товаров](docs/top10_stock.png) | Топ-10 товаров по остаткам (горизонтальный bar) |
-| ![What-If прогноз](docs/whatif_chart.png) | Прогноз выручки при изменении цены (dual line) |
-| ![ABC/XYZ матрица](docs/abc_xyz_matrix.png) | Распределение категорий ABC/XYZ (bar chart) |
-
-### Страницы Web UI
-
-| Страница | URL | Описание |
-|----------|-----|----------|
-| **📊 Дашборд** | `/` | Метрики, топ-10, графики |
-| **📦 Остатки** | `/stock` | Поиск, фильтр, bar chart, CSV |
-| **💰 Продажи** | `/sales` | Фильтры, line/pie chart |
-| **💬 AI Чат** | `/chat` | Natural language запросы |
-| **🔮 What-If** | `/whatif` | 4 сценария + графики Plotly |
-| **📊 ABC/XYZ** | `/analysis/abc-xyz` | Матрица 3×3, Pareto |
-| **🤖 Инсайты** | `/insights` | Список AI-инсайтов |
-| **📄 Документы** | `/documents` | OCR + распознавание |
-| **⚙️ Статус** | `/status` | Мониторинг системы |
-
----
-
-## 🚀 Возможности
-
-| Модуль | Описание |
-|--------|----------|
-| **📊 Анализ данных** | Остатки, продажи, задолженность, поиск номенклатуры через AI-чат |
-| **📈 Auto-Charts** | Автоматическая генерация графиков (line, bar, pie, area) по запросу |
-| **🔮 What-If** | Симуляция сценариев: изменение цены, акции, закупки, увольнение |
-| **🤖 AI Insights** | Проактивные инсайты: аномалии продаж, дебиторка, stock-out |
-| **📄 DocParser** | Распознавание накладных, счетов, УПД через OCR + AI |
-| **🌐 Web UI** | FastAPI + Bootstrap 5 + Chart.js, дашборды, графики |
-
-## 🏗️ Архитектура
-
-```
-Пользователь (CLI / Web / Telegram)
-        │
-        ▼
-┌───────────────────┐     ┌──────────────┐
-│   MCP Server      │────▶│  DeepSeek AI │
-│   (8 tools)       │     │  (Function   │
-│                   │◀────│   Calling)   │
-└───────┬───────────┘     └──────────────┘
-        │
-        ▼
-┌──────────────────────────────────────────┐
-│              Модули                       │
-│  ┌──────┐ ┌────────┐ ┌──────┐ ┌──────┐  │
-│  │1С    │ │What-If │ │Инсай-│ │Доку- │  │
-│  │API   │ │Simula- │ │ ты   │ │менты │  │
-│  │Client│ │tor     │ │      │ │Parser│  │
-│  └──────┘ └────────┘ └──────┘ └──────┘  │
-└──────────────────────────────────────────┘
-        │
-        ▼
-┌──────────────────────────────────────────┐
-│           1С:УНФ / Mock Data              │
-└──────────────────────────────────────────┘
-```
-
-## 📦 Установка
+## 🚀 Быстрый старт
 
 ```bash
+# Клонировать
 git clone https://github.com/Av75057/1c-mcp-sales-analyst.git
 cd 1c-mcp-sales-analyst
 
+# Настроить
 cp .env.example .env
-# Отредактировать .env: указать DEEPSEEK_API_KEY
+# Отредактировать .env: DEEPSEEK_API_KEY, C1_BASE_URL, C1_USERNAME, C1_PASSWORD
 
-pip install -e ".[web,dev]"
+# Установить
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Запустить Web UI
+./start.sh web
+# → http://localhost:8000 | admin / admin123
 ```
 
-## 🔧 Быстрый старт
+## 📊 Страницы Web UI
 
-### Web UI (рекомендуется)
+| Страница | URL | Описание |
+|---|---|---|
+| **📊 Дашборд** | `/` | Ключевые метрики |
+| **📦 Остатки** | `/stock` | Поиск, фильтр |
+| **💰 Продажи** | `/sales` | Фильтры, аналитика |
+| **💬 AI Чат** | `/chat` | Natural language + история сессий |
+| **🔍 Поиск** | `/search` | FTS5 + fuzzy + фильтры + фасеты |
+| **📄 Реализации** | `/documents/sales` | Список документов с фильтрами |
+| **🔮 What-If** | `/whatif` | 4 сценария + графики |
+| **📊 ABC/XYZ** | `/analysis/abc-xyz` | Матрица 3×3 |
+| **🤖 Инсайты** | `/insights` | AI-инсайты |
+| **📄 Документы** | `/documents` | OCR + распознавание |
+| **⚙️ Статус** | `/status` | Мониторинг |
+| **🔐 Админка** | `/admin` | Управление системой |
+
+## 🔧 Функции
+
+### AI Чат с историей
+- Сессии с авто-названием из первого сообщения
+- Сохранение всех сообщений и tool calls
+- Контекст sliding window (3000 токенов)
+- Поиск по истории, экспорт в JSON
+
+### Продвинутый поиск номенклатуры
+- FTS5 + BM25 ранжирование (локальный SQLite кэш)
+- Нечёткий поиск (rapidfuzz, обработка опечаток)
+- Автодополнение (Trie-структура)
+- Синонимы (ноут→ноутбук, телефон→смартфон)
+- Фильтры: группа, тип, наличие, цена
+- Фасеты в результатах
+- Аналитика поисковых запросов
+
+### Batch-запросы к 1С
+- Группировка нескольких запросов в один HTTP-вызов
+- Автоматический fallback на последовательные запросы
+- Агрегированные эндпоинты
+
+### Безопасность
+- JWT-аутентификация (Bearer + httponly cookies)
+- RBAC: admin, analyst, viewer, api_client
+- Rate limiting по ролям (slowapi)
+- Security headers (CSP, HSTS, X-Frame-Options)
+- CORS с белым списком
+- Аудит действий (audit.log)
+- Маскирование sensitive data в логах
+
+### Админ-панель (11 модулей)
+- Dashboard: метрики и алерты
+- Users: CRUD + блокировка + сброс сессий
+- Audit: просмотр + фильтры + экспорт CSV
+- Monitoring: производительность, endpoint stats
+- Settings: управление + история + откат
+- Integrations: health check 1С / DeepSeek
+- Tools: 15 MCP инструментов + статистика
+- API Keys: создание + отзыв
+- IP Blocks: блокировка IP
+- Search Analytics: топ запросов
+- System: ресурсы сервера
+
+### Стабильность (Фаза 1)
+- Health checks: `/health`, `/health/live`, `/health/ready`
+- Circuit Breaker для DeepSeek и 1С
+- Prometheus метрики: `/metrics`
+- Guardrails: верификация чисел AI + защита от инъекций
+- X-Request-ID для корреляции запросов
+
+## 🔌 API Endpoints
 
 ```bash
-uvicorn web.app:app --host 0.0.0.0 --port 8000
+# Аутентификация
+POST /api/auth/login          # username + password → JWT
+POST /api/auth/logout         # сброс cookie
+GET  /api/auth/me             # текущий пользователь
+
+# Чат
+GET  /api/chat/sessions       # список сессий
+POST /api/chat/sessions       # создать сессию
+GET  /api/chat/sessions/{id}/messages
+POST /api/chat/sessions/{id}/messages  # отправить сообщение
+GET  /api/chat/search?q=      # поиск по сообщениям
+
+# Поиск
+POST /api/search/nomenclature # поиск с фильтрами
+GET  /api/search/autocomplete?q=  # автодополнение
+GET  /api/search/synonyms     # список синонимов
+
+# Админка
+GET  /admin/                  # дашборд
+GET  /admin/users/            # пользователи
+GET  /admin/audit/            # логи аудита
+GET  /admin/monitoring/       # мониторинг
+GET  /admin/settings/         # настройки
+GET  /admin/integrations/     # интеграции
+GET  /admin/tools/            # MCP инструменты
+GET  /admin/system/           # система
+
+# Мониторинг
+GET  /health                  # health check
+GET  /health/live             # liveness probe
+GET  /metrics                 # Prometheus метрики
+
+# 1С
+POST /hs/api/v1/batch         # batch-запросы
+GET  /hs/api/stock            # остатки
+GET  /hs/api/sales            # продажи
 ```
 
-Открой http://localhost:8000
-
-| Страница | Назначение |
-|----------|-----------|
-| `/` | Дашборд с метриками |
-| `/stock` | Остатки + поиск + график |
-| `/sales` | Продажи + фильтры + графики |
-| `/chat` | AI-чат с Function Calling |
-| `/whatif` | Симуляция сценариев |
-| `/insights` | AI-инсайты |
-| `/documents` | Распознавание документов |
-| `/status` | Мониторинг системы |
-
-### CLI
-
-```bash
-python chat.py "Покажи топ-5 товаров по остаткам"
-python chat.py "Что будет, если поднять цены на Гвоздь 100мм на 10%?"
-```
-
-### С мок-данными (без 1С)
-
-```bash
-USE_MOCK_DATA=true uvicorn web.app:app --host 0.0.0.0 --port 8000
-```
-
-## 🎯 Модули
-
-### 📊 Анализ данных (MCP tools)
-
-| Tool | Параметры | Описание |
-|------|-----------|----------|
-| `get_stock` | warehouse, nomenclature, min_quantity | Остатки товаров |
-| `get_sales` | date_from, date_to, manager | Продажи |
-| `get_sales_by_manager` | date_from, date_to | Продажи по менеджерам |
-| `get_receivables` | min_amount, date_from | Задолженность |
-| `list_nomenclature` | query, limit | Поиск номенклатуры |
-| `create_chart` | chart_type, x_data, y_data | Графики (line/bar/pie) |
-
-### 📈 Auto-Charts
-
-Автоматическая генерация графиков через DeepSeek Function Calling.
-
-```python
-# AI сам решает, когда построить график
-"Покажи динамику продаж за 6 месяцев"
-# → get_sales → create_chart(line)
-```
-
-Поддерживаемые типы: `line`, `bar`, `hbar`, `pie`, `area`
-
-### 🔮 What-If Simulator
-
-Симуляция 4 сценариев с ML-моделями и Monte-Carlo:
-
-| Сценарий | Что считает | Модель |
-|----------|------------|--------|
-| **💰 price_change** | Эффект изменения цены | ElasticityModel (Ridge) |
-| **🏷️ promotion** | Эффект скидки + каннибализация | ElasticityModel |
-| **📦 purchase_change** | Оптимизация заказа, EOQ, stock-out | MonteCarlo |
-| **👤 employee_departure** | Потери при увольнении, риски | ChurnModel |
-
-```bash
-# Через Web UI: /whatif
-# Или через API:
-curl -X POST http://localhost:8000/api/simulate \
-  -d "scenario_type=price_change&entity_name=Гвоздь 100мм&change_percent=10"
-```
-
-### 🤖 AI Insights
-
-Проактивный анализ данных по расписанию:
-
-| Детектор | Что ищет | Порог |
-|----------|---------|-------|
-| `sales_anomaly` | Падение продаж | >30% за неделю |
-| `sales_growth` | Рост продаж | >25% |
-| `stock_shortage` | Заканчивающиеся товары | <7 дней |
-| `inactive_clients` | Неактивные менеджеры | >30 дней |
-| `receivables_alert` | Рост дебиторки | >20% |
-
-```bash
-python run_insights.py scan    # разовый скан
-python run_insights.py daemon  # по расписанию
-```
-
-### 📄 AI DocParser
-
-Распознавание первичных документов:
-
-| Формат | Обработка |
-|--------|-----------|
-| PDF (текст) | pdftotext |
-| PDF (скан) | pdftoppm → tesseract OCR |
-| JPEG/PNG | tesseract OCR |
-| TXT/CSV | прямое чтение |
-
-```bash
-# Через Web UI: /documents
-# Или через API:
-curl -X POST http://localhost:8000/api/documents/upload \
-  -F "file=@invoice.pdf" -F "match_nomenclature=true"
-```
-
-## ⚙️ Переменные окружения (.env)
-
-| Переменная | По умолчанию | Описание |
-|-----------|-------------|----------|
-| `DEEPSEEK_API_KEY` | — | Ключ DeepSeek API |
-| `C1_BASE_URL` | http://localhost/1c/api | URL 1С |
-| `C1_USERNAME` | service_user | Логин 1С |
-| `C1_PASSWORD` | service_password | Пароль 1С |
-| `USE_MOCK_DATA` | true | Мок-режим (без 1С) |
-| `LLM_MODEL` | deepseek-chat | Модель DeepSeek |
-| `TELEGRAM_BOT_TOKEN` | — | Telegram bot token |
-| `TELEGRAM_CHAT_IDS` | — | Telegram chat IDs |
-
-## 🧪 Тестирование
+## 🧪 Тесты
 
 ```bash
 # Все тесты
 pytest tests/ -v
 
-# Без графиков (требуют Chrome)
-pytest tests/ --ignore=tests/test_charts.py -v
+# По модулям
+pytest tests/test_search.py
+pytest tests/test_chat_models.py
+pytest tests/test_guardrails.py
+pytest tests/test_resilience.py
+pytest tests/test_admin.py
+pytest tests/integration/
 
-# Интеграционные тесты
-pytest tests/integration/ -v
+# С coverage
+pytest tests/ --cov=src --cov=web --cov-report=term
+pytest tests/ --cov=src --cov=web --cov-report=html
+# → открыть htmlcov/index.html
 ```
 
 ## 🐳 Docker
 
 ```bash
-docker-compose up --build
+# Сборка
+docker compose build
+
+# Запуск всех сервисов
+docker compose up -d
+
+# Только proxy + web-ui
+docker compose up -d proxy open-webui
+
+# Логи
+docker compose logs -f
 ```
 
 ## 📁 Структура проекта
 
 ```
 src/
-├── charts/            # Auto-Charts (Plotly engine)
-├── clients/           # 1С HTTP-клиент + мок
-├── docparser/         # Распознавание документов
-├── insights/          # AI-инсайты (детекторы + LLM)
-├── whatif/            # What-If симулятор (ML + сценарии)
-├── mcp/               # MCP-сервер + tools registry
-├── web/               # FastAPI Web UI
-├── deepseek_client.py # DeepSeek API + Function Calling
-├── tools.py           # Инструменты
-└── config.py          # Конфигурация
+├── admin/          # Админ-панель (11 модулей)
+├── auth/           # JWT + RBAC аутентификация
+├── audit/          # Аудит + AuditLogger
+├── chat/           # История сессий чата
+├── clients/        # C1Client + BatchC1Client
+├── guardrails/     # Верификация AI + защита
+├── health/         # Health checks
+├── mcp/            # MCP tools registry
+├── observability/  # Prometheus метрики
+├── resilience/     # Circuit Breaker
+├── search/         # FTS5 + fuzzy + synonyms
+├── security/       # Security headers + rate limiting
+└── whatif/         # What-If симуляции
 
-tests/
-├── test_mock_client.py
-├── test_c1_client.py
-├── test_deepseek_client.py
-├── test_charts.py
-├── test_tools.py
-├── test_insights.py
-└── integration/
-    └── test_whatif_mcp.py
-
-web/templates/         # Jinja2 шаблоны (7 страниц)
-web/static/            # CSS/JS
+web/
+├── app.py          # FastAPI приложение
+└── templates/      # HTML шаблоны
 ```
 
-## 📊 Технологии
+## 🔑 Переменные окружения
 
-| Компонент | Технология |
-|-----------|-----------|
-| Backend | Python 3.12, FastAPI |
-| Frontend | Bootstrap 5, Chart.js, Plotly |
-| ML | scikit-learn, NumPy, Pandas |
-| OCR | Tesseract, pdftoppm |
-| AI | DeepSeek API, Function Calling |
-| Tests | pytest, pytest-asyncio |
-| CI | GitHub Actions |
+| Переменная | Описание | По умолчанию |
+|---|---|---|
+| `DEEPSEEK_API_KEY` | API ключ DeepSeek | — |
+| `C1_BASE_URL` | URL HTTP-сервиса 1С | `http://localhost/1c/api` |
+| `C1_USERNAME` | Пользователь 1С | `service_user` |
+| `C1_PASSWORD` | Пароль 1С | `service_password` |
+| `JWT_SECRET_KEY` | Секрет для JWT | — |
+| `AUTH_ENABLED` | Включить аутентификацию | `true` |
+| `USE_MOCK_DATA` | Использовать мок-данные | `true` |
 
-## 📝 Лицензия
+## 📄 Лицензия
 
-MIT
+MIT License. Copyright (c) 2026 Av75057.

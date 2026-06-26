@@ -68,6 +68,32 @@ async function loadStatus() {
         • Модель AI: ${d.llm_model || 'deepseek-chat'}<br>
         • Всего товаров в 1С: ${d.stock_count || 0}
     `;
+    // Health check
+    try {
+        const h = await (await fetch('/health')).json();
+        const el = document.getElementById('healthStatus') || document.getElementById('connectionStatus');
+        if (!document.getElementById('healthStatus')) {
+            const card = document.querySelector('.row .col-md-6:first-child');
+            if (card) {
+                const div = document.createElement('div');
+                div.className = 'card p-3 mt-3';
+                div.innerHTML = '<div class="card-title">Health Check</div><div id="healthStatus"></div>';
+                card.appendChild(div);
+            }
+        }
+        const hs = document.getElementById('healthStatus');
+        if (hs) {
+            const statusColor = h.status === 'healthy' ? 'success' : h.status === 'degraded' ? 'warning' : 'danger';
+            hs.innerHTML = `<div class="mb-2"><span class="text-${statusColor}">●</span> Статус: <strong>${h.status}</strong></div>`;
+            for (const [name, check] of Object.entries(h.checks || {})) {
+                const c = check.status === 'ok' ? 'success' : check.status === 'error' ? 'danger' : 'warning';
+                hs.innerHTML += `<div class="mb-1 small"><span class="text-${c}">●</span> ${name}: ${check.status}${check.latency_ms ? ' ('+check.latency_ms+'ms)' : ''}</div>`;
+            }
+        }
+    } catch(e) {
+        const hs = document.getElementById('healthStatus');
+        if (hs) hs.innerHTML = '<div class="text-danger">Health check недоступен</div>';
+    }
 }
 loadStatus();
 </script>
