@@ -224,33 +224,63 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
     offset = (page - 1) * request.limit
     page_items = filtered[offset : offset + request.limit]
 
-    # Enrich with stock data from 1С
+    # Enrich with stock and price data from 1С
+    _price_cache: dict[str, float] = {}
+
+    async def _get_price(name: str) -> float:
+        """Get price from last sale for an item."""
+        if name in _price_cache:
+            return _price_cache[name]
+        return 0.0
+
     try:
         import asyncio
         from src.clients.c1_client import C1Client
         c1 = C1Client()
+        stock_items = await asyncio.wait_for(c1.get_stock(), timeout=10.0)
+        stock_by_name: dict[str, float] = {}
+        stock_by_lower: dict[str, float] = {}
+        for s in stock_items:
+            name = s.get("nomenclature", "")
+            qty = s.get("quantity", 0)
+            if name:
+                fqty = float(qty)
+                stock_by_name[name] = stock_by_name.get(name, 0) + fqty
+                stock_by_lower[name.lower().strip()] = stock_by_lower.get(name.lower().strip(), 0) + fqty
+        for item in page_items:
+            name = str(item.get("name", ""))
+            if name in stock_by_name:
+                item["stock_qty"] = stock_by_name[name]
+            elif name.lower().strip() in stock_by_lower:
+                item["stock_qty"] = stock_by_lower[name.lower().strip()]
+            else:
+                for stock_name, qty in stock_by_name.items():
+                    if name.lower() in stock_name.lower() or stock_name.lower() in name.lower():
+                        item["stock_qty"] = qty
+                        break
+
+        # Enrich with price from last sale
         try:
-            stock_items = await asyncio.wait_for(c1.get_stock(), timeout=10.0)
-            stock_by_name: dict[str, float] = {}
-            stock_by_lower: dict[str, float] = {}
-            for s in stock_items:
-                name = s.get("nomenclature", "")
-                qty = s.get("quantity", 0)
-                if name:
-                    fqty = float(qty)
-                    stock_by_name[name] = stock_by_name.get(name, 0) + fqty
-                    stock_by_lower[name.lower().strip()] = stock_by_lower.get(name.lower().strip(), 0) + fqty
+            from datetime import date, timedelta
+            sales = await asyncio.wait_for(c1.get_sales(date_from=(date.today() - timedelta(days=90)).isoformat(), date_to=date.today().isoformat()), timeout=15.0)
+            last_price: dict[str, float] = {}
+            for s in sales:
+                sname = s.get("nomenclature", "")
+                sprice = s.get("sum", 0)
+                sqty = s.get("quantity", 0)
+                if sname and float(sqty) > 0:
+                    last_price[sname] = float(sprice) / float(sqty)
             for item in page_items:
                 name = str(item.get("name", ""))
-                if name in stock_by_name:
-                    item["stock_qty"] = stock_by_name[name]
-                elif name.lower().strip() in stock_by_lower:
-                    item["stock_qty"] = stock_by_lower[name.lower().strip()]
+                if name in last_price:
+                    item["price"] = round(last_price[name], 2)
                 else:
-                    for stock_name, qty in stock_by_name.items():
-                        if name.lower() in stock_name.lower() or stock_name.lower() in name.lower():
-                            item["stock_qty"] = qty
+                    for sname, p in last_price.items():
+                        if name.lower() in sname.lower() or sname.lower() in name.lower():
+                            item["price"] = round(p, 2)
                             break
+        except asyncio.TimeoutError:
+            pass
         except Exception:
             pass
         finally:
