@@ -22,7 +22,7 @@ _cmd() { nohup "$@" > "$PID_DIR/$2.log" 2>&1 & echo $! > "$PID_DIR/$2.pid"; }
 
 _port_check() {
     local p="${1:-8000}"
-    if ss -tlnp "sport = :$p" 2>/dev/null | grep -q .; then
+    if ss -tlnp "sport = :$p" 2>/dev/null | grep -q "LISTEN"; then
         err "Порт $p уже занят. Выполните: $0 stop"
         return 1
     fi
@@ -32,7 +32,7 @@ _port_check() {
 start_web() {
     PORT="${PORT:-8000}"
     _port_check "$PORT" || return 1
-    _cmd uvicorn web.app:app --host 0.0.0.0 --port "$PORT" --proxy-headers --log-level info web
+    _cmd "$VENV/bin/uvicorn" web.app:app --host 0.0.0.0 --port "$PORT" --proxy-headers --log-level info web
     sleep 1
     if kill -0 "$(cat "$PID_DIR/web.pid")" 2>/dev/null; then
         ok "Web UI запущен (PID $(cat "$PID_DIR/web.pid")) — http://localhost:$PORT"
@@ -42,12 +42,12 @@ start_web() {
 }
 
 start_mcp() {
-    _cmd python -m src server mcp
+    _cmd "$VENV/bin/python" -m src server mcp
     ok "MCP сервер запущен (PID $(cat "$PID_DIR/mcp.pid"))"
 }
 
 start_proxy() {
-    _cmd python -m src proxy proxy
+    _cmd "$VENV/bin/python" -m src proxy proxy
     ok "Proxy запущен (PID $(cat "$PID_DIR/proxy.pid")) — http://localhost:${PROXY_PORT:-8000}/v1"
 }
 
