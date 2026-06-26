@@ -262,7 +262,7 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
         # Enrich with price from last sale
         try:
             from datetime import date, timedelta
-            sales = await asyncio.wait_for(c1.get_sales(date_from=(date.today() - timedelta(days=7)).isoformat(), date_to=date.today().isoformat()), timeout=10.0)
+            sales = await asyncio.wait_for(c1.get_sales(date_from=(date.today() - timedelta(days=90)).isoformat(), date_to=date.today().isoformat()), timeout=30.0)
             last_price: dict[str, float] = {}
             for s in sales:
                 sname = s.get("nomenclature", "")
