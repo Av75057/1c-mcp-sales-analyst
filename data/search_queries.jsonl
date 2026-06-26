@@ -58,3 +58,4 @@
 {"timestamp": "2026-06-26T18:15:26.338769", "user_id": "user2", "query": "ананас", "filters": {}, "results_count": 0, "search_time_ms": 30.0, "strategy": "hybrid"}
 {"timestamp": "2026-06-26T20:10:41.838444", "user_id": "api", "query": "кофе", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 1, "search_time_ms": 1337.29, "strategy": "hybrid"}
 {"timestamp": "2026-06-26T20:11:23.839932", "user_id": "api", "query": "меня можно", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 20, "search_time_ms": 469.48, "strategy": "hybrid"}
+{"timestamp": "2026-06-26T20:15:48.694457", "user_id": "api", "query": "термо", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 2, "search_time_ms": 841.21, "strategy": "hybrid"}
