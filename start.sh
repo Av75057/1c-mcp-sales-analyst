@@ -18,7 +18,7 @@ if [ ! -d "$VENV" ]; then
 fi
 source "$VENV/bin/activate"
 
-_cmd() { nohup "$@" > "$PID_DIR/$2.log" 2>&1 & echo $! > "$PID_DIR/$2.pid"; }
+_cmd() { local name="${!#}"; nohup "${@:1:$#-1}" > "$PID_DIR/$name.log" 2>&1 & echo $! > "$PID_DIR/$name.pid"; }
 
 _port_check() {
     local p="${1:-8000}"
