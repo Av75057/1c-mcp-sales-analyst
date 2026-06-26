@@ -26,6 +26,7 @@ from src.deepseek_client import DeepSeekClient
 from src.metrics import metrics
 from src.whatif.engine.simulator import WhatIfSimulator
 
+from src.observability.middleware import MetricsMiddleware
 from src.auth.middleware import AuthMiddleware
 from src.auth.routes import router as auth_router
 from src.audit.middleware import AuditMiddleware
@@ -95,6 +96,7 @@ async def on_startup():
 
 
 # Middleware (порядок: от внешнего к внутреннему)
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
