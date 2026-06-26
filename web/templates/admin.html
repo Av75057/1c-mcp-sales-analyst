@@ -13,6 +13,8 @@
                 <a class="list-group-item list-group-item-action" href="#tools" onclick="showTab('tools')">🛠️ Tools</a>
                 <a class="list-group-item list-group-item-action" href="#apikeys" onclick="showTab('apikeys')">🔑 API Keys</a>
                 <a class="list-group-item list-group-item-action" href="#ipblocks" onclick="showTab('ipblocks')">🚫 IP Blocks</a>
+                <a class="list-group-item list-group-item-action" href="#knowledge" onclick="showTab('knowledge')">📚 Knowledge</a>
+                <a class="list-group-item list-group-item-action" href="#events" onclick="showTab('events')">⚡ Events</a>
                 <a class="list-group-item list-group-item-action" href="#data-quality" onclick="showTab('data-quality')">📋 Data Quality</a>
                 <a class="list-group-item list-group-item-action" href="#search-analytics" onclick="showTab('search-analytics')">🔍 Search Analytics</a>
                 <a class="list-group-item list-group-item-action" href="#system" onclick="showTab('system')">🖥️ System</a>
@@ -40,6 +42,8 @@ function showTab(tab) {
     else if (tab === 'tools') loadTools(c);
     else if (tab === 'apikeys') loadApiKeys(c);
     else if (tab === 'ipblocks') loadIpBlocks(c);
+    else if (tab === 'knowledge') loadKnowledge(c);
+    else if (tab === 'events') loadEvents(c);
     else if (tab === 'data-quality') loadDataQuality(c);
     else if (tab === 'search-analytics') loadSearchAnalytics(c);
     else if (tab === 'system') loadSystem(c);
@@ -308,6 +312,73 @@ window.blockIp = async function() {
 window.unblockIp = async function(id) {
     await fetch(API + '/admin/ip-blocks/' + id + '/unblock', {method:'POST'});
     loadIpBlocks(document.getElementById('adminContent'));
+};
+
+// === Knowledge Base ===
+async function loadKnowledge(c) {
+    const [docs, stats] = await Promise.all([
+        api('/api/knowledge/documents?limit=50'),
+        api('/api/knowledge/stats').catch(() => ({total_documents: 0, by_type: {}})),
+    ]);
+    c.innerHTML = `
+        <h3>📚 Knowledge Base</h3>
+        <div class="mb-2"><span class="badge bg-info">Total: ${stats.total_documents || 0}</span>
+        ${Object.entries(stats.by_type || {}).map(([k,v]) => `<span class="badge bg-secondary ms-1">${k}: ${v}</span>`).join('')}
+        </div>
+        <button class="btn btn-primary btn-sm mb-3" onclick="showCreateDoc()">+ New Document</button>
+        <div id="docForm"></div>
+        <table class="table table-sm"><thead><tr><th>Title</th><th>Type</th><th>Tags</th><th>Actions</th></tr></thead><tbody>
+        ${(docs.documents || []).map(d => `<tr>
+            <td>${d.title}</td>
+            <td><span class="badge bg-secondary">${d.document_type}</span></td>
+            <td>${(JSON.parse(d.tags || '[]')).join(', ')}</td>
+            <td><button class="btn btn-sm btn-danger" onclick="deleteDoc('${d.id}')">Del</button></td>
+        </tr>`).join('')}
+        </tbody></table>
+    `;
+}
+window.showCreateDoc = function() {
+    document.getElementById('docForm').innerHTML = `
+        <div class="card p-3 mb-3">
+            <input id="kd_title" class="form-control mb-2" placeholder="Title">
+            <textarea id="kd_content" class="form-control mb-2" rows="3" placeholder="Content"></textarea>
+            <select id="kd_type" class="form-control mb-2"><option value="general">General</option><option value="business_rule">Business Rule</option><option value="faq">FAQ</option></select>
+            <button class="btn btn-success btn-sm" onclick="createDoc()">Create</button>
+        </div>`;
+};
+window.createDoc = async function() {
+    await fetch(API + '/api/knowledge/documents', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({title: document.getElementById('kd_title').value, content: document.getElementById('kd_content').value, document_type: document.getElementById('kd_type').value})});
+    loadKnowledge(document.getElementById('adminContent'));
+};
+window.deleteDoc = async function(id) {
+    await fetch(API + '/api/knowledge/documents/' + id, {method:'DELETE'});
+    loadKnowledge(document.getElementById('adminContent'));
+};
+
+// === Events ===
+async function loadEvents(c) {
+    const [dead, stats] = await Promise.all([
+        api('/api/events/dead-letter'),
+        api('/api/events/stats').catch(() => ({handlers: {}, dead_letter_count: 0})),
+    ]);
+    c.innerHTML = `
+        <h3>⚡ Event Bus</h3>
+        <div class="mb-2">
+            <span class="badge bg-info">Handlers: ${Object.keys(stats.handlers || {}).length}</span>
+            <span class="badge bg-warning">Dead Letter: ${stats.dead_letter_count || 0}</span>
+            ${(dead.events || []).length ? '<button class="btn btn-sm btn-secondary ms-2" onclick="replayDead()">Replay</button>' : ''}
+        </div>
+        <h6>Registered Handlers</h6>
+        <table class="table table-sm"><thead><tr><th>Event Type</th><th>Count</th></tr></thead><tbody>
+        ${Object.entries(stats.handlers || {}).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+        </tbody></table>
+        ${(dead.events || []).length ? '<h6>Dead Letter Queue</h6><pre>' + JSON.stringify(dead.events, null, 2) + '</pre>' : ''}
+    `;
+}
+window.replayDead = async function() {
+    await fetch(API + '/api/events/dead-letter/replay', {method:'POST'});
+    loadEvents(document.getElementById('adminContent'));
 };
 
 // === Data Quality ===
