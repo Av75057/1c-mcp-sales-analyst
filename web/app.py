@@ -266,6 +266,54 @@ async def api_health_performance():
     }
 
 
+@app.get("/health/live")
+async def health_live():
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    from src.health.checks import check_database, check_c1
+    db = await check_database()
+    c1 = await check_c1()
+    all_ok = db["status"] == "ok" and c1["status"] == "ok"
+    from fastapi.responses import JSONResponse
+    return JSONResponse(status_code=200 if all_ok else 503, content={"status": "ready" if all_ok else "not_ready", "checks": {"database": db, "c1": c1}})
+
+
+@app.get("/health")
+async def health():
+    from src.health.checks import all_checks
+    from fastapi.responses import JSONResponse
+    result = await all_checks()
+    status_code = 200 if result["status"] in ("healthy", "degraded") else 503
+    return JSONResponse(status_code=status_code, content=result)
+
+
+@app.get("/metrics")
+async def metrics_endpoint():
+    from src.observability.metrics import get_metrics
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(get_metrics(), media_type="text/plain; version=0.0.4")
+
+
+@app.get("/api/admin/circuit-breakers")
+async def admin_circuit_breakers():
+    from src.resilience.circuit_breaker import deepseek_cb, c1_cb
+    return {"circuit_breakers": [deepseek_cb.state_metrics, c1_cb.state_metrics]}
+
+
+@app.post("/api/admin/circuit-breakers/{name}/reset")
+async def admin_circuit_breaker_reset(name: str):
+    from src.resilience.circuit_breaker import deepseek_cb, c1_cb
+    cbs = {"deepseek": deepseek_cb, "c1": c1_cb}
+    cb = cbs.get(name)
+    if not cb:
+        raise HTTPException(status_code=404, detail=f"Circuit breaker '{name}' not found")
+    cb.reset()
+    return {"status": "reset", "name": name, "new_state": cb.state.value}
+
+
 @measure_time("api_documents_sales")
 @app.get("/api/documents/sales")
 async def api_documents_sales(
