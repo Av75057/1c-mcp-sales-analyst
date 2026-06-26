@@ -29,6 +29,8 @@ from src.whatif.engine.simulator import WhatIfSimulator
 from src.observability.middleware import MetricsMiddleware
 from src.auth.middleware import AuthMiddleware
 from src.data_quality.routes import router as data_quality_router
+from src.rag.routes import router as rag_router
+from src.events.routes import router as events_router
 from src.auth.routes import router as auth_router
 from src.audit.middleware import AuditMiddleware
 from src.audit.logger import audit_logger
@@ -102,6 +104,13 @@ async def on_startup():
     except Exception as e:
         logger.warning("Lineage DB init failed: {}", e)
 
+    # Init knowledge base DB
+    try:
+        from src.rag.repository import init_db as init_knowledge_db
+        init_knowledge_db()
+    except Exception as e:
+        logger.warning("Knowledge DB init failed: {}", e)
+
 
 # Middleware (порядок: от внешнего к внутреннему)
 app.add_middleware(MetricsMiddleware)
@@ -133,6 +142,8 @@ app.include_router(admin_system_router)
 
 # Data Quality routes
 app.include_router(data_quality_router)
+app.include_router(rag_router)
+app.include_router(events_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
