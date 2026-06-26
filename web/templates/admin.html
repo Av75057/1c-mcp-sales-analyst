@@ -13,6 +13,7 @@
                 <a class="list-group-item list-group-item-action" href="#tools" onclick="showTab('tools')">🛠️ Tools</a>
                 <a class="list-group-item list-group-item-action" href="#apikeys" onclick="showTab('apikeys')">🔑 API Keys</a>
                 <a class="list-group-item list-group-item-action" href="#ipblocks" onclick="showTab('ipblocks')">🚫 IP Blocks</a>
+                <a class="list-group-item list-group-item-action" href="#data-quality" onclick="showTab('data-quality')">📋 Data Quality</a>
                 <a class="list-group-item list-group-item-action" href="#search-analytics" onclick="showTab('search-analytics')">🔍 Search Analytics</a>
                 <a class="list-group-item list-group-item-action" href="#system" onclick="showTab('system')">🖥️ System</a>
             </div>
@@ -39,6 +40,7 @@ function showTab(tab) {
     else if (tab === 'tools') loadTools(c);
     else if (tab === 'apikeys') loadApiKeys(c);
     else if (tab === 'ipblocks') loadIpBlocks(c);
+    else if (tab === 'data-quality') loadDataQuality(c);
     else if (tab === 'search-analytics') loadSearchAnalytics(c);
     else if (tab === 'system') loadSystem(c);
 }
@@ -307,6 +309,34 @@ window.unblockIp = async function(id) {
     await fetch(API + '/admin/ip-blocks/' + id + '/unblock', {method:'POST'});
     loadIpBlocks(document.getElementById('adminContent'));
 };
+
+// === Data Quality ===
+async function loadDataQuality(c) {
+    const [contracts, lineage] = await Promise.all([
+        api('/api/data/contracts'),
+        api('/api/data/lineage?limit=10').catch(() => ({records: [], total: 0})),
+    ]);
+    c.innerHTML = `
+        <h3>📋 Data Quality</h3>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="card p-3"><h6>Data Contracts</h6>
+                <table class="table table-sm"><thead><tr><th>Tool</th><th>Model</th><th>Rules</th></tr></thead><tbody>
+                ${(contracts.contracts || []).map(c => `<tr><td>${c.tool_name}</td><td>${c.output_model}</td><td>${(c.quality_rules || []).join(', ') || '-'}</td></tr>`).join('')}
+                </tbody></table></div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3"><h6>Lineage Records</h6>
+                <table class="table table-sm"><thead><tr><th>Endpoint</th><th>Rows</th><th>Status</th><th>Time</th></tr></thead><tbody>
+                ${(lineage.records || []).map(r => `<tr><td>${r.source_endpoint}</td><td>${r.row_count}</td><td><span class="badge ${r.validation_status === 'valid' ? 'bg-success' : 'bg-danger'}">${r.validation_status}</span></td><td>${r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td></tr>`).join('')}
+                ${(lineage.records || []).length === 0 ? '<tr><td colspan="4" class="text-secondary">Нет данных</td></tr>' : ''}
+                </tbody></table>
+                <a class="btn btn-sm btn-secondary" href="/api/data/lineage">View all</a>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 // === Search Analytics ===
 async function loadSearchAnalytics(c) {
