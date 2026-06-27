@@ -63,3 +63,7 @@
 {"timestamp": "2026-06-26T20:18:35.889536", "user_id": "api", "query": "фольга", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 1, "search_time_ms": 1253.28, "strategy": "hybrid"}
 {"timestamp": "2026-06-26T20:18:42.833217", "user_id": "api", "query": "термо", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 2, "search_time_ms": 303.36, "strategy": "hybrid"}
 {"timestamp": "2026-06-26T20:19:30.636666", "user_id": "api", "query": "фольга", "filters": {"group": null, "item_type": null, "in_stock": null, "price_min": null, "price_max": null}, "results_count": 1, "search_time_ms": 456.92, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T19:20:40.812465", "user_id": "user1", "query": "яблоко", "filters": {}, "results_count": 5, "search_time_ms": 100.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T19:20:40.812552", "user_id": "user1", "query": "груша", "filters": {}, "results_count": 0, "search_time_ms": 50.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T19:20:40.812593", "user_id": "user2", "query": "яблоко", "filters": {"in_stock": true}, "results_count": 3, "search_time_ms": 200.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T19:20:40.812619", "user_id": "user2", "query": "ананас", "filters": {}, "results_count": 0, "search_time_ms": 30.0, "strategy": "hybrid"}

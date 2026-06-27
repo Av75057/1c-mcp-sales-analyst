@@ -43,6 +43,52 @@
 
 ---
 
+## Фаза 4: Metadata + Execute Query
+
+### GET /hs/metadata/config
+
+Паспорт базы 1С (имя, конфигурация, версия, платформа).
+
+**Файл:** `metadata_api.bsl`
+
+**Функция:** `ConfigGET(Запрос)` — экспортная
+
+**Пример:**
+```bash
+curl https://01.yes-it.ru/unf-kav/hs/metadata/config
+```
+
+### GET /hs/metadata/describe
+
+Список объектов метаданных (справочники, документы, регистры).
+
+**Параметры:** `type` (Catalog/Document/AccumulationRegister), `search`
+
+**Функция:** `DescribeGET(Запрос)` — экспортная
+
+### GET /hs/metadata/structure?name=Номенклатура
+
+Структура объекта метаданных (поля, типы, синонимы).
+
+**Функция:** `StructureGET(Запрос)` — экспортная
+
+### POST /hs/query/execute
+
+Выполнение произвольного запроса (только SELECT).
+
+**Вход:** `{"query": "ВЫБРАТЬ ...", "params": {...}}`
+**Выход:** `{"columns": [...], "rows": [[...], ...], "count": N}`
+
+**Файл:** `execute_query.bsl`
+
+**Функция:** `ExecutePOST(Запрос)` — экспортная
+
+**Ограничения:**
+- Только SELECT (ВЫБРАТЬ)
+- Read-only guard: запрещены ИЗМЕНИТЬ/ДОБАВИТЬ/УДАЛИТЬ/ПРОВЕСТИ/ЗАПИСАТЬ
+
+---
+
 ## Новые эндпоинты
 
 ### GET /hs/api/v1/documents/sales
