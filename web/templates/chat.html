@@ -48,9 +48,15 @@ let searchTimeout = null;
 })();
 
 async function api(path, opts = {}) {
-    const r = await fetch(path, { headers: {'Content-Type': 'application/json', ...(opts.headers || {})}, ...opts });
-    if (!r.ok) { const e = await r.text(); throw new Error(e); }
-    return r.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    try {
+        const r = await fetch(path, { signal: controller.signal, credentials: 'include', headers: {'Content-Type': 'application/json', ...(opts.headers || {})}, ...opts });
+        if (!r.ok) { const e = await r.text(); throw new Error(e); }
+        return r.json();
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
 // === Sessions ===
