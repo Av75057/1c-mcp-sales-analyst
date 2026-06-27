@@ -67,3 +67,7 @@
 {"timestamp": "2026-06-27T19:20:40.812552", "user_id": "user1", "query": "груша", "filters": {}, "results_count": 0, "search_time_ms": 50.0, "strategy": "hybrid"}
 {"timestamp": "2026-06-27T19:20:40.812593", "user_id": "user2", "query": "яблоко", "filters": {"in_stock": true}, "results_count": 3, "search_time_ms": 200.0, "strategy": "hybrid"}
 {"timestamp": "2026-06-27T19:20:40.812619", "user_id": "user2", "query": "ананас", "filters": {}, "results_count": 0, "search_time_ms": 30.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T20:15:56.429364", "user_id": "user1", "query": "яблоко", "filters": {}, "results_count": 5, "search_time_ms": 100.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T20:15:56.429440", "user_id": "user1", "query": "груша", "filters": {}, "results_count": 0, "search_time_ms": 50.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T20:15:56.429472", "user_id": "user2", "query": "яблоко", "filters": {"in_stock": true}, "results_count": 3, "search_time_ms": 200.0, "strategy": "hybrid"}
+{"timestamp": "2026-06-27T20:15:56.429495", "user_id": "user2", "query": "ананас", "filters": {}, "results_count": 0, "search_time_ms": 30.0, "strategy": "hybrid"}
