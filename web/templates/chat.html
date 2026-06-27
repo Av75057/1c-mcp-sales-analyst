@@ -134,10 +134,14 @@ function renderMessages(messages) {
     const el = document.getElementById('chatMessages');
     el.innerHTML = messages.map(m => {
         const isUser = m.role === 'user';
+        let chartImg = '';
+        const chartCall = (m.tool_calls || []).find(t => (t.tool_name || t.name) === 'create_chart' && t.result?.image_base64);
+        if (chartCall) chartImg = '<div class="mt-2"><img src="data:image/png;base64,' + chartCall.result.image_base64 + '" style="max-width:100%;border-radius:8px"></div>';
         return `<div class="d-flex mb-3 ${isUser ? 'justify-content-end' : ''}">
             <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%;white-space:pre-wrap">
                 ${escapeHtml(m.content)}
-                ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.tool_name + '</span>').join('') + '</div>' : ''}
+                ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + (t.tool_name || t.name || '?') + '</span>').join('') + '</div>' : ''}
+                ${chartImg}
                 <div class="mt-1 small text-secondary">${new Date(m.created_at).toLocaleTimeString()}${m.tokens_used ? ' · ' + m.tokens_used + ' tokens' : ''}${m.response_time_ms ? ' · ' + (m.response_time_ms/1000).toFixed(1)+'s' : ''}</div>
             </div>
         </div>`;
@@ -160,8 +164,18 @@ async function sendMsg() {
         const d = await api(`/api/chat/sessions/${currentSessionId}/messages`, { method: 'POST', body: JSON.stringify({content}) });
         document.getElementById('loadingIndicator').classList.add('d-none');
 
-        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%;white-space:pre-wrap">${escapeHtml(d.answer)}
-            ${d.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🤖 Инструменты: ' + d.tool_calls.map(t => '<span class="badge bg-info me-1">' + t.name + '</span>').join('') + '</div>' : ''}</div></div>`;
+        let toolHtml = '';
+        if (d.tool_calls?.length) {
+            const badges = d.tool_calls.map(t => '<span class="badge bg-info me-1">' + (t.name || t.tool_name || '?') + '</span>').join('');
+            toolHtml = '<div class="mt-2 pt-2 border-top border-secondary">🤖 Инструменты: ' + badges + '</div>';
+
+            // Chart display
+            const chartCall = d.tool_calls.find(t => t.name === 'create_chart' && t.result?.image_base64);
+            if (chartCall) {
+                toolHtml += '<div class="mt-2"><img src="data:image/png;base64,' + chartCall.result.image_base64 + '" style="max-width:100%;border-radius:8px"></div>';
+            }
+        }
+        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%;white-space:pre-wrap">${escapeHtml(d.answer)}${toolHtml}</div></div>`;
         el.scrollTop = el.scrollHeight;
 
         const usage = d.usage || {};
