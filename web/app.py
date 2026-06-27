@@ -31,6 +31,8 @@ from src.auth.middleware import AuthMiddleware
 from src.data_quality.routes import router as data_quality_router
 from src.rag.routes import router as rag_router
 from src.events.routes import router as events_router
+from src.anonymization.routes import router as anonymization_router
+from src.metadata.routes import router as metadata_router
 from src.workflows.routes import router as workflows_router
 from src.proactive.routes import router as proactive_router
 from src.auth.routes import router as auth_router
@@ -113,6 +115,13 @@ async def on_startup():
     except Exception as e:
         logger.warning("Knowledge DB init failed: {}", e)
 
+    # Init anonymization DB
+    try:
+        from src.anonymization.storage import init_db as init_anon_db
+        init_anon_db()
+    except Exception as e:
+        logger.warning("Anonymization DB init failed: {}", e)
+
 
 # Middleware (порядок: от внешнего к внутреннему)
 app.add_middleware(MetricsMiddleware)
@@ -148,6 +157,8 @@ app.include_router(rag_router)
 app.include_router(events_router)
 app.include_router(workflows_router)
 app.include_router(proactive_router)
+app.include_router(anonymization_router)
+app.include_router(metadata_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")

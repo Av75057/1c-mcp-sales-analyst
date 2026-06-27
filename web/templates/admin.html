@@ -14,6 +14,8 @@
                 <a class="list-group-item list-group-item-action" href="#apikeys" onclick="showTab('apikeys')">🔑 API Keys</a>
                 <a class="list-group-item list-group-item-action" href="#ipblocks" onclick="showTab('ipblocks')">🚫 IP Blocks</a>
                 <a class="list-group-item list-group-item-action" href="#knowledge" onclick="showTab('knowledge')">📚 Knowledge</a>
+                <a class="list-group-item list-group-item-action" href="#anonymization" onclick="showTab('anonymization')">🕵️ Anonymization</a>
+                <a class="list-group-item list-group-item-action" href="#metadata" onclick="showTab('metadata')">📐 Metadata</a>
                 <a class="list-group-item list-group-item-action" href="#events" onclick="showTab('events')">⚡ Events</a>
                 <a class="list-group-item list-group-item-action" href="#data-quality" onclick="showTab('data-quality')">📋 Data Quality</a>
                 <a class="list-group-item list-group-item-action" href="#search-analytics" onclick="showTab('search-analytics')">🔍 Search Analytics</a>
@@ -43,6 +45,8 @@ function showTab(tab) {
     else if (tab === 'apikeys') loadApiKeys(c);
     else if (tab === 'ipblocks') loadIpBlocks(c);
     else if (tab === 'knowledge') loadKnowledge(c);
+    else if (tab === 'anonymization') loadAnonymization(c);
+    else if (tab === 'metadata') loadMetadata(c);
     else if (tab === 'events') loadEvents(c);
     else if (tab === 'data-quality') loadDataQuality(c);
     else if (tab === 'search-analytics') loadSearchAnalytics(c);
@@ -355,6 +359,47 @@ window.deleteDoc = async function(id) {
     await fetch(API + '/api/knowledge/documents/' + id, {method:'DELETE'});
     loadKnowledge(document.getElementById('adminContent'));
 };
+
+// === Anonymization ===
+async function loadAnonymization(c) {
+    try {
+        const r = await fetch(API + '/api/anonymization/stats');
+        const d = await r.json();
+        c.innerHTML = `
+            <h3>🕵️ Anonymization</h3>
+            <div class="row g-3 mb-3">
+                <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Total Tokens</small><h4>${d.total_tokens || 0}</h4></div></div>
+                <div class="col-md-3"><div class="card p-3"><small class="text-secondary">Reveals Today</small><h4>${d.reveals_today || 0}</h4></div></div>
+            </div>
+            <table class="table table-sm"><thead><tr><th>Type</th><th>Count</th></tr></thead><tbody>
+            ${Object.entries(d.by_type || {}).map(([k,v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
+            </tbody></table>
+        `;
+    } catch(e) {
+        c.innerHTML = '<h3>🕵️ Anonymization</h3><p class="text-secondary">Not available</p>';
+    }
+}
+
+// === Metadata ===
+async function loadMetadata(c) {
+    try {
+        const cfg = await api('/api/metadata/config');
+        const desc = await api('/api/metadata/describe');
+        c.innerHTML = `
+            <h3>📐 Metadata</h3>
+            <div class="card p-3 mb-3">
+                <h6>Config</h6>
+                <pre>${JSON.stringify(cfg, null, 2)}</pre>
+            </div>
+            <h6>Objects (${desc.objects?.length || 0})</h6>
+            <table class="table table-sm"><thead><tr><th>Name</th><th>Type</th><th>Fields</th></tr></thead><tbody>
+            ${(desc.objects || []).map(o => `<tr><td>${o.name}</td><td><span class="badge bg-secondary">${o.type}</span></td><td>${o.fields_count}</td></tr>`).join('')}
+            </tbody></table>
+        `;
+    } catch(e) {
+        c.innerHTML = '<h3>📐 Metadata</h3><p class="text-secondary">Not available</p>';
+    }
+}
 
 // === Events ===
 async function loadEvents(c) {
