@@ -77,7 +77,7 @@ class ChatService:
                     result=json.dumps(tc.get("result", ""), ensure_ascii=False)[:500],
                     status="success",
                 )
-                tool_calls_saved.append({"name": tc["name"], "args": tc.get("args")})
+                tool_calls_saved.append({"name": tc["name"], "args": tc.get("args"), "result": tc.get("result")})
 
             return {
                 "session_id": session_id,
