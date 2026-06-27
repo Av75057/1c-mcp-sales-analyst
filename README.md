@@ -172,19 +172,28 @@ docker compose logs -f
 
 ```
 src/
-├── admin/          # Админ-панель (11 модулей)
-├── auth/           # JWT + RBAC аутентификация
-├── audit/          # Аудит + AuditLogger
-├── chat/           # История сессий чата
-├── clients/        # C1Client + BatchC1Client
-├── guardrails/     # Верификация AI + защита
-├── health/         # Health checks
-├── mcp/            # MCP tools registry
-├── observability/  # Prometheus метрики
-├── resilience/     # Circuit Breaker
-├── search/         # FTS5 + fuzzy + synonyms
-├── security/       # Security headers + rate limiting
-└── whatif/         # What-If симуляции
+├── admin/            # Админ-панель (16 модулей)
+├── anonymization/    # Анонимизация ПДн (токены ПЕРС/ОРГ/КОНТ/ФИН/ДОК)
+├── auth/             # JWT + RBAC аутентификация
+├── audit/            # Аудит + AuditLogger
+├── chat/             # История сессий чата
+├── clients/          # C1Client + BatchC1Client
+├── data_quality/     # Качество данных (Pydantic, валидация, anomalies)
+├── events/           # Event Bus (publish/subscribe, dead letter)
+├── guardrails/       # Верификация AI + защита
+├── health/           # Health checks /health /health/live /health/ready
+├── mcp/              # MCP tools registry
+├── metadata/         # Метаданные 1С (config, describe, get_structure)
+├── observability/    # Prometheus метрики + middleware
+├── proactive/        # Proactive analytics (scheduler, отчёты)
+├── query/            # Декларативный QueryBuilder для 1С
+├── rag/              # База знаний (SQLite + поиск)
+├── reflection/       # Self-Reflection (AI критик ответов)
+├── resilience/       # Circuit Breaker
+├── search/           # FTS5 + fuzzy + synonyms + autocomplete
+├── security/         # Security headers + rate limiting + ReadOnlyGuard
+├── workflows/        # Workflow engine + бизнес-workflow
+└── whatif/           # What-If симуляции
 
 web/
 ├── app.py          # FastAPI приложение
