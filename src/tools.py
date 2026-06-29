@@ -237,6 +237,29 @@ async def get_sales_documents_tool(
 
 
 @measure_time("get_analytics_context")
+@measure_time("config")
+async def config_tool() -> dict:
+    """Паспорт базы 1С."""
+    from src.metadata.service import metadata_service
+    return await metadata_service.get_config()
+
+
+@measure_time("describe")
+async def describe_tool(object_type: str | None = None, search: str | None = None) -> dict:
+    """Список объектов метаданных."""
+    from src.metadata.service import metadata_service
+    objects = await metadata_service.describe(object_type=object_type, search=search)
+    return {"objects": objects, "total": len(objects)}
+
+
+@measure_time("get_structure")
+async def get_structure_tool(object_name: str) -> dict:
+    """Структура объекта метаданных."""
+    from src.metadata.service import metadata_service
+    return await metadata_service.get_structure(object_name)
+
+
+@measure_time("get_analytics_context")
 async def get_analytics_context_tool(
     date_from: str = "",
     date_to: str = "",

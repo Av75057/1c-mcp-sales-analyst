@@ -36,6 +36,9 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 - get_receivables — задолженность клиентов
 - get_purchases — закупки товаров/услуг у поставщиков
 - get_analytics_context — сводка: итоги, топ товаров, топ клиентов, остатки за период. Используй, когда нужна общая аналитика (без детализации по документам).
+- config — паспорт базы 1С (имя, версия, конфигурация)
+- describe — список объектов метаданных 1С
+- get_structure — структура объекта метаданных (поля, типы)
 - abc_xyz_analysis — ABC/XYZ классификация товаров/клиентов по выручке и стабильности
 - forecast_sales — прогноз продаж товара на N дней
 - forecast_stockout — прогноз окончания товаров на складе
@@ -361,6 +364,31 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
         },
     },
     {
+        {
+        "type": "function",
+        "function": {
+            "name": "config",
+            "description": "Получить паспорт базы 1С: имя, конфигурация, версия, платформа.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "describe",
+            "description": "Описать объекты метаданных в базе 1С (справочники, документы, регистры).",
+            "parameters": {"type": "object", "properties": {"object_type": {"type": "string", "description": "Тип объекта: Catalog, Document, AccumulationRegister, InformationRegister"}, "search": {"type": "string", "description": "Поиск по имени"}}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_structure",
+            "description": "Получить структуру объекта метаданных 1С: поля, типы, синонимы.",
+            "parameters": {"type": "object", "properties": {"object_name": {"type": "string", "description": "Имя объекта (например, Номенклатура)"}}, "required": ["object_name"]},
+        },
+    },
+    {
         "type": "function",
         "function": {
             "name": "get_sales_documents",
@@ -410,7 +438,9 @@ def _import_tools() -> None:
     from src.tools import (
         abc_xyz_analysis_tool,
         compare_forecasts_tool,
+        config_tool,
         create_chart_tool,
+        describe_tool,
         forecast_sales_tool,
         forecast_stockout_tool,
         get_analytics_context_tool,
@@ -420,6 +450,7 @@ def _import_tools() -> None:
         get_sales_documents_tool,
         get_sales_tool,
         get_stock_tool,
+        get_structure_tool,
         list_nomenclature_tool,
         simulate_scenario_tool,
     )
@@ -435,6 +466,9 @@ def _import_tools() -> None:
     TOOL_NAME_TO_FUNC["abc_xyz_analysis"] = abc_xyz_analysis_tool
     TOOL_NAME_TO_FUNC["get_analytics_context"] = get_analytics_context_tool
     TOOL_NAME_TO_FUNC["get_sales_documents"] = get_sales_documents_tool
+    TOOL_NAME_TO_FUNC["config"] = config_tool
+    TOOL_NAME_TO_FUNC["describe"] = describe_tool
+    TOOL_NAME_TO_FUNC["get_structure"] = get_structure_tool
     TOOL_NAME_TO_FUNC["forecast_sales"] = forecast_sales_tool
     TOOL_NAME_TO_FUNC["forecast_stockout"] = forecast_stockout_tool
     TOOL_NAME_TO_FUNC["compare_forecasts"] = compare_forecasts_tool

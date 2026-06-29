@@ -6,7 +6,9 @@ from src.logger import logger
 from src.tools import (
     abc_xyz_analysis_tool,
     compare_forecasts_tool,
+    config_tool,
     create_chart_tool,
+    describe_tool,
     forecast_sales_tool,
     forecast_stockout_tool,
     get_analytics_context_tool,
@@ -16,6 +18,7 @@ from src.tools import (
     get_sales_documents_tool,
     get_sales_tool,
     get_stock_tool,
+    get_structure_tool,
     list_nomenclature_tool,
 )
 from src.whatif.mcp.tools import WHATIF_TOOLS_SCHEMA, list_whatif_scenarios_tool, simulate_scenario_tool
@@ -34,6 +37,9 @@ EXISTING_TOOLS_SCHEMA = [
     {"type": "function", "function": {"name": "create_chart", "description": "Построить график", "parameters": {"type": "object", "properties": {"chart_type": {"type": "string", "enum": ["line", "bar", "hbar", "pie", "area"]}, "title": {"type": "string"}, "x_data": {"type": "array"}, "y_data": {"type": "array"}, "x_label": {"type": "string"}, "y_label": {"type": "string"}, "series_names": {"type": "array"}, "color_scheme": {"type": "string", "enum": ["default", "corporate", "vibrant"]}}, "required": ["chart_type", "title", "x_data", "y_data"]}}},
     {"type": "function", "function": {"name": "get_analytics_context", "description": "Получить полный контекст для аналитики одним batch-запросом (итоги, топ-20 товаров, топ-10 клиентов, остатки, неликвиды)", "parameters": {"type": "object", "properties": {"date_from": {"type": "string", "description": "Начальная дата (YYYY-MM-DD)"}, "date_to": {"type": "string", "description": "Конечная дата (YYYY-MM-DD)"}}, "required": ["date_from", "date_to"]}}},
     {"type": "function", "function": {"name": "get_sales_documents", "description": "Получить список документов реализации с номерами, датами, суммами и контрагентами. Используйте для проверки конкретных сделок, поиска по контрагенту, детализации продаж.", "parameters": {"type": "object", "properties": {"date_from": {"type": "string", "description": "Дата начала периода (YYYY-MM-DD)"}, "date_to": {"type": "string", "description": "Дата окончания периода (YYYY-MM-DD)"}, "counterparty": {"type": "string", "description": "Фильтр по контрагенту (подстрока)"}, "sum_min": {"type": "number", "description": "Минимальная сумма"}, "sum_max": {"type": "number", "description": "Максимальная сумма"}, "posted_only": {"type": "boolean", "description": "Только проведённые"}, "sort_by": {"type": "string", "enum": ["date", "sum", "number"], "description": "Поле сортировки"}, "sort_order": {"type": "string", "enum": ["asc", "desc"], "description": "Направление"}, "page": {"type": "integer", "description": "Номер страницы"}, "page_size": {"type": "integer", "description": "Размер страницы"}}, "required": ["date_from", "date_to"]}}},
+    {"type": "function", "function": {"name": "config", "description": "Получить паспорт базы 1С: имя, конфигурация, версия, платформа.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "describe", "description": "Описать объекты метаданных в базе 1С (справочники, документы, регистры).", "parameters": {"type": "object", "properties": {"object_type": {"type": "string", "description": "Тип объекта: Catalog, Document, AccumulationRegister, InformationRegister"}, "search": {"type": "string", "description": "Поиск по имени"}}, "required": []}}},
+    {"type": "function", "function": {"name": "get_structure", "description": "Получить структуру объекта метаданных: поля, типы, синонимы.", "parameters": {"type": "object", "properties": {"object_name": {"type": "string", "description": "Имя объекта (например, Номенклатура, Продажи)"}}, "required": ["object_name"]}}},
 ]
 
 ALL_TOOLS_SCHEMA = EXISTING_TOOLS_SCHEMA + WHATIF_TOOLS_SCHEMA
@@ -54,6 +60,9 @@ TOOLS_REGISTRY: dict[str, Any] = {
     "list_whatif_scenarios": list_whatif_scenarios_tool,
     "get_analytics_context": get_analytics_context_tool,
     "get_sales_documents": get_sales_documents_tool,
+    "config": config_tool,
+    "describe": describe_tool,
+    "get_structure": get_structure_tool,
 }
 
 
