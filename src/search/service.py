@@ -259,26 +259,25 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
                         item["stock_qty"] = qty
                         break
 
-        # Enrich with price from last sale
+        # Enrich with price from batch price history
         try:
-            from datetime import date, timedelta
-            sales = await asyncio.wait_for(c1.get_sales(date_from=(date.today() - timedelta(days=90)).isoformat(), date_to=date.today().isoformat()), timeout=30.0)
-            last_price: dict[str, float] = {}
-            for s in sales:
-                sname = s.get("nomenclature", "")
-                sprice = s.get("sum", 0)
-                sqty = s.get("quantity", 0)
-                if sname and float(sqty) > 0:
-                    last_price[sname] = float(sprice) / float(sqty)
+            from src.clients.batch_client import BatchC1Client
+            batch_requests = []
             for item in page_items:
                 name = str(item.get("name", ""))
-                if name in last_price:
-                    item["price"] = round(last_price[name], 2)
-                else:
-                    for sname, p in last_price.items():
-                        if name.lower() in sname.lower() or sname.lower() in name.lower():
-                            item["price"] = round(p, 2)
-                            break
+                if name:
+                    batch_requests.append({"id": f"price_{len(batch_requests)}", "method": "GET", "path": "/pricehistory", "params": {"item": name, "limit": "1"}})
+            if batch_requests:
+                async with BatchC1Client() as bc:
+                    price_result = await asyncio.wait_for(bc.execute_batch(batch_requests, timeout=30), timeout=35.0)
+                for r in price_result.get("results", []):
+                    price_id = int(r.get("id", "-1").replace("price_", "")) if "price_" in r.get("id", "") else -1
+                    if price_id >= 0 and price_id < len(page_items) and r.get("status") == 200:
+                        data = r.get("data", [])
+                        if data and len(data) > 0:
+                            p = data[0].get("price", 0)
+                            if p:
+                                page_items[price_id]["price"] = round(float(p), 2)
         except asyncio.TimeoutError:
             pass
         except Exception:
