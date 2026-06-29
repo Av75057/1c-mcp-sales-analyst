@@ -364,7 +364,6 @@ TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
         },
     },
     {
-        {
         "type": "function",
         "function": {
             "name": "config",
