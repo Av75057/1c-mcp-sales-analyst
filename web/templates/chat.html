@@ -144,8 +144,8 @@ function renderMessages(messages) {
         const chartCall = (m.tool_calls || []).find(t => (t.tool_name || t.name) === 'create_chart' && t.result?.image_base64);
         if (chartCall) chartImg = '<div class="mt-2"><img src="data:image/png;base64,' + chartCall.result.image_base64 + '" style="max-width:100%;border-radius:8px"></div>';
         return `<div class="d-flex mb-3 ${isUser ? 'justify-content-end' : ''}">
-            <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%;white-space:pre-wrap">
-                ${escapeHtml(m.content)}
+            <div class="${isUser ? 'bg-primary text-white' : 'bg-dark text-light'} p-3 rounded" style="max-width:80%">
+                ${isUser ? escapeHtml(m.content) : renderMarkdown(m.content)}
                 ${m.tool_calls?.length ? '<div class="mt-2 pt-2 border-top border-secondary">🔧 ' + m.tool_calls.map(t => '<span class="badge bg-info me-1">' + (t.tool_name || t.name || '?') + '</span>').join('') + '</div>' : ''}
                 ${chartImg}
                 <div class="mt-1 small text-secondary">${new Date(m.created_at).toLocaleTimeString()}${m.tokens_used ? ' · ' + m.tokens_used + ' tokens' : ''}${m.response_time_ms ? ' · ' + (m.response_time_ms/1000).toFixed(1)+'s' : ''}</div>
@@ -181,7 +181,7 @@ async function sendMsg() {
                 toolHtml += '<div class="mt-2"><img src="data:image/png;base64,' + chartCall.result.image_base64 + '" style="max-width:100%;border-radius:8px"></div>';
             }
         }
-        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%;white-space:pre-wrap">${escapeHtml(d.answer)}${toolHtml}</div></div>`;
+        el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%">${renderMarkdown(d.answer)}${toolHtml}</div></div>`;
         el.scrollTop = el.scrollHeight;
 
         const usage = d.usage || {};
@@ -221,5 +221,27 @@ async function doSearch() {
 }
 
 function escapeHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Simple markdown renderer for tables and formatting
+function renderMarkdown(text) {
+    if (!text) return '';
+    let html = escapeHtml(text);
+    // Tables: | Header | ... |
+    html = html.replace(/\n\|(.+)\|/g, (m) => {
+        const cells = m.slice(1, -1).split('|').map(c => c.trim());
+        if (cells.every(c => /^[-:\s]+$/.test(c))) return '<tr class="d-none">';
+        return '<tr><td>' + cells.join('</td><td>') + '</td></tr>';
+    });
+    html = html.replace(/<tr class="d-none"><\/tr>/g, '');
+    // Wrap consecutive table rows in <table>
+    html = html.replace(/((?:<tr>.*?<\/tr>\n?)+)/g, '<table class="table table-sm table-bordered mb-2">$1</table>');
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    return html;
+}
 </script>
 {% endblock %}
