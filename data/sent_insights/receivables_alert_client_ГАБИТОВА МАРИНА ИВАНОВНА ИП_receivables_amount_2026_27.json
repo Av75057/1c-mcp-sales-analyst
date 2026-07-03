@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ГАБИТОВА МАРИНА ИВАНОВНА ИП:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "ГАБИТОВА МАРИНА ИВАНОВНА ИП",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.798984+00:00",
+  "title": "Задолженность: ГАБИТОВА МАРИНА ИВАНОВНА ИП"
+}

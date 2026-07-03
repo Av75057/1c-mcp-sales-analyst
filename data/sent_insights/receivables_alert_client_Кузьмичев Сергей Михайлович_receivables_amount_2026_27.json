@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Кузьмичев Сергей Михайлович:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "Кузьмичев Сергей Михайлович",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.798837+00:00",
+  "title": "Задолженность: Кузьмичев Сергей Михайлович"
+}

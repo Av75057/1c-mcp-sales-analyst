@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Болодурина Вера Анатольевна ИП:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "Болодурина Вера Анатольевна ИП",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.799545+00:00",
+  "title": "Задолженность: Болодурина Вера Анатольевна ИП"
+}

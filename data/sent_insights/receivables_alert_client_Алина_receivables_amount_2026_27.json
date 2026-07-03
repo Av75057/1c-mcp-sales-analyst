@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Алина:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "Алина",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.801180+00:00",
+  "title": "Задолженность: Алина"
+}

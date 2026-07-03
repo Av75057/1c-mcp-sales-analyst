@@ -33,6 +33,7 @@ from src.rag.routes import router as rag_router
 from src.events.routes import router as events_router
 from src.anonymization.routes import router as anonymization_router
 from src.metadata.routes import router as metadata_router
+from src.dashboard.router import router as dashboard_router
 from src.workflows.routes import router as workflows_router
 from src.proactive.routes import router as proactive_router
 from src.auth.routes import router as auth_router
@@ -159,6 +160,7 @@ app.include_router(workflows_router)
 app.include_router(proactive_router)
 app.include_router(anonymization_router)
 app.include_router(metadata_router)
+app.include_router(dashboard_router)
 
 BASE = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")

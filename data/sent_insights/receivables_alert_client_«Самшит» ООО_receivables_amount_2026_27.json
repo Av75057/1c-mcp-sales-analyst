@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:«Самшит» ООО:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "«Самшит» ООО",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.799611+00:00",
+  "title": "Задолженность: «Самшит» ООО"
+}

@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ИП Журавлев Константин Константинович:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "ИП Журавлев Константин Константинович",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.799052+00:00",
+  "title": "Задолженность: ИП Журавлев Константин Константинович"
+}

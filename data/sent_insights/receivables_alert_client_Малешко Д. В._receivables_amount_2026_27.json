@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Малешко Д. В.:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "Малешко Д. В.",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.800980+00:00",
+  "title": "Задолженность: Малешко Д. В."
+}

@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Роман Михайлович Родионов:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "Роман Михайлович Родионов",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-06-29T19:10:40.800228+00:00",
+  "title": "Задолженность: Роман Михайлович Родионов"
+}
