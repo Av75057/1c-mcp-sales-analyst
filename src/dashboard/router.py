@@ -74,13 +74,18 @@ async def _fetch_data(config: ChartConfig) -> list[dict]:
 
 @router.post("/generate")
 async def generate_dashboard(body: DashboardRequest, request: Request = None):
+    from src.dashboard.services.history_service import history_service
+
     req_id = str(uuid.uuid4())[:8]
     start = time.perf_counter()
+    user_id = "api"
 
     try:
         config = await generate_chart_config(body.query)
         data = await _fetch_data(config)
         elapsed = (time.perf_counter() - start) * 1000
+
+        history_service.log(user_id=user_id, query=body.query, chart_type=config.chart_type, status="success", execution_time_ms=int(elapsed))
 
         return DashboardResponse(
             chart=config.model_dump(),
@@ -89,7 +94,9 @@ async def generate_dashboard(body: DashboardRequest, request: Request = None):
         )
 
     except ValueError as e:
+        history_service.log(user_id=user_id, query=body.query, chart_type=None, status="error", error_code="INVALID_QUERY")
         return DashboardResponse(status="error", error_code="INVALID_QUERY", message=str(e), suggestions=["Покажи продажи за последний месяц", "Топ-10 товаров по выручке"])
     except Exception as e:
         logger.error("[Dashboard] Error: {}", e)
+        history_service.log(user_id=user_id, query=body.query, chart_type=None, status="error", error_code="NO_DATA")
         return DashboardResponse(status="error", error_code="NO_DATA", message="По вашему запросу данных не найдено.", suggestions=["Попробуйте расширить период", "Проверьте правильность названия"])
