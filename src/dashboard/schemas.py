@@ -32,7 +32,7 @@ class OnecQuery(BaseModel):
 
 
 class ChartConfig(BaseModel):
-    chart_type: str = Field(default="bar", pattern="^(line|bar|pie)$")
+    chart_type: str = Field(default="bar", pattern="^(line|bar|pie|horizontal_bar|area|combo|scatter)$")
     title: str = Field(default="", max_length=100)
     subtitle: str = Field(default="", max_length=200)
     x_axis: Axis
