@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:ЗАО ТехноПром:receivables_amount:2026:27",
+  "detector": "receivables_alert",
+  "entity_id": "ЗАО ТехноПром",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-07-03T19:37:39.529040+00:00",
+  "title": "Задолженность: ЗАО ТехноПром"
+}

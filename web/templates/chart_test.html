@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Тест графиков</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        body { background:#1a1d23; color:#e5e7eb; font-family:sans-serif; padding:20px; }
+        .card { background:#1a1d23; border:1px solid #2d3139; border-radius:8px; padding:16px; margin-bottom:16px; }
+        canvas { width:100% !important; height:250px !important; }
+        .row { display:flex; gap:16px; }
+        .col { flex:1; }
+    </style>
+</head>
+<body>
+    <h2>Тест рендеринга графиков</h2>
+    <div class="row">
+        <div class="col"><div class="card"><h4>Bar</h4><canvas id="chart1"></canvas></div></div>
+        <div class="col"><div class="card"><h4>Line</h4><canvas id="chart2"></canvas></div></div>
+        <div class="col"><div class="card"><h4>Pie</h4><canvas id="chart3"></canvas></div></div>
+    </div>
+    <div class="row">
+        <div class="col"><div class="card"><h4>Heatmap</h4><canvas id="chart4"></canvas></div></div>
+        <div class="col"><div class="card"><h4>Gauge</h4><canvas id="chart5"></canvas></div></div>
+        <div class="col"><div class="card"><h4>Radar</h4><canvas id="chart6"></canvas></div></div>
+    </div>
+
+    <script>
+    const COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
+
+    console.log('Chart.js loaded:', typeof Chart !== 'undefined');
+
+    // 1. Bar
+    new Chart(document.getElementById('chart1'), {
+        type: 'bar',
+        data: {
+            labels: ['Товар А','Товар Б','Товар В','Товар Г','Товар Д'],
+            datasets: [{ label: 'Продажи', data: [12000, 8500, 6200, 4100, 2300], backgroundColor: '#5470c6' }],
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+    console.log('Bar: OK');
+
+    // 2. Line
+    new Chart(document.getElementById('chart2'), {
+        type: 'line',
+        data: {
+            labels: ['2026-07-01','2026-07-02','2026-07-03','2026-07-04','2026-07-05'],
+            datasets: [{ label: 'Выручка', data: [3500, 4000, 12000, 8000, 6000], borderColor: '#91cc75', fill: true }],
+        },
+        options: { responsive: true }
+    });
+    console.log('Line: OK');
+
+    // 3. Pie
+    new Chart(document.getElementById('chart3'), {
+        type: 'pie',
+        data: {
+            labels: ['Иванов','Петров','Сидоров','Кузнецов'],
+            datasets: [{ data: [40, 30, 20, 10], backgroundColor: COLORS }],
+        },
+        options: { responsive: true }
+    });
+    console.log('Pie: OK');
+
+    // 4. Heatmap (canvas)
+    function renderHeatmap(canvas) {
+        const w = canvas.parentElement.clientWidth || 400, h = 250;
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        const data = [[1,2,3],[4,5,6],[7,8,9]];
+        const labels = ['Товар A','Товар B','Товар C'];
+        const days = ['Пн','Вт','Ср'];
+        const colors = ['#1a1a2e','#16213e','#0f3460','#e94560','#ff6b6b','#ffd93d'];
+        const cellW = (w-60)/3, cellH = (h-40)/3;
+        ctx.fillStyle = '#9ca3af';
+        days.forEach((d,i) => ctx.fillText(d, 50+i*cellW+2, 20));
+        labels.forEach((l,i) => ctx.fillText(l, 5, 40+i*cellH+12));
+        data.forEach((row, yi) => row.forEach((v, xi) => {
+            const idx = Math.min(Math.floor(v/9*colors.length), colors.length-1);
+            ctx.fillStyle = colors[idx];
+            ctx.fillRect(50+xi*cellW, 30+yi*cellH, cellW-2, cellH-2);
+            ctx.fillStyle = v > 4 ? '#fff' : '#ccc';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(v, 50+xi*cellW+cellW/3, 30+yi*cellH+cellH/2+4);
+        }));
+        console.log('Heatmap: OK');
+    }
+    renderHeatmap(document.getElementById('chart4'));
+
+    // 5. Gauge (doughnut)
+    const val = 75, maxVal = 100;
+    new Chart(document.getElementById('chart5'), {
+        type: 'doughnut',
+        data: { labels: ['Значение','Остаток'], datasets: [{ data: [val, maxVal-val], backgroundColor: ['#91cc75','#2d3139'], borderWidth: 0 }] },
+        options: { cutout: '75%', responsive: true, plugins: { legend: { display: false } } }
+    });
+    console.log('Gauge: OK');
+
+    // 6. Radar
+    new Chart(document.getElementById('chart6'), {
+        type: 'radar',
+        data: {
+            labels: ['Продажи','Клиенты','Средний чек','Конверсия','Возвраты'],
+            datasets: [{
+                label: 'Менеджер А',
+                data: [80, 60, 70, 50, 90],
+                borderColor: '#5470c6', backgroundColor: '#5470c622', fill: true,
+            }],
+        },
+        options: { responsive: true, scales: { r: { ticks: { color: '#6b7280' }, grid: { color: '#2d3139' } } } }
+    });
+    console.log('Radar: OK');
+    </script>
+</body>
+</html>

@@ -16,7 +16,7 @@ class GuardrailError(ValueError):
     pass
 
 
-VALID_CHART_TYPES = {"line", "bar", "pie", "horizontal_bar", "area", "combo", "scatter"}
+VALID_CHART_TYPES = {"line", "bar", "pie", "horizontal_bar", "area", "combo", "scatter", "heatmap", "treemap", "sankey", "gauge", "radar"}
 VALID_OPERATORS = {"eq", "ne", "gt", "lt", "gte", "lte", "between", "in", "contains"}
 
 
@@ -57,6 +57,27 @@ def validate_chart_config(config: dict[str, Any]) -> None:
         x_type = config.get("x_axis", {}).get("type", "")
         if x_type != "value":
             raise GuardrailError("Scatter требует x_axis.type = 'value'")
+
+    if chart_type == "heatmap":
+        if not config.get("heatmap"):
+            raise GuardrailError("Heatmap требует секцию 'heatmap' с x_field, y_field, value_field")
+
+    if chart_type == "treemap":
+        if not config.get("treemap"):
+            raise GuardrailError("Treemap требует секцию 'treemap' с category_field, value_field")
+
+    if chart_type == "sankey":
+        if not config.get("sankey"):
+            raise GuardrailError("Sankey требует секцию 'sankey' с source_field, target_field, value_field")
+
+    if chart_type == "gauge":
+        if not config.get("gauge"):
+            raise GuardrailError("Gauge требует секцию 'gauge' с value_field")
+
+    if chart_type == "radar":
+        radar = config.get("radar", {})
+        if not radar or len(radar.get("dimensions", [])) < 3:
+            raise GuardrailError("Radar требует минимум 3 измерения в секции 'radar.dimensions'")
 
     for f in config.get("filters", []):
         op = f.get("operator", "")

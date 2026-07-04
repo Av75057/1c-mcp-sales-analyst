@@ -19,6 +19,7 @@
                     <input class="form-control form-control-sm" id="sessionTitle" style="max-width:300px;font-weight:bold" onchange="renameSession()">
                     <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentSession()" title="Удалить сессию">🗑</button>
                     <button class="btn btn-sm btn-outline-secondary" onclick="exportSession()" title="Экспорт JSON">📥</button>
+                    <button class="btn btn-sm btn-outline-success" onclick="saveToLibrary()" title="Сохранить в библиотеку" id="saveToLibBtn" style="display:none">💾 Сохранить</button>
                     <span class="text-secondary small ms-auto" id="usageDisplay"></span>
                 </div>
             </div>
@@ -40,6 +41,7 @@
 let currentSessionId = null;
 let sessions = [];
 let searchTimeout = null;
+let lastChart = null; // для кнопки "Сохранить в библиотеку"
 
 (async function() {
     await loadSessions();
@@ -179,6 +181,9 @@ async function sendMsg() {
             const chartCall = d.tool_calls.find(t => t.name === 'create_chart' && t.result?.image_base64);
             if (chartCall) {
                 toolHtml += '<div class="mt-2"><img src="data:image/png;base64,' + chartCall.result.image_base64 + '" style="max-width:100%;border-radius:8px"></div>';
+                // Сохраняем для кнопки "Сохранить в библиотеку"
+                lastChart = { toolCall: chartCall, answer: d.answer };
+                document.getElementById('saveToLibBtn').style.display = 'inline-block';
             }
         }
         el.innerHTML += `<div class="d-flex mb-3"><div class="bg-dark text-light p-3 rounded" style="max-width:80%">${renderMarkdown(d.answer)}${toolHtml}</div></div>`;
@@ -242,6 +247,42 @@ function renderMarkdown(text) {
     // Line breaks
     html = html.replace(/\n/g, '<br>');
     return html;
+}
+
+// Сохранение последнего графика из AI Чата в библиотеку
+async function saveToLibrary() {
+    if (!lastChart || !lastChart.toolCall) { alert('Нет графика для сохранения'); return; }
+    const title = prompt('Название дашборда:', lastChart.toolCall.args?.title || 'График из чата');
+    if (!title) return;
+    const tagsInput = prompt('Теги (через запятую):', 'чат');
+    const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : ['чат'];
+    const chartConfig = {
+        chart_type: lastChart.toolCall.args?.chart_type || 'bar',
+        title: title,
+        x_axis: { field: 'x', label: 'X', type: 'category' },
+        y_axis: { field: 'y', label: 'Y', type: 'category' },
+        series: [{ name: 'Значение', field: 'y', color: '#5470c6' }],
+        onec_query: { entity: 'Document.РеализацияТоваровУслуг', fields: ['Сумма'], period: 'last_30_days' },
+    };
+    const chartItem = {
+        id: 'c' + Date.now(),
+        title: title,
+        chart_config: chartConfig,
+        data: [],
+        position: { x: 0, y: 0, w: 6, h: 4 },
+        filter_bindings: [],
+    };
+    const r = await fetch('/api/v2/dashboards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description: 'Сохранён из AI Чата', tags, charts: [chartItem] }),
+    });
+    if (r.ok) {
+        alert('✅ Дашборд сохранён в библиотеку!');
+        document.getElementById('saveToLibBtn').style.display = 'none';
+    } else {
+        alert('❌ Ошибка сохранения');
+    }
 }
 </script>
 {% endblock %}

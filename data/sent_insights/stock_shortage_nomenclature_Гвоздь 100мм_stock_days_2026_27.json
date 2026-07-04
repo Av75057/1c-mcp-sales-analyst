@@ -1,0 +1,9 @@
+{
+  "dedup_key": "stock_shortage:nomenclature:Гвоздь 100мм:stock_days:2026:27",
+  "detector": "stock_shortage",
+  "entity_id": "Гвоздь 100мм",
+  "metric_name": "stock_days",
+  "priority": "warning",
+  "sent_at": "2026-07-03T19:37:39.527430+00:00",
+  "title": "Товар заканчивается: Гвоздь 100мм"
+}

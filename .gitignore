@@ -23,3 +23,8 @@ htmlcov/
 
 static/charts/*.png
 static/charts/*.pdf
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env

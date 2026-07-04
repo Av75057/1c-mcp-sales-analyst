@@ -16,7 +16,9 @@ PUBLIC_PATHS = [
     "/openapi.json",
     "/redoc",
     "/static",
+    "/assets",
     "/login",
+    "/share",
 ]
 
 
@@ -51,6 +53,20 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        payload = AuthService.decode_token(token)
-        request.state.user = payload
-        return await call_next(request)
+        try:
+            payload = AuthService.decode_token(token)
+            request.state.user = payload
+            return await call_next(request)
+        except HTTPException:
+            from fastapi.responses import JSONResponse
+            accept = request.headers.get("accept", "")
+            if "text/html" in accept:
+                resp = RedirectResponse(url="/login")
+                resp.delete_cookie("access_token")
+                resp.delete_cookie("refresh_token")
+                return resp
+            return JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"detail": "Token expired. Please login again."},
+                headers={"WWW-Authenticate": "Bearer"},
+            )

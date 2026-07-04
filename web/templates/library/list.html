@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-book me-2"></i>Библиотека дашбордов</h4>
+        <small class="text-secondary">Сохранённые дашборды и аналитика</small>
+    </div>
+    <div>
+        <a href="/dashboards" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Создать</a>
+        <a href="/chat" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-dots"></i> AI Чат</a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input class="form-control form-control-sm" id="searchInput" placeholder="🔍 Поиск по названию, описанию, тегам..." oninput="debounceSearch()">
+    </div>
+    <div class="col-md-2">
+        <select class="form-select form-select-sm" id="sortSelect" onchange="applyFilters()">
+            <option value="updated_at">По обновлению</option>
+            <option value="created_at">По созданию</option>
+            <option value="title">По названию</option>
+            <option value="view_count">По просмотрам</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select form-select-sm" id="chartTypeFilter" onchange="applyFilters()">
+            <option value="">Все типы</option>
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+            <option value="horizontal_bar">Horizontal Bar</option>
+            <option value="area">Area</option>
+            <option value="heatmap">Heatmap</option>
+            <option value="treemap">Treemap</option>
+            <option value="sankey">Sankey</option>
+            <option value="gauge">Gauge</option>
+            <option value="radar">Radar</option>
+        </select>
+    </div>
+    <div class="col-md-1">
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="favFilter" onchange="applyFilters()">
+            <label class="form-check-label">⭐</label>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-outline-secondary btn-sm w-100" onclick="applyFilters()">Применить</button>
+    </div>
+</div>
+
+<!-- Теги-фильтры -->
+<div id="tagsFilter" class="mb-3"></div>
+
+<!-- Статистика -->
+<div class="row g-2 mb-3">
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Дашбордов</small><strong id="statTotal">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Просмотров</small><strong id="statViews">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Поделились</small><strong id="statShares">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Экспортов</small><strong id="statExports">0</strong></div></div>
+</div>
+
+<!-- Список дашбордов -->
+<div id="dashboardList" class="row g-3"></div>
+
+<!-- Пагинация -->
+<div id="pagination" class="d-flex justify-content-between align-items-center mt-3"></div>
+
+<!-- Empty state -->
+<div id="emptyState" class="text-center py-5" style="display:none">
+    <i class="bi bi-book" style="font-size:3rem;color:#2d3139"></i>
+    <h5 class="mt-2 text-secondary">Библиотека пуста</h5>
+    <p class="text-secondary">Сохраните дашборд из AI Чата или создайте вручную</p>
+    <a href="/chat" class="btn btn-primary">Перейти в AI Чат</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1, totalPages = 1;
+let searchTimer = null;
+
+function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(loadLibrary, 300); }
+function applyFilters() { currentPage = 1; loadLibrary(); }
+
+async function loadLibrary() {
+    const search = document.getElementById('searchInput').value;
+    const sort = document.getElementById('sortSelect').value;
+    const fav = document.getElementById('favFilter').checked;
+    const chartType = document.getElementById('chartTypeFilter').value;
+    let url = `/api/v2/dashboards?page=${currentPage}&per_page=20&sort_by=${sort}`;
+    if (search) url += '&search=' + encodeURIComponent(search);
+    if (fav) url += '&is_favorite=true';
+
+    const r = await fetch(url);
+    const data = await r.json();
+    const items = data.dashboards || [];
+
+    document.getElementById('statTotal').textContent = data.total || 0;
+    document.getElementById('statViews').textContent = items.reduce((s, d) => s + (d.view_count || 0), 0);
+
+    const container = document.getElementById('dashboardList');
+    const empty = document.getElementById('emptyState');
+
+    if (!items.length) {
+        container.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+    empty.style.display = 'none';
+
+    container.innerHTML = items.map(d => `
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card dash-card p-3 h-100" onclick="location.href='/library/${d.id}'">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 text-truncate" style="max-width:75%">${d.title || 'Без названия'}</h6>
+                    <div>
+                        ${d.is_favorite ? '<span class="stat-badge bg-warning">⭐</span>' : ''}
+                        <span class="stat-badge bg-${d.is_public ? 'success' : 'secondary'} ms-1">${d.is_public ? '🌐' : '🔒'}</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    ${d.charts ? d.charts.map(c => '<span class="stat-badge bg-dark me-1">' + (c.chart_config?.chart_type || '?') + '</span>').join('') : ''}
+                </div>
+                <small class="text-secondary">${d.charts ? d.charts.length : 0} графиков · 👁 ${d.view_count || 0}</small>
+                ${d.tags && d.tags.length ? '<div class="mt-1">' + d.tags.map(t => '<span class="badge bg-info me-1">' + t + '</span>').join('') + '</div>' : ''}
+                <small class="text-secondary d-block mt-1">${d.updated_at ? new Date(d.updated_at).toLocaleDateString() : ''}</small>
+            </div>
+        </div>
+    `).join('');
+
+    totalPages = data.total_pages || 1;
+    const pag = document.getElementById('pagination');
+    pag.innerHTML = `
+        <small class="text-secondary">Страница ${data.page || 1} из ${totalPages} (всего: ${data.total || 0})</small>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="goPage(-1)" ${currentPage <= 1 ? 'disabled' : ''}>← Назад</button>
+            <button class="btn btn-sm btn-outline-secondary ms-1" onclick="goPage(1)" ${currentPage >= totalPages ? 'disabled' : ''}>Вперёд →</button>
+        </div>
+    `;
+}
+
+function goPage(delta) {
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
+    loadLibrary();
+}
+
+loadLibrary();
+</script>
+{% endblock %}

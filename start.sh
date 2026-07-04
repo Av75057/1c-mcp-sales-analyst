@@ -51,8 +51,26 @@ start_proxy() {
     ok "Proxy запущен (PID $(cat "$PID_DIR/proxy.pid")) — http://localhost:${PROXY_PORT:-8000}/v1"
 }
 
+start_react() {
+    if [ ! -d "frontend/node_modules" ]; then
+        info "Установка зависимостей React..."
+        (cd frontend && npm install) || return 1
+    fi
+    if [ "$1" == "prod" ]; then
+        info "Сборка React SPA для production..."
+        (cd frontend && npx vite build) || return 1
+        ok "React SPA собрана. Запустите: ./start.sh web"
+    else
+        _port_check 5173 || return 1
+        info "Запуск React dev server на порту 5173..."
+        _cmd npx vite --host 0.0.0.0 --port 5173 --root frontend react
+        sleep 2
+        ok "React Dev: http://localhost:5173 | API: http://localhost:8000"
+    fi
+}
+
 stop_all() {
-    for svc in web mcp proxy; do
+    for svc in web mcp proxy react; do
         pidf="$PID_DIR/$svc.pid"
         [ -f "$pidf" ] && kill "$(cat "$pidf")" 2>/dev/null && ok "$svc остановлен" || true
         rm -f "$pidf"
@@ -61,7 +79,7 @@ stop_all() {
 
 status() {
     local any=0
-    for svc in web mcp proxy; do
+    for svc in web mcp proxy react; do
         pidf="$PID_DIR/$svc.pid"
         if [ -f "$pidf" ] && kill -0 "$(cat "$pidf")" 2>/dev/null; then
             ok "$svc запущен (PID $(cat "$pidf"))"; any=1
@@ -76,6 +94,7 @@ logs() { tail -f "$PID_DIR/${1:-web}.log" 2>/dev/null || err "Нет логов 
 
 case "${1:-menu}" in
     web|mcp|proxy) start_"$1" ;;
+    react|react-prod) start_react "$2" ;;
     all) start_web; start_mcp; start_proxy; ok "Все сервисы запущены" ;;
     stop) stop_all ;;
     restart) stop_all; sleep 1; start_web; start_mcp; start_proxy ;;
@@ -87,15 +106,20 @@ case "${1:-menu}" in
             echo -e "${CYAN}║   1C MCP Sales Analyst       ║${NC}"
             echo -e "${CYAN}╚══════════════════════════════╝${NC}"; echo
             status 2>&1 | sed 's/^/  /'
-            echo; echo "  1) Web UI    2) MCP  3) Proxy  4) All"
-            echo "  5) Stop      6) Logs 7) Status       0) Exit"; echo
+            echo; echo "  1) Web UI    2) MCP       3) Proxy"
+            echo "  4) React Dev 5) React Prod 6) All"
+            echo "  7) Stop      8) Logs       9) Status      0) Exit"; echo
             read -rp "  Выбор: " c || break
             case "$c" in
-                1) start_web;; 2) start_mcp;; 3) start_proxy;;
-                4) start_web; start_mcp; start_proxy; ok "Всё запущено";;
-                5) stop_all;;
-                6) read -rp "  Логи (web/mcp/proxy): " s; logs "$s";;
-                7) status;;
+                1) start_web;;
+                2) start_mcp;;
+                3) start_proxy;;
+                4) start_react dev;;
+                5) start_react prod;;
+                6) start_web; start_mcp; start_proxy; ok "Всё запущено";;
+                7) stop_all;;
+                8) read -rp "  Логи (web/mcp/proxy/react): " s; logs "$s";;
+                9) status;;
                 0) echo; exit 0;;
                 *) err "Неверный выбор";;
             esac
@@ -103,11 +127,13 @@ case "${1:-menu}" in
         done
         ;;
     *)
-        echo "Использование: $0 {web|mcp|proxy|all|stop|restart|status|logs|menu}"
-        echo "  ./start.sh        — интерактивное меню"
-        echo "  ./start.sh web    — Web UI на http://localhost:8000"
-        echo "  ./start.sh all    — всё сразу"
-        echo "  ./start.sh stop   — остановить всё"
-        echo "  ./start.sh status — статус"
+        echo "Использование: $0 {web|mcp|proxy|react|all|stop|restart|status|logs|menu}"
+        echo "  ./start.sh              — интерактивное меню"
+        echo "  ./start.sh web          — Web UI на http://localhost:8000"
+        echo "  ./start.sh react        — React Dev на http://localhost:5173"
+        echo "  ./start.sh react prod   — Сборка React + Web UI"
+        echo "  ./start.sh all          — всё сразу"
+        echo "  ./start.sh stop         — остановить всё"
+        echo "  ./start.sh status       — статус"
         ;;
 esac

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block content %}
+<nav class="mb-3" style="font-size:13px">
+    <a href="/library" class="text-secondary text-decoration-none">Библиотека</a>
+    <span class="text-secondary mx-1">/</span>
+    <span class="text-secondary">{{ dashboard.title }}</span>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-1">{{ dashboard.title }}</h4>
+        {% if dashboard.description %}
+        <p class="text-secondary mb-1">{{ dashboard.description }}</p>
+        {% endif %}
+        <small class="text-secondary">
+            👤 {{ dashboard.owner_id }} · 📅 {{ dashboard.created_at }} · 👁 {{ dashboard.view_count }} просмотров
+            {% if data_freshness and data_freshness.cached %}
+            · ⚡ из кэша ({{ data_freshness.cached_at }})
+            {% endif %}
+        </small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if perms.can_edit %}
+        <button class="btn btn-outline-primary btn-sm" onclick="editDashboard()"><i class="bi bi-pencil"></i></button>
+        {% endif %}
+        <button class="btn btn-outline-secondary btn-sm" onclick="shareDashboard()"><i class="bi bi-share"></i></button>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-download"></i></button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                <li><a class="dropdown-item" href="#" onclick="exportDash('csv')">📄 CSV</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportDash('xlsx')">📊 XLSX</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportDash('pdf')">📑 PDF</a></li>
+            </ul>
+        </div>
+        <button class="btn btn-outline-warning btn-sm" onclick="toggleFav()">
+            <span id="favIcon">{{ '⭐' if dashboard.is_favorite else '☆' }}</span>
+        </button>
+        <button class="btn btn-outline-info btn-sm" onclick="refreshData()"><i class="bi bi-arrow-clockwise"></i></button>
+        {% if perms.can_delete %}
+        <button class="btn btn-outline-danger btn-sm" onclick="deleteDash()"><i class="bi bi-trash"></i></button>
+        {% endif %}
+    </div>
+</div>
+
+{% if dashboard.tags %}
+<div class="mb-3">
+    {% for tag in dashboard.tags %}
+    <span class="badge bg-info me-1">{{ tag }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Графики -->
+<div class="row g-3" id="chartsGrid">
+    {% for chart in dashboard.charts or [] %}
+    <div class="col-md-{{ chart.position.w or 6 }}">
+        <div class="card chart-card p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">{{ chart.title or 'График' }}</h6>
+                <span class="stat-badge bg-dark">{{ chart.chart_config.chart_type if chart.chart_config else '?' }}</span>
+            </div>
+            <div style="position:relative;height:{{ [200, (chart.position.h or 4) * 60] | max }}px">
+                <canvas id="chart_{{ chart.id }}" style="width:100%;height:100%"></canvas>
+            </div>
+            <small class="text-secondary mt-1">{{ chart.data|length if chart.data else 0 }} записей</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Feedback виджет -->
+<div class="card p-3 mt-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <span>💬 Как вам этот дашборд?</span>
+        <div>
+            <button class="btn btn-sm btn-outline-success me-1" onclick="sendFeedback('positive')">👍 Полезно</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="sendFeedback('negative')">👎 Не то</button>
+        </div>
+    </div>
+    <div id="feedbackForm" style="display:none" class="mt-2">
+        <textarea class="form-control form-control-sm" id="feedbackComment" placeholder="Что можно улучшить?" rows="2"></textarea>
+        <button class="btn btn-primary btn-sm mt-1" onclick="submitFeedback()">Отправить</button>
+    </div>
+    <div id="feedbackThanks" style="display:none" class="text-success mt-1">✅ Спасибо за отзыв!</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc'];
+const CHART_TYPES_MAP = { bar:'bar', line:'line', pie:'pie', horizontal_bar:'bar', area:'line', combo:'bar', scatter:'scatter', heatmap:'heatmap', treemap:'treemap', sankey:'sankey', gauge:'doughnut', radar:'radar' };
+let chartInstances = {};
+const DASHBOARD_ID = '{{ dashboard.id }}';
+
+function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
+
+function renderChart(canvas, cfg, data, chartType) {
+    if (!canvas || !data || !data.length) return;
+    if (typeof Chart === 'undefined') return;
+    const id = canvas.id; destroyChart(id);
+    const fields = Object.keys(data[0]);
+    const labels = data.map(r => r[cfg.x_axis?.field || fields[0]]);
+    const valField = cfg.series?.[0]?.field || fields[1];
+    const values = data.map(r => Number(r[valField]) || 0);
+    const color = cfg.series?.[0]?.color || '#5470c6';
+    const type = CHART_TYPES_MAP[chartType] || 'bar';
+    if (chartType === 'heatmap' || chartType === 'treemap' || chartType === 'sankey') return;
+    if (chartType === 'gauge') { renderGauge(canvas, data, cfg); return; }
+    if (chartType === 'horizontal_bar') { renderHBar(canvas, labels, values, color, cfg, id); return; }
+    if (chartType === 'radar') { renderRadar(canvas, data, cfg, color, id); return; }
+    const isPie = type === 'doughnut' || type === 'pie';
+    const datasets = [{
+        label: cfg.title || '', data: values,
+        backgroundColor: isPie ? values.map((_, i) => COLORS[i % COLORS.length]) : color + '33',
+        borderColor: color, borderWidth: isPie ? 0 : 2, fill: chartType === 'area', tension: chartType === 'area' ? 0.3 : 0,
+    }];
+    try {
+        chartInstances[id] = new Chart(canvas, {
+            type, data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: isPie, position: 'bottom', labels: { color: '#9ca3af' } } },
+                scales: isPie ? {} : {
+                    x: { ticks: { color: '#6b7280', maxTicksLimit: 12 }, grid: { color: '#2d3139' } },
+                    y: { ticks: { color: '#6b7280' }, grid: { color: '#2d3139' }, beginAtZero: true },
+                },
+            },
+        });
+    } catch (e) { console.warn('Chart error:', e); }
+}
+
+function renderHBar(canvas, labels, values, color, cfg, id) {
+    try { chartInstances[id] = new Chart(canvas, { type:'bar', data:{ labels: labels.slice(0,15), datasets:[{ data: values.slice(0,15), backgroundColor: color+'cc' }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#6b7280' }, grid:{ color:'#2d3139' } }, y:{ ticks:{ color:'#9ca3af' }, grid:{ display:false } } } } }); }
+    catch (e) { console.warn('HBar error:', e); }
+}
+
+function renderRadar(canvas, data, cfg, color, id) {
+    const dims = cfg.radar?.dimensions || []; if (!dims.length) return;
+    try { chartInstances[id] = new Chart(canvas, { type:'radar', data:{ labels: dims, datasets: data.map((r,i) => ({ label: r[cfg.x_axis?.field || ''] || '', data: dims.map(d => Number(r[d]) || 0), borderColor: COLORS[i%COLORS.length], backgroundColor: COLORS[i%COLORS.length]+'22', fill: true })) }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ color:'#9ca3af' } } }, scales:{ r:{ ticks:{ color:'#6b7280', backdropColor:'transparent' }, grid:{ color:'#2d3139' } } } } }); }
+    catch (e) { console.warn('Radar error:', e); }
+}
+
+function renderGauge(canvas, data, cfg) {
+    const val = data.length ? Number(data[0][cfg.gauge?.value_field || Object.keys(data[0])[0]]) || 0 : 0;
+    const maxVal = cfg.gauge?.max || 100;
+    const pct = Math.min(val/maxVal, 1);
+    const id = canvas.id; destroyChart(id);
+    try { chartInstances[id] = new Chart(canvas, { type:'doughnut', data:{ labels:['Значение','Остаток'], datasets:[{ data:[val, Math.max(0, maxVal-val)], backgroundColor:[pct > 0.8 ? '#91cc75' : pct > 0.5 ? '#fac858' : '#ee6666', '#2d3139'], borderWidth:0 }] }, options:{ responsive:true, maintainAspectRatio:false, cutout:'75%', plugins:{ legend:{ display:false } } } }); }
+    catch (e) { console.warn('Gauge error:', e); }
+}
+
+// Рендеринг всех графиков
+document.addEventListener('DOMContentLoaded', () => {
+    const charts = {{ dashboard.charts | tojson | safe }};
+    (charts || []).forEach(c => {
+        const canvas = document.getElementById('chart_' + c.id);
+        if (!canvas) return;
+        canvas.width = canvas.parentElement.clientWidth || 400;
+        canvas.height = parseInt(canvas.getAttribute('height')) || 250;
+        const cfg = c.chart_config || {};
+        renderChart(canvas, cfg, c.data || [], cfg.chart_type || 'bar');
+    });
+});
+
+// Действия
+async function refreshData() {
+    const r = await fetch('/api/v2/dashboards/' + DASHBOARD_ID + '/refresh', { method:'POST' });
+    if (r.ok) location.reload();
+}
+
+async function toggleFav() {
+    const r = await fetch('/api/v1/dashboards/' + DASHBOARD_ID, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_favorite: document.getElementById('favIcon').textContent === '☆' }) });
+    if (r.ok) location.reload();
+}
+
+async function deleteDash() {
+    if (!confirm('Удалить дашборд?')) return;
+    await fetch('/api/v2/dashboards/' + DASHBOARD_ID, { method:'DELETE' });
+    location.href = '/library';
+}
+
+function editDashboard() { location.href = '/dashboards'; }
+
+async function shareDashboard() {
+    const r = await fetch('/api/v3/dashboards/' + DASHBOARD_ID + '/share', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ permissions: 'view', expires_in_days: 30 }) });
+    const data = await r.json();
+    if (data.status === 'success') {
+        const url = window.location.origin + data.share.share_url;
+        alert('🔗 Ссылка для шаринга:\n' + url + '\n\nСкопирована в буфер обмена');
+        navigator.clipboard.writeText(url);
+    }
+}
+
+async function exportDash(fmt) {
+    const r = await fetch('/api/v3/dashboards/' + DASHBOARD_ID + '/export', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ format: fmt }) });
+    if (!r.ok) { alert('Ошибка экспорта'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'dashboard.' + fmt; a.click();
+    URL.revokeObjectURL(url);
+}
+
+let feedbackRating = '';
+function sendFeedback(rating) {
+    feedbackRating = rating;
+    document.getElementById('feedbackForm').style.display = 'block';
+}
+async function submitFeedback() {
+    const comment = document.getElementById('feedbackComment').value;
+    await fetch('/api/v1/dashboards/' + DASHBOARD_ID + '/feedback', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ rating: feedbackRating, comment }) });
+    document.getElementById('feedbackForm').style.display = 'none';
+    document.getElementById('feedbackThanks').style.display = 'block';
+}
+</script>
+{% endblock %}

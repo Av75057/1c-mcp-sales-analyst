@@ -1,0 +1,1044 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.modal-fullscreen-xl { max-width: 95vw; }
+.chart-card { transition: transform .15s, box-shadow .15s; }
+.chart-card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+.dash-card { cursor:pointer; transition: transform .15s, border-color .15s; }
+.dash-card:hover { transform: translateY(-2px); border-color: #2563eb; }
+.chart-grid-placeholder { border: 2px dashed #2d3139; border-radius: 8px; min-height: 200px; display: flex; align-items:center; justify-content:center; color: #6b7280; }
+.rec-card { border-left: 4px solid #3b82f6; }
+.stat-badge { font-size: .75rem; padding: 2px 8px; border-radius: 10px; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-columns-gap me-2"></i>Конструктор дашбордов</h4>
+        <small class="text-secondary">Создавайте мульти-чарт панели из 12 типов графиков</small>
+    </div>
+    <div class="d-flex gap-2">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-file-earmark-plus"></i> Шаблоны
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+                <li><a class="dropdown-item" href="#" onclick="createFromTemplate('sales')">📈 Продажи + динамика</a></li>
+                <li><a class="dropdown-item" href="#" onclick="createFromTemplate('stock')">📦 Склад + остатки</a></li>
+                <li><a class="dropdown-item" href="#" onclick="createFromTemplate('managers')">👥 По менеджерам</a></li>
+                <li><a class="dropdown-item" href="#" onclick="createFromTemplate('clients')">🏢 По клиентам</a></li>
+                <li><a class="dropdown-item" href="#" onclick="createFromTemplate('full')">🔬 Полный анализ</a></li>
+            </ul>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="showCreateModal()"><i class="bi bi-plus-lg"></i> С нуля</button>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row g-2 mb-3" id="statsRow">
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Дашбордов</small><strong id="statTotal">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Публичных</small><strong id="statPublic">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Всего графиков</small><strong id="statCharts">0</strong></div></div>
+    <div class="col-md-3"><div class="card p-2 text-center"><small class="text-secondary">Просмотров</small><strong id="statViews">0</strong></div></div>
+</div>
+
+<!-- Поиск и фильтры -->
+<div class="row g-2 mb-3">
+    <div class="col-md-6">
+        <input class="form-control form-control-sm" id="searchInput" placeholder="Поиск дашбордов..." oninput="debounceSearch()">
+    </div>
+    <div class="col-md-3">
+        <select class="form-select form-select-sm" id="filterPublic" onchange="loadDashboards()">
+            <option value="all">Все дашборды</option>
+            <option value="public">Публичные</option>
+            <option value="private">Личные</option>
+        </select>
+    </div>
+    <div class="col-md-3 text-end">
+        <button class="btn btn-outline-danger btn-sm" onclick="clearAll()"><i class="bi bi-trash"></i> Очистить всё</button>
+    </div>
+</div>
+
+<!-- Сетка дашбордов -->
+<div id="dashboardList" class="row g-3"></div>
+
+<!-- Модалка создания/редактирования -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-fullscreen-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Создать дашборд</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Название</label>
+                        <input class="form-control" id="editTitle" maxlength="200" placeholder="Мой дашборд">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Теги</label>
+                        <input class="form-control" id="editTags" placeholder="продажи, склад">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Обновление (мин)</label>
+                        <input class="form-control" id="editRefresh" type="number" value="0" min="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" id="editDesc" rows="2" placeholder="Описание дашборда"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="editPublic">
+                            <label class="form-check-label">Публичный</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="editFav">
+                            <label class="form-check-label">В избранное</label>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0">Графики <span class="badge bg-secondary" id="chartsCount">0</span></h6>
+                    <div>
+                        <button class="btn btn-outline-info btn-sm me-1" onclick="addChart()"><i class="bi bi-plus"></i> График</button>
+                        <button class="btn btn-outline-info btn-sm" onclick="addChartAI()"><i class="bi bi-magic"></i> AI-график</button>
+                    </div>
+                </div>
+                <div id="chartsContainer" class="row g-2 mb-3"></div>
+            </div>
+            <div class="modal-footer">
+                <div class="me-auto">
+                    <small class="text-secondary" id="editHelp">Выберите тип графика, поля X/Y и сущность 1С</small>
+                </div>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button class="btn btn-primary" onclick="saveDashboard()"><i class="bi bi-check"></i> Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка просмотра -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewTitle"></h5>
+                <div class="ms-auto d-flex gap-2">
+                    <button class="btn btn-outline-warning btn-sm" onclick="toggleFav()" id="favBtn"><i class="bi bi-star"></i></button>
+                    <button class="btn btn-outline-info btn-sm" onclick="showRecommendations()"><i class="bi bi-lightbulb"></i> Советы</button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="showScheduleModal()"><i class="bi bi-clock"></i> Отчёт</button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="showShareModal()"><i class="bi bi-share"></i> Доступ</button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="editCurrentDashboard()"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteCurrentDashboard()"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body" id="viewBody">
+                <div class="row g-3" id="chartsGrid"></div>
+                <div id="recsContainer" class="mt-3" style="display:none">
+                    <h6>💡 Рекомендации ИИ</h6>
+                    <div id="recsList"></div>
+                </div>
+            </div>
+            <div class="modal-footer" id="viewFooter">
+                <small class="text-secondary" id="viewMeta"></small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модалка доступа -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">🔐 Доступ</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="mb-3">
+                <label class="form-label">Добавить пользователя</label>
+                <div class="input-group">
+                    <input class="form-control" id="shareUserId" placeholder="Логин">
+                    <select class="form-select" id="sharePermission" style="max-width:130px">
+                        <option value="view">просмотр</option>
+                        <option value="edit">редактирование</option>
+                        <option value="admin">администрирование</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="addPermission()"><i class="bi bi-plus"></i></button>
+                </div>
+            </div>
+            <div class="mb-2"><small class="text-secondary">Текущие права</small></div>
+            <div id="permissionsList"></div>
+        </div>
+    </div></div>
+</div>
+
+<!-- Модалка расписания -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">⏰ Расписание</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="form-label">Cron</label>
+                    <input class="form-control" id="schedCron" value="0 9 * * 1">
+                    <small class="text-secondary">мин час день_мес месяц день_нед</small>
+                </div>
+                <div class="col-3">
+                    <label class="form-label">Формат</label>
+                    <select class="form-select" id="schedFormat">
+                        <option value="csv">CSV</option>
+                        <option value="xlsx">XLSX</option>
+                    </select>
+                </div>
+                <div class="col-3">
+                    <label class="form-label">Статус</label>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="schedActive" checked>
+                        <label class="form-check-label">Активно</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Получатели (email)</label>
+                    <input class="form-control" id="schedRecipients" placeholder="ivan@company.ru, petr@company.ru">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary btn-sm" onclick="saveSchedule()"><i class="bi bi-plus"></i> Добавить</button>
+                </div>
+            </div>
+            <hr>
+            <div id="schedulesList"></div>
+        </div>
+    </div></div>
+</div>
+
+<!-- Модалка шаблонов JSON -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title" id="templateTitle">JSON дашборда</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body"><pre id="templateJson" class="small" style="max-height:400px;overflow:auto"></pre></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" onclick="copyJson()"><i class="bi bi-clipboard"></i> Копировать</button>
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрыть</button>
+        </div>
+    </div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentDashId = null, currentCharts = [], editMode = false;
+let searchTimer = null;
+let chartInstances = {};
+const COLORS = ['#5470c6','#91cc75','#fac858','#ee6666','#73c0de','#3ba272','#fc8452','#9a60b4','#ea7ccc','#1a1a2e'];
+const CHART_TYPES_MAP = { bar:'bar', line:'line', pie:'pie', horizontal_bar:'bar', area:'line', combo:'bar', scatter:'scatter', heatmap:'heatmap', treemap:'treemap', sankey:'sankey', gauge:'doughnut', radar:'radar' };
+
+function destroyChart(canvasId) {
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+        delete chartInstances[canvasId];
+    }
+}
+
+function updateNav() {
+    document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+    const link = document.querySelector('a[href="/dashboards"]');
+    if (link) link.classList.add('active');
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadDashboards, 300);
+}
+
+async function loadDashboards() {
+    const search = document.getElementById('searchInput').value;
+    const pubFilter = document.getElementById('filterPublic').value;
+    let url = '/api/v2/dashboards?per_page=100';
+    if (search) url += '&search=' + encodeURIComponent(search);
+    const r = await fetch(url);
+    const data = await r.json();
+    const items = data.dashboards || [];
+
+    document.getElementById('statTotal').textContent = data.total || items.length;
+    document.getElementById('statPublic').textContent = items.filter(d => d.is_public).length;
+    document.getElementById('statCharts').textContent = items.reduce((s, d) => s + (d.charts || []).length, 0);
+    document.getElementById('statViews').textContent = items.reduce((s, d) => s + (d.view_count || 0), 0);
+
+    const filtered = items.filter(d => {
+        if (pubFilter === 'public') return d.is_public;
+        if (pubFilter === 'private') return !d.is_public;
+        return true;
+    });
+
+    const container = document.getElementById('dashboardList');
+    if (!filtered.length) {
+        container.innerHTML = `<div class="col-12 text-center py-5"><i class="bi bi-folder2-open" style="font-size:3rem;color:#2d3139"></i>
+            <p class="mt-2 text-secondary">${search ? 'Ничего не найдено' : 'Нет дашбордов. Создайте первый!'}</p>
+            ${!search ? '<button class="btn btn-primary btn-sm" onclick="showCreateModal()">Создать дашборд</button>' : ''}
+        </div>`;
+        return;
+    }
+    container.innerHTML = filtered.map(d => `
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card dash-card p-3 h-100" onclick="viewDashboard('${d.id}')">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 text-truncate" style="max-width:80%">${d.title || 'Без названия'}</h6>
+                    <div><span class="stat-badge bg-${d.is_public ? 'success' : 'secondary'}">${d.is_public ? '🌐' : '🔒'}</span></div>
+                </div>
+                <div class="mb-2">
+                    <small class="text-secondary">${d.charts ? d.charts.length : 0} графиков</small>
+                    <small class="text-secondary ms-2">👁 ${d.view_count || 0}</small>
+                    ${d.refresh_interval_minutes ? `<small class="text-secondary ms-2">🔄 ${d.refresh_interval_minutes}мин</small>` : ''}
+                </div>
+                ${d.tags && d.tags.length ? '<div class="mb-2">' + d.tags.map(t => '<span class="badge bg-info me-1">' + t + '</span>').join('') + '</div>' : ''}
+                ${d.description ? '<small class="text-secondary d-block mb-1">' + d.description.slice(0, 80) + '</small>' : ''}
+                <div class="mt-auto"><small class="text-secondary">${d.charts ? d.charts.map(c => '<span class="stat-badge bg-dark me-1">' + (c.chart_config?.chart_type || '?') + '</span>').join('') : ''}</small></div>
+                <small class="text-secondary d-block mt-1">${d.updated_at ? new Date(d.updated_at).toLocaleString() : ''}</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+// === RENDER CHART ===
+function checkChartJs() {
+    if (typeof Chart === 'undefined') {
+        const g = document.getElementById('chartsGrid');
+        if (g) g.innerHTML = '<div class="col-12 text-center py-5 text-danger">⚠ Chart.js не загрузился</div>';
+        return false;
+    }
+    return true;
+}
+
+function renderChart(canvas, cfg, data, chartType) {
+    if (!canvas || !data || !data.length) return;
+    if (!checkChartJs()) return;
+    const id = canvas.id;
+    destroyChart(id);
+
+    const fields = Object.keys(data[0]);
+    const labels = data.map(r => r[cfg.x_axis?.field || fields[0]]);
+    const valField = cfg.series?.[0]?.field || fields[1];
+    const values = data.map(r => Number(r[valField]) || 0);
+    const color = cfg.series?.[0]?.color || '#5470c6';
+    const type = CHART_TYPES_MAP[chartType] || 'bar';
+
+    if (chartType === 'heatmap') return renderHeatmap(canvas, data, cfg);
+    if (chartType === 'treemap') return renderTreemap(canvas, data, cfg);
+    if (chartType === 'sankey') return renderSankey(canvas, data, cfg);
+    if (chartType === 'gauge') return renderGauge(canvas, data, cfg);
+    if (chartType === 'horizontal_bar') return renderHBar(canvas, labels, values, color, cfg, id);
+    if (chartType === 'radar') return renderRadar(canvas, data, cfg, color, id);
+
+    const isPie = type === 'doughnut' || type === 'pie';
+    const isArea = chartType === 'area';
+    const datasets = cfg.series?.length > 1 ? cfg.series.map((s, i) => ({
+        label: s.name, data: data.map(r => Number(r[s.field]) || 0),
+        backgroundColor: s.color || COLORS[i % COLORS.length],
+        borderColor: s.color || COLORS[i % COLORS.length],
+        fill: isArea, tension: isArea ? 0.3 : 0,
+        borderWidth: chartType === 'combo' && s.type === 'line' ? 2 : 1,
+        type: chartType === 'combo' && s.type === 'line' ? 'line' : type,
+    })) : [{
+        label: cfg.title || '', data: values,
+        backgroundColor: isPie ? values.map((_, i) => COLORS[i % COLORS.length]) : color + '33',
+        borderColor: color, borderWidth: isPie ? 0 : 2,
+        fill: isArea, tension: isArea ? 0.3 : 0,
+    }];
+
+    if (chartType === 'combo') {
+        datasets.forEach(d => { if (d.type === 'line') { d.fill = false; d.borderWidth = 2; } });
+    }
+
+    try {
+        chartInstances[id] = new Chart(canvas, {
+            type: type === 'combo' ? 'bar' : type,
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: { display: isPie || datasets.length > 1, position: 'bottom', labels: { color: '#9ca3af', boxWidth: 12 } },
+                },
+                scales: isPie ? {} : {
+                    x: { ticks: { color: '#6b7280', maxTicksLimit: 12 }, grid: { color: '#2d3139' } },
+                    y: { ticks: { color: '#6b7280' }, grid: { color: '#2d3139' }, beginAtZero: true },
+                },
+            },
+        });
+    } catch (e) {
+        console.warn('Chart render error:', e);
+        // Fallback: рисуем текстом на канвасе
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.fillStyle = '#1a1d23';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Ошибка рендеринга графика', canvas.width/2, canvas.height/2);
+        }
+    }
+}
+
+function renderHBar(canvas, labels, values, color, cfg, id) {
+    try {
+        chartInstances[id] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: labels.slice(0, 15), datasets: [{ label: cfg.title || '', data: values.slice(0, 15), backgroundColor: color + 'cc' }] },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { ticks: { color: '#6b7280' }, grid: { color: '#2d3139' } }, y: { ticks: { color: '#9ca3af' }, grid: { display: false } } },
+            },
+        });
+    } catch (e) { console.warn('HBar error:', e); }
+}
+
+function renderRadar(canvas, data, cfg, color, id) {
+    const dims = cfg.radar?.dimensions || [];
+    if (!dims.length) return;
+    try {
+        chartInstances[id] = new Chart(canvas, {
+            type: 'radar',
+            data: {
+                labels: dims,
+                datasets: data.map((r, i) => ({
+                    label: r[cfg.x_axis?.field || Object.keys(r)[0]] || '',
+                    data: dims.map(d => Number(r[d]) || 0),
+                    borderColor: COLORS[i % COLORS.length], backgroundColor: COLORS[i % COLORS.length] + '22',
+                    fill: true,
+                })),
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } },
+                scales: { r: { ticks: { color: '#6b7280', backdropColor: 'transparent' }, grid: { color: '#2d3139' } } },
+            },
+        });
+    } catch (e) { console.warn('Radar error:', e); }
+}
+
+function renderHeatmap(canvas, data, cfg) {
+    const w = canvas.parentElement.clientWidth || 300, h = canvas.parentElement.clientHeight || 250;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const xField = cfg.heatmap?.x_field || Object.keys(data[0] || {})[0];
+    const yField = cfg.heatmap?.y_field || Object.keys(data[0] || {})[1];
+    const vField = cfg.heatmap?.value_field || Object.keys(data[0] || {})[2];
+    const xLabels = [...new Set(data.map(r => r[xField]))].slice(0, 12);
+    const yLabels = [...new Set(data.map(r => r[yField]))].slice(0, 8);
+    const values = data.map(r => Number(r[vField]) || 0);
+    const maxVal = Math.max(...values, 1);
+    const cellW = (w - 60) / xLabels.length, cellH = (h - 40) / yLabels.length;
+    const heatColors = ['#1a1a2e','#16213e','#0f3460','#e94560','#ff6b6b','#ffd93d'];
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#9ca3af';
+    xLabels.forEach((l, i) => { ctx.fillText(l.slice(0, 8), 50 + i * cellW + 2, 20); });
+    yLabels.forEach((l, i) => { ctx.fillText(l.slice(0, 8), 5, 40 + i * cellH + 12); });
+    yLabels.forEach((y, yi) => {
+        xLabels.forEach((x, xi) => {
+            const val = data.find(r => r[xField] === x && r[yField] === y);
+            const v = val ? Number(val[vField]) || 0 : 0;
+            const idx = Math.min(Math.floor((v / maxVal) * heatColors.length), heatColors.length - 1);
+            ctx.fillStyle = heatColors[idx];
+            ctx.fillRect(50 + xi * cellW, 30 + yi * cellH, cellW - 2, cellH - 2);
+            ctx.fillStyle = v > maxVal / 2 ? '#fff' : '#ccc';
+            ctx.font = '9px sans-serif';
+            ctx.fillText(v.toFixed(0), 50 + xi * cellW + 4, 30 + yi * cellH + 12);
+        });
+    });
+}
+
+function renderTreemap(canvas, data, cfg) {
+    const w = canvas.parentElement.clientWidth || 300, h = canvas.parentElement.clientHeight || 250;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const catField = cfg.treemap?.category_field || Object.keys(data[0] || {})[0];
+    const valField = cfg.treemap?.value_field || Object.keys(data[0] || {})[1];
+    const items = data.map(r => ({ label: String(r[catField] || '').slice(0, 20), value: Number(r[valField]) || 0 }));
+    const total = items.reduce((s, i) => s + i.value, 1);
+    const pad = 2;
+    let x = 0, y = 0, rowH = h;
+    ctx.clearRect(0, 0, w, h);
+    items.slice(0, 20).forEach((item, i) => {
+        const area = (item.value / total) * (w * h);
+        const cellW = Math.max(40, area / (rowH || h));
+        if (x + cellW > w) { x = 0; y += rowH + pad; rowH = Math.max(40, (h - y - pad) * 0.5); }
+        const ci = i % COLORS.length;
+        ctx.fillStyle = COLORS[ci] + '99';
+        ctx.fillRect(x, y, Math.max(38, cellW - pad), Math.max(38, rowH - pad));
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(item.label, x + 4, y + 14);
+        ctx.font = '9px sans-serif';
+        ctx.fillText(item.value.toFixed(0), x + 4, y + 26);
+        x += cellW;
+    });
+}
+
+function renderSankey(canvas, data, cfg) {
+    const w = canvas.parentElement.clientWidth || 300, h = canvas.parentElement.clientHeight || 250;
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    const srcField = cfg.sankey?.source_field || Object.keys(data[0] || {})[0];
+    const dstField = cfg.sankey?.target_field || Object.keys(data[0] || {})[1];
+    const valField = cfg.sankey?.value_field || Object.keys(data[0] || {})[2];
+    const nodes = [...new Set([...data.map(r => r[srcField]), ...data.map(r => r[dstField])])];
+    const maxVal = Math.max(...data.map(r => Number(r[valField]) || 0), 1);
+    const nodeW = 20;
+    const spacing = Math.min((h - 40) / nodes.length, 24);
+    const srcNodes = nodes.slice(0, Math.ceil(nodes.length / 2));
+    const dstNodes = nodes.slice(Math.ceil(nodes.length / 2));
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '10px sans-serif';
+    srcNodes.forEach((n, i) => { ctx.fillText(String(n).slice(0, 15), 10, 30 + i * spacing); });
+    dstNodes.forEach((n, i) => { ctx.fillText(String(n).slice(0, 15), w - 120, 30 + i * spacing); });
+    data.forEach((r, i) => {
+        const si = srcNodes.indexOf(r[srcField]);
+        const di = dstNodes.indexOf(r[dstField]);
+        if (si < 0 || di < 0 || si >= srcNodes.length || di >= dstNodes.length) return;
+        const y1 = 30 + si * spacing, y2 = 30 + di * spacing;
+        const v = Number(r[valField]) || 0;
+        const bw = Math.max(2, (v / maxVal) * 30);
+        ctx.strokeStyle = COLORS[i % COLORS.length] + '66';
+        ctx.lineWidth = bw;
+        ctx.beginPath();
+        ctx.moveTo(50, y1);
+        ctx.bezierCurveTo(w / 2, y1, w / 2, y2, w - 40, y2);
+        ctx.stroke();
+    });
+}
+
+function renderGauge(canvas, data, cfg) {
+    const val = data.length ? Number(data[0][cfg.gauge?.value_field || Object.keys(data[0])[0]]) || 0 : 0;
+    const maxVal = cfg.gauge?.max || 100;
+    const pct = Math.min(val / maxVal, 1);
+    const id = canvas.id;
+    destroyChart(id);
+    try {
+        chartInstances[id] = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Значение', 'Остаток'],
+                datasets: [{
+                    data: [val, Math.max(0, maxVal - val)],
+                    backgroundColor: [pct > 0.8 ? '#91cc75' : pct > 0.5 ? '#fac858' : '#ee6666', '#2d3139'],
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: { legend: { display: false } },
+            },
+        });
+    } catch (e) { console.warn('Gauge error:', e); }
+    const parent = canvas.parentElement;
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;';
+    lbl.innerHTML = `<strong style="font-size:1.5rem">${val.toFixed(0)}</strong><br><small class="text-secondary">из ${maxVal}</small>`;
+    parent.style.position = 'relative';
+    const old = parent.querySelector('.gauge-label');
+    if (old) old.remove();
+    lbl.className = 'gauge-label';
+    parent.appendChild(lbl);
+}
+
+// === TEMPLATES ===
+const TEMPLATES = {
+    sales: {
+        title: 'Анализ продаж',
+        description: 'Динамика продаж и топ товаров',
+        tags: ['продажи'],
+        charts: [
+            { id:'c1', title:'Продажи по дням', chart_config:{ chart_type:'line', x_axis:{field:'Дата',label:'Дата',type:'time'}, y_axis:{field:'Сумма',label:'Сумма',type:'category'}, series:[{name:'Выручка',field:'Сумма',color:'#5470c6'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Дата','Сумма'],period:'last_30_days'} }, data:[], position:{x:0,y:0,w:6,h:4}, filter_bindings:['Дата'] },
+            { id:'c2', title:'Топ товаров', chart_config:{ chart_type:'horizontal_bar', x_axis:{field:'Номенклатура',label:'Товар',type:'category'}, y_axis:{field:'Сумма',label:'Выручка',type:'category'}, series:[{name:'Сумма',field:'Сумма',color:'#91cc75'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Номенклатура','Сумма'],period:'last_30_days'} }, data:[], position:{x:6,y:0,w:3,h:4}, filter_bindings:[] },
+            { id:'c3', title:'Структура по менеджерам', chart_config:{ chart_type:'pie', x_axis:{field:'Менеджер',label:'Менеджер',type:'category'}, y_axis:{field:'Сумма',label:'Сумма',type:'category'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Менеджер','Сумма'],period:'last_30_days'} }, data:[], position:{x:9,y:0,w:3,h:4}, filter_bindings:[] },
+        ],
+    },
+    stock: {
+        title: 'Склад и остатки',
+        description: 'Остатки товаров, неликвиды, прогноз',
+        tags: ['склад'],
+        charts: [
+            { id:'c1', title:'Остатки по группам', chart_config:{ chart_type:'bar', x_axis:{field:'Номенклатура.Группа',label:'Группа',type:'category'}, y_axis:{field:'Сумма',label:'Сумма',type:'category'}, series:[{name:'Сумма',field:'Сумма',color:'#73c0de'}], onec_query:{entity:'Catalog.Номенклатура',fields:['Номенклатура.Группа','Сумма']} }, data:[], position:{x:0,y:0,w:6,h:4}, filter_bindings:[] },
+            { id:'c2', title:'Товары с минимальным остатком', chart_config:{ chart_type:'horizontal_bar', x_axis:{field:'Номенклатура',label:'Товар',type:'category'}, y_axis:{field:'Количество',label:'Кол-во',type:'category'}, series:[{name:'Количество',field:'Количество',color:'#ee6666'}], onec_query:{entity:'Register.Продажи',fields:['Номенклатура','Количество']} }, data:[], position:{x:6,y:0,w:3,h:4}, filter_bindings:[] },
+        ],
+    },
+    managers: {
+        title: 'Эффективность менеджеров',
+        description: 'Рейтинг менеджеров по продажам',
+        tags: ['менеджеры'],
+        charts: [
+            { id:'c1', title:'Рейтинг менеджеров', chart_config:{ chart_type:'bar', x_axis:{field:'Менеджер',label:'Менеджер',type:'category'}, y_axis:{field:'Сумма',label:'Выручка',type:'category'}, series:[{name:'Выручка',field:'Сумма',color:'#fac858'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Менеджер','Сумма'],period:'last_30_days'} }, data:[], position:{x:0,y:0,w:6,h:4}, filter_bindings:[] },
+            { id:'c2', title:'Сравнение метрик', chart_config:{ chart_type:'radar', x_axis:{field:'Менеджер',label:'',type:'category'}, y_axis:{field:'',label:'',type:'value'}, series:[{name:'Продажи',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Менеджер','Сумма','Количество'],period:'last_30_days'}, radar:{dimensions:['Сумма','Количество']} }, data:[], position:{x:6,y:0,w:3,h:4}, filter_bindings:[] },
+            { id:'c3', title:'Поток клиентов', chart_config:{ chart_type:'sankey', x_axis:{field:'Менеджер',label:'',type:'category'}, y_axis:{field:'Контрагент',label:'',type:'category'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Менеджер','Контрагент','Сумма'],period:'last_30_days'}, sankey:{source_field:'Менеджер',target_field:'Контрагент',value_field:'Сумма'} }, data:[], position:{x:9,y:0,w:3,h:4}, filter_bindings:[] },
+        ],
+    },
+    clients: {
+        title: 'Анализ клиентов',
+        description: 'Топ клиентов и структура продаж',
+        tags: ['клиенты'],
+        charts: [
+            { id:'c1', title:'Топ-10 клиентов', chart_config:{ chart_type:'horizontal_bar', x_axis:{field:'Контрагент',label:'Клиент',type:'category'}, y_axis:{field:'Сумма',label:'Выручка',type:'category'}, series:[{name:'Выручка',field:'Сумма',color:'#9a60b4'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Контрагент','Сумма'],period:'last_30_days'} }, data:[], position:{x:0,y:0,w:6,h:4}, filter_bindings:[] },
+            { id:'c2', title:'Тепловая карта (клиенты x товары)', chart_config:{ chart_type:'heatmap', x_axis:{field:'Контрагент',label:'Клиент',type:'category'}, y_axis:{field:'Номенклатура',label:'Товар',type:'category'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Контрагент','Номенклатура','Сумма'],period:'last_30_days'}, heatmap:{x_field:'Контрагент',y_field:'Номенклатура',value_field:'Сумма'} }, data:[], position:{x:6,y:0,w:6,h:4}, filter_bindings:[] },
+        ],
+    },
+    full: {
+        title: 'Полный анализ',
+        description: 'Продажи, менеджеры, товары, остатки — всё в одной панели',
+        tags: ['полный', 'анализ'],
+        charts: [
+            { id:'c1', title:'Динамика продаж', chart_config:{ chart_type:'area', x_axis:{field:'Дата',label:'Дата',type:'time'}, y_axis:{field:'Сумма',label:'Выручка',type:'category'}, series:[{name:'Выручка',field:'Сумма',color:'#5470c6'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Дата','Сумма'],period:'last_30_days'} }, data:[], position:{x:0,y:0,w:6,h:4}, filter_bindings:['Дата'] },
+            { id:'c2', title:'Структура продаж', chart_config:{ chart_type:'pie', x_axis:{field:'Номенклатура.Группа',label:'Группа',type:'category'}, y_axis:{field:'Сумма',label:'Сумма',type:'category'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Номенклатура.Группа','Сумма'],period:'last_30_days'} }, data:[], position:{x:6,y:0,w:3,h:4}, filter_bindings:[] },
+            { id:'c3', title:'Выполнение плана', chart_config:{ chart_type:'gauge', x_axis:{field:'',label:'',type:'value'}, y_axis:{field:'',label:'',type:'value'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Сумма'],period:'last_30_days'}, gauge:{value_field:'Сумма',min:0,max:1000000,target:800000} }, data:[], position:{x:9,y:0,w:3,h:4}, filter_bindings:[] },
+            { id:'c4', title:'Рейтинг менеджеров', chart_config:{ chart_type:'bar', x_axis:{field:'Менеджер',label:'Менеджер',type:'category'}, y_axis:{field:'Сумма',label:'Выручка',type:'category'}, series:[{name:'Выручка',field:'Сумма',color:'#91cc75'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Менеджер','Сумма'],period:'last_30_days'} }, data:[], position:{x:0,y:4,w:6,h:4}, filter_bindings:[] },
+            { id:'c5', title:'Топ товаров', chart_config:{ chart_type:'treemap', x_axis:{field:'Номенклатура',label:'Товар',type:'category'}, y_axis:{field:'Сумма',label:'Сумма',type:'category'}, series:[{name:'Сумма',field:'Сумма'}], onec_query:{entity:'Document.РеализацияТоваровУслуг',fields:['Номенклатура','Сумма'],period:'last_30_days'}, treemap:{category_field:'Номенклатура',value_field:'Сумма'} }, data:[], position:{x:6,y:4,w:6,h:4}, filter_bindings:[] },
+        ],
+    },
+};
+
+function createFromTemplate(name) {
+    const t = TEMPLATES[name];
+    if (!t) return;
+    editMode = false; currentDashId = null;
+    document.getElementById('modalTitle').textContent = 'Из шаблона: ' + t.title;
+    document.getElementById('editTitle').value = t.title;
+    document.getElementById('editDesc').value = t.description;
+    document.getElementById('editTags').value = (t.tags || []).join(', ');
+    document.getElementById('editRefresh').value = '0';
+    document.getElementById('editPublic').checked = false;
+    currentCharts = JSON.parse(JSON.stringify(t.charts));
+    renderChartsEditor();
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+// === CRUD MODALS ===
+function showCreateModal() {
+    editMode = false; currentDashId = null;
+    document.getElementById('modalTitle').textContent = 'Создать дашборд';
+    document.getElementById('editTitle').value = '';
+    document.getElementById('editDesc').value = '';
+    document.getElementById('editTags').value = '';
+    document.getElementById('editRefresh').value = '0';
+    document.getElementById('editPublic').checked = false;
+    currentCharts = [];
+    renderChartsEditor();
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+}
+
+function addChart() {
+    currentCharts.push({
+        id: 'c' + Date.now() + Math.random().toString(36).slice(2, 6),
+        title: '', chart_config: {
+            chart_type: 'bar',
+            x_axis: { field: 'Дата', label: 'Дата', type: 'category' },
+            y_axis: { field: 'Сумма', label: 'Сумма', type: 'category' },
+            series: [{ name: 'Сумма', field: 'Сумма', color: '#5470c6' }],
+            onec_query: { entity: 'Document.РеализацияТоваровУслуг', fields: ['Сумма'], period: 'last_30_days' },
+        },
+        data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
+    });
+    renderChartsEditor();
+}
+
+async function addChartAI() {
+    const query = prompt('Опишите график (например: "продажи по дням за последний месяц"):');
+    if (!query) return;
+    try {
+        const r = await fetch('/api/v1/dashboard/generate', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+        });
+        const data = await r.json();
+        if (data.status === 'success' && data.chart) {
+            currentCharts.push({
+                id: 'c' + Date.now(),
+                title: data.chart.title || 'AI-график',
+                chart_config: data.chart,
+                data: data.data || [],
+                position: { x: 0, y: 0, w: 6, h: 4 },
+                filter_bindings: [],
+            });
+            renderChartsEditor();
+        } else {
+            alert('AI не смог сгенерировать график: ' + (data.message || 'попробуйте другой запрос'));
+        }
+    } catch (e) {
+        alert('Ошибка вызова AI: ' + e.message);
+    }
+}
+
+function removeChart(idx) {
+    currentCharts.splice(idx, 1);
+    renderChartsEditor();
+}
+
+function renderChartsEditor() {
+    const container = document.getElementById('chartsContainer');
+    document.getElementById('chartsCount').textContent = currentCharts.length;
+    if (!currentCharts.length) {
+        container.innerHTML = '<div class="col-12"><div class="chart-grid-placeholder"><span><i class="bi bi-plus-circle me-2"></i>Нажмите "Добавить график" или "AI-график"</span></div></div>';
+        return;
+    }
+    container.innerHTML = currentCharts.map((c, i) => {
+        const cfg = c.chart_config || {};
+        const q = cfg.onec_query || {};
+        return `<div class="col-md-6">
+            <div class="card chart-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <input class="form-control form-control-sm bg-dark" style="width:auto;flex:1;border:none;font-weight:600" value="${c.title}" placeholder="Название графика" onchange="currentCharts[${i}].title = this.value">
+                    <div class="d-flex gap-1 ms-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="moveChart(${i},-1)" ${i===0?'disabled':''}><i class="bi bi-chevron-up"></i></button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="moveChart(${i},1)" ${i===currentCharts.length-1?'disabled':''}><i class="bi bi-chevron-down"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeChart(${i})"><i class="bi bi-x"></i></button>
+                    </div>
+                </div>
+                <div class="row g-1">
+                    <div class="col-4">
+                        <label class="text-secondary" style="font-size:10px">Тип</label>
+                        <select class="form-select form-select-sm" onchange="currentCharts[${i}].chart_config.chart_type = this.value; renderChartsEditor()">
+                            ${['bar','line','pie','horizontal_bar','area','combo','scatter','heatmap','treemap','sankey','gauge','radar'].map(t =>
+                                `<option value="${t}" ${cfg.chart_type === t ? 'selected' : ''}>${t}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="col-4">
+                        <label class="text-secondary" style="font-size:10px">Поле X</label>
+                        <input class="form-control form-control-sm" value="${cfg.x_axis?.field || ''}" placeholder="Дата" onchange="if(!currentCharts[${i}].chart_config.x_axis) currentCharts[${i}].chart_config.x_axis={}; currentCharts[${i}].chart_config.x_axis.field = this.value">
+                    </div>
+                    <div class="col-4">
+                        <label class="text-secondary" style="font-size:10px">Поле Y</label>
+                        <input class="form-control form-control-sm" value="${cfg.series?.[0]?.field || ''}" placeholder="Сумма" onchange="if(!currentCharts[${i}].chart_config.series) currentCharts[${i}].chart_config.series=[{}]; currentCharts[${i}].chart_config.series[0].field = this.value">
+                    </div>
+                </div>
+                <div class="row g-1 mt-1">
+                    <div class="col-6">
+                        <label class="text-secondary" style="font-size:10px">Сущность 1С</label>
+                        <select class="form-select form-select-sm" onchange="currentCharts[${i}].chart_config.onec_query.entity = this.value">
+                            <option value="Document.РеализацияТоваровУслуг" ${q.entity === 'Document.РеализацияТоваровУслуг' ? 'selected' : ''}>Реализация товаров</option>
+                            <option value="Register.Продажи" ${q.entity === 'Register.Продажи' ? 'selected' : ''}>Регистр продаж</option>
+                            <option value="Catalog.Номенклатура" ${q.entity === 'Catalog.Номенклатура' ? 'selected' : ''}>Номенклатура</option>
+                            <option value="Catalog.Контрагенты" ${q.entity === 'Catalog.Контрагенты' ? 'selected' : ''}>Контрагенты</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <label class="text-secondary" style="font-size:10px">Период</label>
+                        <select class="form-select form-select-sm" onchange="currentCharts[${i}].chart_config.onec_query.period = this.value">
+                            <option value="last_7_days" ${q.period === 'last_7_days' ? 'selected' : ''}>7 дней</option>
+                            <option value="last_30_days" ${q.period === 'last_30_days' ? 'selected' : ''}>30 дней</option>
+                            <option value="last_quarter" ${q.period === 'last_quarter' ? 'selected' : ''}>Квартал</option>
+                            <option value="last_year" ${q.period === 'last_year' ? 'selected' : ''}>Год</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <label class="text-secondary" style="font-size:10px">Ширина</label>
+                        <input class="form-control form-control-sm" type="number" min="1" max="12" value="${c.position?.w || 6}" onchange="currentCharts[${i}].position.w = Math.min(12, Math.max(1, parseInt(this.value) || 6))">
+                    </div>
+                </div>
+                ${cfg.chart_type === 'heatmap' ? `<div class="row g-1 mt-1"><div class="col-4"><input class="form-control form-control-sm" placeholder="x_field" value="${cfg.heatmap?.x_field || ''}" onchange="if(!currentCharts[${i}].chart_config.heatmap) currentCharts[${i}].chart_config.heatmap={}; currentCharts[${i}].chart_config.heatmap.x_field=this.value"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" placeholder="y_field" value="${cfg.heatmap?.y_field || ''}" onchange="if(!currentCharts[${i}].chart_config.heatmap) currentCharts[${i}].chart_config.heatmap={}; currentCharts[${i}].chart_config.heatmap.y_field=this.value"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" placeholder="value_field" value="${cfg.heatmap?.value_field || ''}" onchange="if(!currentCharts[${i}].chart_config.heatmap) currentCharts[${i}].chart_config.heatmap={}; currentCharts[${i}].chart_config.heatmap.value_field=this.value"></div></div>` : ''}
+                ${cfg.chart_type === 'treemap' ? `<div class="row g-1 mt-1"><div class="col-6"><input class="form-control form-control-sm" placeholder="category_field" value="${cfg.treemap?.category_field || ''}" onchange="if(!currentCharts[${i}].chart_config.treemap) currentCharts[${i}].chart_config.treemap={}; currentCharts[${i}].chart_config.treemap.category_field=this.value"></div>
+                    <div class="col-6"><input class="form-control form-control-sm" placeholder="value_field" value="${cfg.treemap?.value_field || ''}" onchange="if(!currentCharts[${i}].chart_config.treemap) currentCharts[${i}].chart_config.treemap={}; currentCharts[${i}].chart_config.treemap.value_field=this.value"></div></div>` : ''}
+                ${cfg.chart_type === 'sankey' ? `<div class="row g-1 mt-1"><div class="col-4"><input class="form-control form-control-sm" placeholder="source_field" value="${cfg.sankey?.source_field || ''}" onchange="if(!currentCharts[${i}].chart_config.sankey) currentCharts[${i}].chart_config.sankey={}; currentCharts[${i}].chart_config.sankey.source_field=this.value"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" placeholder="target_field" value="${cfg.sankey?.target_field || ''}" onchange="if(!currentCharts[${i}].chart_config.sankey) currentCharts[${i}].chart_config.sankey={}; currentCharts[${i}].chart_config.sankey.target_field=this.value"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" placeholder="value_field" value="${cfg.sankey?.value_field || ''}" onchange="if(!currentCharts[${i}].chart_config.sankey) currentCharts[${i}].chart_config.sankey={}; currentCharts[${i}].chart_config.sankey.value_field=this.value"></div></div>` : ''}
+                ${cfg.chart_type === 'gauge' ? `<div class="row g-1 mt-1"><div class="col-4"><input class="form-control form-control-sm" placeholder="value_field" value="${cfg.gauge?.value_field || ''}" onchange="if(!currentCharts[${i}].chart_config.gauge) currentCharts[${i}].chart_config.gauge={}; currentCharts[${i}].chart_config.gauge.value_field=this.value"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" type="number" placeholder="max" value="${cfg.gauge?.max || 100}" onchange="if(!currentCharts[${i}].chart_config.gauge) currentCharts[${i}].chart_config.gauge={}; currentCharts[${i}].chart_config.gauge.max=Number(this.value)"></div>
+                    <div class="col-4"><input class="form-control form-control-sm" type="number" placeholder="target" value="${cfg.gauge?.target || ''}" onchange="if(!currentCharts[${i}].chart_config.gauge) currentCharts[${i}].chart_config.gauge={}; currentCharts[${i}].chart_config.gauge.target=Number(this.value)"></div></div>` : ''}
+                ${cfg.chart_type === 'radar' ? `<div class="row g-1 mt-1"><div class="col-12"><input class="form-control form-control-sm" placeholder="dimensions (через запятую)" value="${(cfg.radar?.dimensions || []).join(', ')}" onchange="if(!currentCharts[${i}].chart_config.radar) currentCharts[${i}].chart_config.radar={}; currentCharts[${i}].chart_config.radar.dimensions=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>` : ''}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function moveChart(idx, dir) {
+    const target = idx + dir;
+    if (target < 0 || target >= currentCharts.length) return;
+    [currentCharts[idx], currentCharts[target]] = [currentCharts[target], currentCharts[idx]];
+    renderChartsEditor();
+}
+
+async function saveDashboard() {
+    const body = {
+        title: document.getElementById('editTitle').value || 'Новый дашборд',
+        description: document.getElementById('editDesc').value,
+        tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(Boolean),
+        is_public: document.getElementById('editPublic').checked,
+        refresh_interval_minutes: parseInt(document.getElementById('editRefresh').value) || 0,
+        charts: currentCharts,
+    };
+    if (!body.charts.length) { alert('Добавьте хотя бы один график'); return; }
+    let r;
+    if (currentDashId && editMode) {
+        r = await fetch('/api/v2/dashboards/' + currentDashId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    } else {
+        r = await fetch('/api/v2/dashboards', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+    if (r.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        loadDashboards();
+    } else {
+        const e = await r.json();
+        alert('Ошибка: ' + (e.detail || 'неизвестная ошибка'));
+    }
+}
+
+// === VIEW ===
+async function viewDashboard(id) {
+    currentDashId = id; editMode = false;
+    try {
+        const r = await fetch('/api/v2/dashboards/' + id);
+        const data = await r.json();
+        if (data.status !== 'success' || !data.dashboard) { alert('Дашборд не найден'); return; }
+        const d = data.dashboard;
+        const titleEl = document.getElementById('viewTitle');
+        if (titleEl) titleEl.textContent = d.title || 'Дашборд';
+        const favEl = document.getElementById('favBtn');
+        if (favEl) favEl.innerHTML = d.is_favorite ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star"></i>';
+
+        const grid = document.getElementById('chartsGrid');
+        if (!grid) { console.error('chartsGrid not found'); return; }
+        const charts = d.charts || [];
+        if (!charts.length) {
+            grid.innerHTML = '<div class="col-12 text-center text-secondary py-4">Нет графиков в этом дашборде</div>';
+        } else {
+            grid.innerHTML = charts.map(c => `
+                <div class="col-md-${Math.min(12, Math.max(3, c.position?.w || 6))} mb-3">
+                    <div class="card chart-card p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 text-truncate">${c.title || 'График'}</h6>
+                            <span class="stat-badge bg-dark ms-2">${(c.chart_config && c.chart_config.chart_type) || '?'}</span>
+                        </div>
+                        <div style="position:relative;height:${Math.max(200, (c.position?.h || 4) * 60)}px">
+                            <canvas id="chart_${c.id}" style="width:100%;height:100%"></canvas>
+                        </div>
+                        <small class="text-secondary" id="status_${c.id}">Загрузка...</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        const viewMeta = document.getElementById('viewMeta');
+        if (viewMeta) viewMeta.textContent = 'Графиков: ' + charts.length + ' · Просмотров: ' + (d.view_count || 0);
+
+        const modal = new bootstrap.Modal(document.getElementById('viewModal'));
+        modal.show();
+
+        // Ждём когда модалка откроется и канвасы появятся
+        setTimeout(() => loadChartData(d.id, charts), 600);
+    } catch (e) {
+        console.error('viewDashboard error:', e);
+        alert('Ошибка загрузки дашборда');
+    }
+}
+
+async function loadChartData(dashId, charts) {
+    console.log('loadChartData:', dashId, charts.length, 'charts');
+    try {
+        const r = await fetch('/api/v2/dashboards/' + dashId + '/refresh', { method: 'POST' });
+        const result = await r.json();
+        const updatedCharts = (result.dashboard && result.dashboard.charts) || charts;
+        console.log('Data loaded, rendering', updatedCharts.length, 'charts');
+        renderViewCharts(updatedCharts);
+    } catch (e) {
+        console.warn('loadChartData error:', e);
+        renderViewCharts(charts);
+    }
+}
+
+function renderViewCharts(charts) {
+    if (!charts || !charts.length) { console.warn('renderViewCharts: no charts'); return; }
+    let rendered = 0;
+    charts.forEach(c => {
+        try {
+            const canvas = document.getElementById('chart_' + c.id);
+            if (!canvas) { console.warn('Canvas missing:', c.id); return; }
+            const parentDiv = canvas.parentElement;
+            const w = parentDiv ? parentDiv.clientWidth : 400;
+            const h = parentDiv ? parentDiv.clientHeight : 250;
+            canvas.width = Math.max(100, w);
+            canvas.height = Math.max(100, h);
+            const cfg = c.chart_config || {};
+            const data = c.data || [];
+            const statusEl = document.getElementById('status_' + c.id);
+            if (data.length > 0) {
+                renderChart(canvas, cfg, data, cfg.chart_type || 'bar');
+                if (statusEl) statusEl.textContent = data.length + ' зап.';
+                rendered++;
+            } else {
+                if (statusEl) statusEl.innerHTML = '<span class="text-warning">Нет данных</span>';
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.fillStyle = '#1a1d23';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#6b7280';
+                    ctx.font = '14px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Нет данных за выбранный период', canvas.width/2, canvas.height/2);
+                }
+            }
+        } catch (e) {
+            console.warn('renderViewCharts error:', c.id, e);
+        }
+    });
+    console.log('Rendered', rendered, 'charts');
+}
+
+function toggleFav() {
+    if (!currentDashId) return;
+    const isFav = document.getElementById('favBtn').querySelector('i').classList.contains('bi-star-fill');
+    fetch('/api/v1/dashboards/' + currentDashId, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_favorite: !isFav }) })
+        .then(() => viewDashboard(currentDashId));
+}
+
+function editCurrentDashboard() {
+    bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide();
+    fetch('/api/v2/dashboards/' + currentDashId).then(r => r.json()).then(data => {
+        const d = data.dashboard;
+        editMode = true;
+        document.getElementById('modalTitle').textContent = 'Редактировать: ' + d.title;
+        document.getElementById('editTitle').value = d.title || '';
+        document.getElementById('editDesc').value = d.description || '';
+        document.getElementById('editTags').value = (d.tags || []).join(', ');
+        document.getElementById('editRefresh').value = d.refresh_interval_minutes || 0;
+        document.getElementById('editPublic').checked = d.is_public || false;
+        currentCharts = JSON.parse(JSON.stringify(d.charts || []));
+        renderChartsEditor();
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    });
+}
+
+async function deleteCurrentDashboard() {
+    if (!currentDashId || !confirm('Удалить дашборд?')) return;
+    const r = await fetch('/api/v2/dashboards/' + currentDashId, { method: 'DELETE' });
+    if (r.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide();
+        loadDashboards();
+    }
+}
+
+async function clearAll() {
+    if (!confirm('Удалить ВСЕ дашборды?')) return;
+    const r = await fetch('/api/v2/dashboards?per_page=100');
+    const data = await r.json();
+    for (const d of (data.dashboards || [])) {
+        await fetch('/api/v2/dashboards/' + d.id, { method: 'DELETE' });
+    }
+    loadDashboards();
+}
+
+// === SHARING ===
+function showShareModal() {
+    loadPermissions();
+    new bootstrap.Modal(document.getElementById('shareModal')).show();
+}
+async function loadPermissions() {
+    const r = await fetch('/api/v2/dashboards/' + currentDashId + '/permissions');
+    const data = await r.json();
+    document.getElementById('permissionsList').innerHTML = (data.permissions || []).map(p =>
+        `<div class="d-flex justify-content-between align-items-center mb-1 p-1 bg-dark rounded">
+            <span><i class="bi bi-person me-1"></i>${p.user_id} <span class="badge bg-secondary">${p.permission}</span></span>
+            <button class="btn btn-sm btn-outline-danger py-0" onclick="removePermission('${p.user_id}')"><i class="bi bi-x"></i></button>
+        </div>`
+    ).join('') || '<small class="text-secondary">Нет выданных прав</small>';
+}
+async function addPermission() {
+    const uid = document.getElementById('shareUserId').value;
+    const perm = document.getElementById('sharePermission').value;
+    if (!uid) return;
+    await fetch('/api/v2/dashboards/' + currentDashId + '/permissions', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({user_id: uid, permission: perm}) });
+    document.getElementById('shareUserId').value = '';
+    loadPermissions();
+}
+async function removePermission(uid) {
+    await fetch('/api/v2/dashboards/' + currentDashId + '/permissions', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({user_id: uid}) });
+    loadPermissions();
+}
+
+// === SCHEDULE ===
+function showScheduleModal() {
+    loadSchedules();
+    document.getElementById('schedCron').value = '0 9 * * 1';
+    document.getElementById('schedRecipients').value = '';
+    document.getElementById('schedFormat').value = 'csv';
+    document.getElementById('schedActive').checked = true;
+    new bootstrap.Modal(document.getElementById('scheduleModal')).show();
+}
+async function loadSchedules() {
+    const r = await fetch('/api/v2/dashboards/' + currentDashId + '/schedules');
+    const data = await r.json();
+    document.getElementById('schedulesList').innerHTML = (data.schedules || []).map(s =>
+        `<div class="d-flex justify-content-between align-items-center mb-1 p-2 bg-dark rounded">
+            <div>
+                <code>${s.cron}</code>
+                <small class="text-secondary ms-2">${(s.recipients || []).join(', ')}</small>
+                <span class="stat-badge bg-${s.is_active ? 'success' : 'secondary'} ms-2">${s.is_active ? 'активен' : 'отключён'}</span>
+                ${s.format ? '<span class="stat-badge bg-dark ms-1">' + s.format + '</span>' : ''}
+                ${s.last_run ? '<br><small class="text-secondary">Последний: ' + new Date(s.last_run).toLocaleString() + '</small>' : ''}
+            </div>
+            <button class="btn btn-sm btn-outline-danger py-0" onclick="deleteSchedule('${s.id}')"><i class="bi bi-trash"></i></button>
+        </div>`
+    ).join('') || '<small class="text-secondary">Нет расписаний</small>';
+}
+async function saveSchedule() {
+    const body = {
+        cron: document.getElementById('schedCron').value,
+        recipients: document.getElementById('schedRecipients').value.split(',').map(t => t.trim()).filter(Boolean),
+        format: document.getElementById('schedFormat').value,
+        is_active: document.getElementById('schedActive').checked,
+    };
+    const r = await fetch('/api/v2/dashboards/' + currentDashId + '/schedules', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (r.ok) loadSchedules();
+}
+async function deleteSchedule(sid) {
+    await fetch('/api/v2/schedules/' + sid, { method: 'DELETE' });
+    loadSchedules();
+}
+
+// === RECOMMENDATIONS ===
+async function showRecommendations() {
+    const container = document.getElementById('recsContainer');
+    const list = document.getElementById('recsList');
+    container.style.display = 'block';
+    list.innerHTML = '<div class="text-secondary py-2">Генерация рекомендаций...</div>';
+    const r = await fetch('/api/v2/dashboards/' + currentDashId + '/recommendations', { method: 'POST' });
+    const data = await r.json();
+    list.innerHTML = (data.recommendations || []).map(rec =>
+        `<div class="card rec-card p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>${rec.title}</strong>
+                    <span class="badge bg-info ms-2">${Math.round((rec.confidence || 0) * 100)}%</span>
+                </div>
+                ${rec.id ? `<button class="btn btn-sm btn-outline-success py-0" onclick="applyRec('${rec.id}')"><i class="bi bi-check"></i></button>` : ''}
+            </div>
+            <small class="d-block mt-1">${rec.description}</small>
+            <small class="text-secondary">${rec.reason}</small>
+            ${rec.suggested_action ? '<pre class="mt-1 mb-0 small text-info">' + rec.suggested_action + '</pre>' : ''}
+        </div>`
+    ).join('') || '<div class="text-secondary">Рекомендаций пока нет</div>';
+}
+async function applyRec(rid) {
+    await fetch('/api/v2/recommendations/' + rid + '/apply', { method: 'POST' });
+}
+
+// === JSON TEMPLATE ===
+function showTemplateJson(title, json) {
+    document.getElementById('templateTitle').textContent = title;
+    document.getElementById('templateJson').textContent = JSON.stringify(json, null, 2);
+    new bootstrap.Modal(document.getElementById('templateModal')).show();
+}
+function copyJson() {
+    const text = document.getElementById('templateJson').textContent;
+    navigator.clipboard.writeText(text).then(() => alert('Скопировано!'));
+}
+
+updateNav();
+loadDashboards();
+</script>
+{% endblock %}

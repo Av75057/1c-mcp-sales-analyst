@@ -59,6 +59,9 @@
                     <a class="nav-link {{ 'active' if page == 'dashboard' }}" href="/"><i class="bi bi-grid"></i><span>Дашборд</span></a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ 'active' if page in ('library', 'library_view') }}" href="/library"><i class="bi bi-book"></i><span>Библиотека</span></a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ 'active' if page == 'stock' }}" href="/stock"><i class="bi bi-box-seam"></i><span>Остатки</span></a>
                 </li>
                 <li class="nav-item">
@@ -72,6 +75,9 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if page == 'whatif' }}" href="/whatif"><i class="bi bi-magic"></i><span>What-If</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if page == 'dashboards_v2' }}" href="/dashboards"><i class="bi bi-columns-gap"></i><span>Конструктор</span></a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ 'active' if page == 'abc_xyz' }}" href="/analysis/abc-xyz"><i class="bi bi-bar-chart"></i><span>ABC/XYZ</span></a>

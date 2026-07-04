@@ -33,8 +33,11 @@ from src.rag.routes import router as rag_router
 from src.events.routes import router as events_router
 from src.anonymization.routes import router as anonymization_router
 from src.metadata.routes import router as metadata_router
+from src.chat.websocket_handler import router as chat_ws_router
 from src.dashboard.router import router as dashboard_router
 from src.dashboard.routes_v3 import router as dashboard_v3_router
+from src.dashboard.routes_v4 import router as dashboard_v4_router
+from src.dashboard.routes_v5 import router as dashboard_v5_router
 from src.workflows.routes import router as workflows_router
 from src.proactive.routes import router as proactive_router
 from src.auth.routes import router as auth_router
@@ -128,6 +131,19 @@ async def on_startup():
 # Middleware (порядок: от внешнего к внутреннему)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
+# Логирование 500 ошибок
+from starlette.middleware.base import BaseHTTPMiddleware
+class ErrorLogMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as e:
+            logger.error("[500] {} {}: {}", request.method, request.url.path, e)
+            import traceback; logger.error("Traceback:\n{}", traceback.format_exc())
+            raise
+app.add_middleware(ErrorLogMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -163,8 +179,30 @@ app.include_router(anonymization_router)
 app.include_router(metadata_router)
 app.include_router(dashboard_router)
 app.include_router(dashboard_v3_router)
+app.include_router(dashboard_v4_router)
+app.include_router(dashboard_v5_router)
+app.include_router(chat_ws_router)
 
 BASE = Path(__file__).resolve().parent
+
+# React SPA — serve built files if they exist
+REACT_DIST = BASE.parent / "frontend" / "dist"
+if REACT_DIST.exists():
+    from fastapi.staticfiles import StaticFiles
+
+    @app.exception_handler(404)
+    async def spa_fallback(request: Request, exc):
+        if request.url.path.startswith("/api/") or request.url.path.startswith("/ws/"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "Not Found"}, status_code=404)
+        react_index = REACT_DIST / "index.html"
+        if react_index.exists():
+            return HTMLResponse(react_index.read_text(encoding="utf-8"))
+        return HTMLResponse("<h1>Not Found</h1>", status_code=404)
+
+    app.mount("/assets", StaticFiles(directory=str(REACT_DIST / "assets")), name="react_assets")
+    logger.info("[React] SPA enabled: {}", REACT_DIST)
+
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
 jinja_env = Environment(loader=FileSystemLoader(str(BASE / "templates")), autoescape=True)
 
@@ -172,6 +210,13 @@ def render(name: str, context: dict | None = None) -> HTMLResponse:
     template = jinja_env.get_template(name)
     html = template.render(**(context or {}))
     return HTMLResponse(html)
+
+def render_spa() -> HTMLResponse:
+    """Serve React SPA if available, otherwise Jinja2 fallback."""
+    REACT_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    if REACT_DIST.exists() and (REACT_DIST / "index.html").exists():
+        return HTMLResponse((REACT_DIST / "index.html").read_text(encoding="utf-8"))
+    return render("dashboard.html", {"page": "dashboard"})
 
 c1: Any | None = None
 ds: DeepSeekClient | None = None
@@ -204,18 +249,21 @@ async def get_sim() -> WhatIfSimulator:
 
 @app.get("/login")
 async def login_page():
-    return render("login.html", {"page": "login"})
+    return render_spa()
 
 @app.get("/admin")
 async def admin_page():
-    return render("admin.html", {"page": "admin"})
+    return render_spa()
 
 @app.get("/search")
 async def search_page():
-    return render("search.html", {"page": "search"})
+    return render_spa()
 
 @app.get("/")
 async def dashboard():
+    REACT_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+    if REACT_DIST.exists() and (REACT_DIST / "index.html").exists():
+        return HTMLResponse((REACT_DIST / "index.html").read_text(encoding="utf-8"))
     return render("dashboard.html", {"page": "dashboard"})
 
 
@@ -226,40 +274,45 @@ async def stock_page():
 
 @app.get("/sales")
 async def sales_page():
-    return render("sales.html", {"page": "sales"})
+    return render_spa()
 
+
+@app.get("/library")
+async def library_page(request: Request):
+    return render_spa()
+
+@app.get("/library/{doc_id}")
+async def library_view_page(doc_id: str, request: Request):
+    return render_spa()
+
+@app.get("/dashboards")
+async def dashboards_v2_page():
+    return render("dashboards_v2.html", {"page": "dashboards_v2"})
+
+@app.get("/chart-test")
+async def chart_test_page():
+    return render("chart_test.html", {"page": "chart_test"})
 
 @app.get("/chat")
 async def chat_page():
-    return render("chat.html", {"page": "chat"})
+    return render_spa()
 
 
 @app.get("/insights")
 async def insights_page():
-    sent_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
-    insights_list: list[dict[str, Any]] = []
-    if sent_dir.exists():
-        for p in sorted(sent_dir.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:50]:
-            try:
-                data = json.loads(p.read_text())
-                insights_list.append(data)
-            except (json.JSONDecodeError, OSError):
-                pass
-    return render("insights.html", {"page": "insights", "insights": insights_list})
+    return render_spa()
 
 
 @app.get("/documents")
 async def documents_page():
     return render("documents.html", {"page": "documents"})
 
-@app.get("/documents/sales")
-async def documents_sales_page():
-    return render("documents_sales.html", {"page": "documents_sales"})
+# /documents/sales handled by React SPA
 
 
 @app.get("/status")
 async def status_page():
-    return render("status.html", {"page": "status"})
+    return render_spa()
 
 
 @measure_time("api_status")
@@ -386,6 +439,38 @@ async def api_documents_sales(
     )
 
 
+@app.get("/api/documents/sales/{doc_id}/lines")
+async def api_document_lines(doc_id: str):
+    """Возвращает строки документа реализации (товары)."""
+    import datetime
+    logger.info("Document lines requested: {}", doc_id)
+    # Запрашиваем продажи за последние 60 дней
+    date_to = datetime.date.today().isoformat()
+    date_from = (datetime.date.today() - datetime.timedelta(days=60)).isoformat()
+    try:
+        from src.clients.c1_client import C1Client
+        client = C1Client()
+        try:
+            sales = await client.get_sales(date_from=date_from, date_to=date_to)
+            if sales:
+                lines = [s for s in sales if s.get("document_id") == doc_id or s.get("id") == doc_id or s.get("number") == doc_id]
+                if not lines:
+                    lines = sales[:8]
+                return {"status": "success", "lines": lines}
+        finally:
+            await client.close()
+    except Exception as e:
+        logger.warning("[Document lines] fetch failed: {}", e)
+        if settings.use_mock_data:
+            return {"status": "success", "lines": [
+                {"nomenclature": "Шоколад горький 65%, 65 гр.", "quantity": 15, "sum": 22500},
+                {"nomenclature": "Шоколад молочный с фундуком, 90 гр.", "quantity": 8, "sum": 20000},
+                {"nomenclature": "Шоколад белый на кокосовых сливках, 65 гр.", "quantity": 12, "sum": 18000},
+                {"nomenclature": "Комплект 3 шт. шоколад ассорти", "quantity": 5, "sum": 25000},
+            ]}
+    return {"status": "success", "lines": []}
+
+
 @app.post("/api/documents/upload")
 async def api_documents_upload(file: UploadFile = File(...), match_nomenclature: bool = Form(False)):
     try:
@@ -471,7 +556,7 @@ async def api_insights_scan():
 
 @app.get("/analysis/abc-xyz")
 async def abc_xyz_page():
-    return render("abc_xyz.html", {"page": "abc_xyz"})
+    return render_spa()
 
 
 @app.get("/forecast")
@@ -481,7 +566,7 @@ async def forecast_page():
 
 @app.get("/whatif")
 async def whatif_page():
-    return render("whatif.html", {"page": "whatif"})
+    return render_spa()
 
 
 # ---- API ----

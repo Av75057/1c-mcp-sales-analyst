@@ -77,6 +77,14 @@ class Settings:
         default_factory=lambda: os.getenv("AUTH_ENABLED", "true").lower() == "true"
     )
 
+    # Telegram
+    telegram_bot_token: str = field(
+        default_factory=lambda: os.getenv("TELEGRAM_BOT_TOKEN", "")
+    )
+    telegram_chat_id: str = field(
+        default_factory=lambda: os.getenv("TELEGRAM_CHAT_ID", "")
+    )
+
     # Кэш
     cache_ttl_seconds: int = field(
         default_factory=lambda: int(os.getenv("CACHE_TTL_SECONDS", "300"))

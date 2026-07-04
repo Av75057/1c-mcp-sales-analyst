@@ -1,0 +1,9 @@
+{
+  "dedup_key": "stock_shortage:nomenclature:Дрель ударная:stock_days:2026:27",
+  "detector": "stock_shortage",
+  "entity_id": "Дрель ударная",
+  "metric_name": "stock_days",
+  "priority": "warning",
+  "sent_at": "2026-07-03T19:37:39.527625+00:00",
+  "title": "Товар заканчивается: Дрель ударная"
+}
