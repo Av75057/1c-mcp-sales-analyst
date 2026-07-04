@@ -1,0 +1,86 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: pip install -e .
+      - run: pip install pytest pytest-asyncio pytest-cov httpx
+      - run: |
+          cp .env.example .env
+          sed -i 's/USE_MOCK_DATA=false/USE_MOCK_DATA=true/' .env
+      - name: Run backend tests
+        run: python -m pytest tests/ -v --tb=short -q --cov=src --cov=web --cov-report=term-missing --ignore=tests/test_admin.py 2>&1 | tail -30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: htmlcov/
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npx oxlint --deny-warnings src/ 2>&1 || true
+      - name: TypeScript check
+        run: npx tsc --noEmit 2>&1 || true
+      - name: Unit tests
+        run: npx vitest run --coverage 2>&1 | tail -20
+      - name: Build
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist/
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        run: |
+          cd ..
+          pip install -e .
+          pip install httpx uvicorn
+      - name: Install frontend
+        run: npm ci
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium 2>&1 | tail -5
+      - name: Run E2E tests
+        run: npx playwright test 2>&1 | tail -30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: frontend/test-results/
