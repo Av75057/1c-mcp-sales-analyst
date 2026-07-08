@@ -107,15 +107,13 @@ export default function AbcXyzPage() {
                   <CardContent>
                     <div className="grid grid-cols-3 gap-2">
                       {matrixKeys.map((key) => {
-                        const cell = result.matrix[key];
-                        const abc = key[0];
-                        const xyz = key[1];
+                        const cell = result.matrix[key] || {};
                         return (
-                          <div key={key} className={`bg-[#0f1117] rounded-lg p-3 text-center border ${cell.count > 0 ? 'border-[#2d3139]' : 'border-transparent opacity-30'}`}>
+                          <div key={key} className={`bg-[#0f1117] rounded-lg p-3 text-center border ${(cell.count || 0) > 0 ? 'border-[#2d3139]' : 'border-transparent opacity-30'}`}>
                             <div className="text-lg font-bold text-white">{key}</div>
-                            <div className="text-xs text-[#6b7280]">{cell.count} шт.</div>
-                            <div className="text-xs text-white">{formatNumber(cell.revenue)} ₽</div>
-                            <div className="text-xs text-[#6b7280]">{(cell.share * 100).toFixed(1)}%</div>
+                            <div className="text-xs text-[#6b7280]">{cell.count || 0} шт.</div>
+                            <div className="text-xs text-white">{formatNumber(cell.revenue || 0)} ₽</div>
+                            <div className="text-xs text-[#6b7280]">{((cell.share || 0) * 100).toFixed(1)}%</div>
                           </div>
                         );
                       })}
@@ -130,8 +128,10 @@ export default function AbcXyzPage() {
                   <CardHeader><CardTitle>💡 Рекомендации</CardTitle></CardHeader>
                   <CardContent>
                     <ul className="space-y-1">
-                      {recommendations.map((r: string, i: number) => (
-                        <li key={i} className="text-sm text-[#e5e7eb] bg-[#0f1117] rounded p-2">• {r}</li>
+                      {recommendations.map((r: any, i: number) => (
+                        <li key={i} className="text-sm text-[#e5e7eb] bg-[#0f1117] rounded p-2">
+                          • {typeof r === 'string' ? r : r.description || r.action || r.recommendation || JSON.stringify(r)}
+                        </li>
                       ))}
                     </ul>
                   </CardContent>

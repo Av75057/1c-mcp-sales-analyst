@@ -173,9 +173,12 @@ class CompositeDashboardService:
     def list(self, owner_id: str | None = None, search: str = "", page: int = 1, per_page: int = 20) -> dict[str, Any]:
         conn = _get_db()
         try:
+            # Если owner_id = "anonymous" или не указан — показываем всё
+            show_all = not owner_id or owner_id == "anonymous"
+
             conditions = ["1=1"]
             params: list[Any] = []
-            if owner_id:
+            if owner_id and not show_all:
                 conditions.append("c.owner_id = ?")
                 params.append(owner_id)
             if search:
@@ -188,7 +191,7 @@ class CompositeDashboardService:
             # Also count old dashboards
             old_conditions = ["1=1"]
             old_params: list[Any] = []
-            if owner_id:
+            if owner_id and not show_all:
                 old_conditions.append("d.owner_id = ?")
                 old_params.append(owner_id)
             if search:
