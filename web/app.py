@@ -466,22 +466,29 @@ async def api_document_lines(doc_id: str):
         from src.clients.c1_client import C1Client
         client = C1Client()
         try:
-            sales = await client.get_sales(date_from=date_from, date_to=date_to)
+            sales = await client.get_sales_with_docs(date_from=date_from, date_to=date_to, limit=1000)
             if sales:
-                # По номеру документа (если есть в данных)
-                lines = [s for s in sales if s.get("number") == doc_number or s.get("document_number") == doc_number]
-                # По контрагенту
-                if not lines and counterparty:
-                    lines = [s for s in sales if counterparty.lower() in (s.get("client", "") or "").lower()]
-                    lines = [s for s in lines if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
-                # Первые непустые
+                lines = [s for s in sales if s.get("document_number") == doc_number]
                 if not lines:
                     lines = [s for s in sales if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
                 lines = lines[:15]
         finally:
             await client.close()
     except Exception as e:
-        logger.warning("[Lines] get_sales failed: {}", e)
+        logger.warning("[Lines] get_sales_with_docs failed, trying get_sales: {}", e)
+        try:
+            client2 = C1Client()
+            try:
+                sales = await client2.get_sales(date_from=date_from, date_to=date_to)
+                if sales:
+                    lines = [s for s in sales if s.get("document_number") == doc_number or s.get("number") == doc_number]
+                    if not lines:
+                        lines = [s for s in sales if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
+                    lines = lines[:15]
+            finally:
+                await client2.close()
+        except Exception as e2:
+            logger.warning("[Lines] get_sales fallback also failed: {}", e2)
 
     return {"status": "success", "lines": lines}
 

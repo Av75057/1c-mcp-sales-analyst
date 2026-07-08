@@ -183,9 +183,25 @@ class C1Client:
                 "manager": d.get("manager", ""),
                 "client": d.get("client", d.get("counterparty", "")),
                 "warehouse": d.get("organization", d.get("warehouse", "")),
+                "document_number": d.get("document_number", ""),
             }
             for d in data
         ]
+
+    async def get_sales_with_docs(
+        self,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 1000,
+    ) -> list[dict[str, Any]]:
+        params: dict[str, str] = {"limit": str(limit)}
+        if date_from:
+            params["date_from"] = date_from
+        if date_to:
+            params["date_to"] = date_to
+        logger.debug("GET /sales/with-docs params={}", params)
+        resp = await self._request("GET", f"{self.base_url}/sales/with-docs", params=params)
+        return self._normalize_sales(resp.json())
 
     def _normalize_sales_by_manager(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [
