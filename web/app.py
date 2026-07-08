@@ -461,7 +461,6 @@ async def api_document_lines(doc_id: str):
     except Exception as e:
         logger.warning("[Lines] could not get doc info: {}", e)
 
-    # Загружаем строки из 1С
     lines = []
     try:
         from src.clients.c1_client import C1Client
@@ -469,12 +468,13 @@ async def api_document_lines(doc_id: str):
         try:
             sales = await client.get_sales(date_from=date_from, date_to=date_to)
             if sales:
-                # Сначала по номеру документа
+                # По номеру документа (если есть в данных)
                 lines = [s for s in sales if s.get("number") == doc_number or s.get("document_number") == doc_number]
-                # Потом по контрагенту
+                # По контрагенту
                 if not lines and counterparty:
                     lines = [s for s in sales if counterparty.lower() in (s.get("client", "") or "").lower()]
-                # Иначе первые непустые
+                    lines = [s for s in lines if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
+                # Первые непустые
                 if not lines:
                     lines = [s for s in sales if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
                 lines = lines[:15]
@@ -482,8 +482,6 @@ async def api_document_lines(doc_id: str):
             await client.close()
     except Exception as e:
         logger.warning("[Lines] get_sales failed: {}", e)
-
-    return {"status": "success", "lines": lines}
 
     return {"status": "success", "lines": lines}
 
