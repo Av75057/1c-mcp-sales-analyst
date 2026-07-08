@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Кириллова Лариса:receivables_amount:2026:28",
+  "detector": "receivables_alert",
+  "entity_id": "Кириллова Лариса",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-07-08T18:39:00.866503+00:00",
+  "title": "Задолженность: Кириллова Лариса"
+}

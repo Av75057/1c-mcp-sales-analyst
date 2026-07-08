@@ -22,10 +22,16 @@ export default function WhatIfPage() {
     setIsLoading(true);
     setResult(null);
     try {
-      const payload: any = { scenario_type: scenarioType, entity_name: entityName };
-      if (scenarioType === 'price_change') payload.change_percent = changePercent;
-      if (scenarioType === 'promotion') payload.discount_percent = changePercent;
-      const { data } = await api.post('/api/simulate', payload);
+      const params = new URLSearchParams();
+      params.append('scenario_type', scenarioType);
+      params.append('entity_name', entityName);
+      if (scenarioType === 'price_change') params.append('change_percent', String(changePercent));
+      if (scenarioType === 'promotion') params.append('discount_percent', String(changePercent));
+      if (scenarioType === 'purchase_change') params.append('order_size_change_percent', String(changePercent));
+      if (scenarioType === 'employee_departure') params.append('employee_name', entityName);
+      const { data } = await api.post('/api/simulate', params.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
       setResult(data);
     } catch (err: any) {
       setResult({ error: err?.response?.data?.detail || 'Ошибка симуляции' });
@@ -115,21 +121,60 @@ export default function WhatIfPage() {
             )}
             {result && !result.error && (
               <div className="space-y-3">
-                {result.summary && (
-                  <div className="text-sm text-white whitespace-pre-wrap">{result.summary}</div>
-                )}
-                {result.impact && (
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    {Object.entries(result.impact).map(([k, v]: [string, any]) => (
-                      <div key={k} className="bg-[#0f1117] rounded-lg p-2 text-center">
-                        <div className="text-xs text-[#6b7280]">{k}</div>
-                        <div className="text-sm font-bold text-white">{String(v)}</div>
+                {/* Baseline vs Projected */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-[#0f1117] rounded-lg p-3 text-center border border-[#2d3139]">
+                    <div className="text-xs text-[#6b7280]">Текущая выручка</div>
+                    <div className="text-lg font-bold text-white">{(result.baseline?.revenue || 0).toLocaleString()} ₽</div>
+                    <div className="text-xs text-[#6b7280]">Маржа: {(result.baseline?.margin || 0).toLocaleString()} ₽</div>
+                  </div>
+                  <div className="bg-[#0f1117] rounded-lg p-3 text-center border border-[#2d3139]">
+                    <div className="text-xs text-[#6b7280]">Прогноз</div>
+                    <div className="text-lg font-bold text-brand-500">{(result.projected?.revenue || 0).toLocaleString()} ₽</div>
+                    <div className="text-xs text-[#6b7280]">Маржа: {(result.projected?.margin || 0).toLocaleString()} ₽</div>
+                  </div>
+                </div>
+
+                {/* Delta */}
+                {result.delta && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-[#0f1117] rounded-lg p-2 text-center">
+                      <div className="text-xs text-[#6b7280]">Изменение выручки</div>
+                      <div className={`text-sm font-bold ${(result.delta.revenue_percent || 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                        {result.delta.revenue_percent >= 0 ? '+' : ''}{result.delta.revenue_percent?.toFixed(1)}%
                       </div>
-                    ))}
+                    </div>
+                    <div className="bg-[#0f1117] rounded-lg p-2 text-center">
+                      <div className="text-xs text-[#6b7280]">Изменение маржи</div>
+                      <div className={`text-sm font-bold ${(result.delta.margin_percent || 0) >= 0 ? 'text-success' : 'text-error'}`}>
+                        {result.delta.margin_percent >= 0 ? '+' : ''}{result.delta.margin_percent?.toFixed(1)}%
+                      </div>
+                    </div>
                   </div>
                 )}
-                {result.chart_url && (
-                  <img src={result.chart_url} alt="Chart" className="w-full rounded-lg mt-2" />
+
+                {/* Recommendations */}
+                {result.recommendations && result.recommendations.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-white mb-1">💡 Рекомендации</h4>
+                    <ul className="space-y-1">
+                      {result.recommendations.map((r: string, i: number) => (
+                        <li key={i} className="text-sm text-[#e5e7eb] bg-[#0f1117] rounded p-2">• {r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Chart */}
+                {result.chart_html && (
+                  <div dangerouslySetInnerHTML={{ __html: result.chart_html }} className="mt-2" />
+                )}
+
+                {/* Confidence */}
+                {result.confidence !== undefined && (
+                  <div className="text-xs text-[#6b7280] text-center">
+                    Уверенность прогноза: {Math.round(result.confidence * 100)}%
+                  </div>
                 )}
               </div>
             )}

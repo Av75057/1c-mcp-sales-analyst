@@ -1,0 +1,9 @@
+{
+  "dedup_key": "receivables_alert:client:Людмила. Планирует. Рязанская обл.:receivables_amount:2026:28",
+  "detector": "receivables_alert",
+  "entity_id": "Людмила. Планирует. Рязанская обл.",
+  "metric_name": "receivables_amount",
+  "priority": "info",
+  "sent_at": "2026-07-08T18:39:00.866710+00:00",
+  "title": "Задолженность: Людмила. Планирует. Рязанская обл."
+}

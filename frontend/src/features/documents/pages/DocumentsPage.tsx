@@ -166,16 +166,21 @@ export default function DocumentsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {lines.map((line, i) => (
-                        <tr key={i} className="border-b border-[#2d3139]">
-                          <td className="py-1.5 px-1 text-white">{line.nomenclature || '-'}</td>
-                          <td className="py-1.5 px-1 text-right text-[#9ca3af]">{line.quantity || 0}</td>
-                          <td className="py-1.5 px-1 text-right text-[#9ca3af]">
-                            {line.price ? (line.price || 0).toLocaleString() + ' ₽' : '-'}
-                          </td>
-                          <td className="py-1.5 px-1 text-right text-white">{(line.sum || 0).toLocaleString()} ₽</td>
-                        </tr>
-                      ))}
+                      {lines.map((line, i) => {
+                        const qty = line.quantity || 0;
+                        const total = line.sum || 0;
+                        const price = qty > 0 ? Math.round(total / qty) : (line.price || 0);
+                        return (
+                          <tr key={i} className="border-b border-[#2d3139]">
+                            <td className="py-1.5 px-1 text-white">{line.nomenclature || '-'}</td>
+                            <td className="py-1.5 px-1 text-right text-[#9ca3af]">{qty}</td>
+                            <td className="py-1.5 px-1 text-right text-[#9ca3af]">
+                              {price ? price.toLocaleString() + ' ₽' : '-'}
+                            </td>
+                            <td className="py-1.5 px-1 text-right text-white">{total.toLocaleString()} ₽</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="font-bold text-white">

@@ -22,7 +22,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (credentials) => {
     set({ isLoading: true });
     try {
-      const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+      const params = new URLSearchParams();
+      params.append('username', credentials.username);
+      params.append('password', credentials.password);
+      const { data } = await api.post<AuthResponse>('/api/auth/login', params.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
       set({
@@ -50,7 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
     try {
-      const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken });
+      const { data } = await api.post('/api/auth/refresh', { refresh_token: refreshToken });
       localStorage.setItem('access_token', data.access_token);
       set({ token: data.access_token });
     } catch {
@@ -60,7 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   checkAuth: async () => {
     try {
-      const { data } = await api.get('/auth/me');
+      const { data } = await api.get('/api/auth/me');
       set({ user: data, isAuthenticated: true });
     } catch {
       set({ user: null, isAuthenticated: false });
