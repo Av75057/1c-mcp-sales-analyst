@@ -460,20 +460,67 @@ async def api_document_lines(doc_id: str):
         logger.warning("[Lines] could not get doc info: {}", e)
 
     lines = []
-    try:
-        from src.clients.c1_client import C1Client
-        client = C1Client()
+
+    # Пробуем execute_query — запрос регистра с номером документа
+    if doc_number:
         try:
-            sales = await client.get_sales(date_from=date_from, date_to=date_to)
-            if sales:
-                lines = [s for s in sales if s.get("document_number") == doc_number or s.get("number") == doc_number]
-                if not lines:
-                    lines = [s for s in sales if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
-                lines = lines[:15]
-        finally:
-            await client.close()
-    except Exception as e:
-        logger.warning("[Lines] get_sales failed: {}", e)
+            import httpx
+            from src.config import settings
+            base = settings.c1_base_url.rstrip("/api").rstrip("/").rstrip("/hs") + "/hs"
+            date_limit = date_from[:4]
+            query_text = (
+                f"ВЫБРАТЬ ПЕРВЫЕ 500 Продажи.Номенклатура, Продажи.Количество, "
+                f"Продажи.Сумма, Продажи.Регистратор.Номер "
+                f"ИЗ РегистрНакопления.Продажи КАК Продажи "
+                f"ГДЕ Продажи.Период >= ДАТАВРЕМЯ({date_limit}, 1, 1) "
+                f"УПОРЯДОЧИТЬ ПО Продажи.Период УБЫВ"
+            )
+            async with httpx.AsyncClient(auth=(settings.c1_username, settings.c1_password), timeout=45) as client:
+                resp = await client.post(
+                    f"{base}/query/execute",
+                    content=query_text.encode("utf-8"),
+                    headers={"Content-Type": "text/plain;charset=utf-8"},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    rows = data.get("rows", [])
+                    cols = data.get("columns", [])
+                    if rows and cols:
+                        col_map = {c: i for i, c in enumerate(cols)}
+                        reg_idx = col_map.get("РегистраторНомер", -1)
+                        nom_idx = col_map.get("Номенклатура", -1)
+                        qty_idx = col_map.get("Количество", -1)
+                        sum_idx = col_map.get("Сумма", -1)
+                        for r in rows:
+                            if reg_idx >= 0 and str(r[reg_idx]) == doc_number:
+                                lines.append({
+                                    "nomenclature": r[nom_idx] if nom_idx >= 0 else "",
+                                    "quantity": r[qty_idx] if qty_idx >= 0 else 0,
+                                    "sum": r[sum_idx] if sum_idx >= 0 else 0,
+                                    "document_number": r[reg_idx] if reg_idx >= 0 else "",
+                                })
+                        lines = lines[:15]
+                        if lines:
+                            logger.info("[Lines] execute_query OK for doc {}", doc_number)
+        except Exception as e:
+            logger.warning("[Lines] execute_query failed: {}", e)
+
+    # Fallback
+    if not lines:
+        try:
+            from src.clients.c1_client import C1Client
+            client = C1Client()
+            try:
+                sales = await client.get_sales(date_from=date_from, date_to=date_to)
+                if sales:
+                    lines = [s for s in sales if s.get("document_number") == doc_number]
+                    if not lines:
+                        lines = [s for s in sales if (s.get("quantity") or 0) > 0 or (s.get("sum") or 0) > 0]
+                    lines = lines[:15]
+            finally:
+                await client.close()
+        except Exception as e:
+            logger.warning("[Lines] get_sales failed: {}", e)
 
     return {"status": "success", "lines": lines}
 

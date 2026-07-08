@@ -194,13 +194,13 @@ class C1Client:
         date_to: str | None = None,
         limit: int = 1000,
     ) -> list[dict[str, Any]]:
-        params: dict[str, str] = {"limit": str(limit)}
+        params: dict[str, str] = {"limit": str(limit), "with_docs": "1"}
         if date_from:
             params["date_from"] = date_from
         if date_to:
             params["date_to"] = date_to
-        logger.debug("GET /sales/with-docs params={}", params)
-        resp = await self._request("GET", f"{self.base_url}/sales/with-docs", params=params)
+        logger.debug("GET /sales with_docs params={}", params)
+        resp = await self._request("GET", f"{self.base_url}/sales", params=params)
         return self._normalize_sales(resp.json())
 
     def _normalize_sales_by_manager(self, data: list[dict[str, Any]]) -> list[dict[str, Any]]:
