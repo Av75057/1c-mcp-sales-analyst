@@ -101,18 +101,18 @@ class QueryValidator:
     async def _validate_remote(self, query: str, params: dict[str, Any] | None) -> ValidationResult:
         payload = {"query": query, "params": params or {}}
         if hasattr(self.c1_client, "post"):
-            response = await self.c1_client.post("/hs/api/validate_query", json=payload, timeout=10)
+            response = await self.c1_client.post("/validate_query", json=payload, timeout=10)
             data = response.json() if hasattr(response, "json") else response
         elif hasattr(self.c1_client, "_request"):
-            import json
+            response = await self.c1_client._request("POST", "/validate_query", json=payload)
+            data = response.json() if hasattr(response, "json") else response
+        else:
             import httpx
             from src.config import settings
-            base = settings.c1_base_url.rstrip("/api").rstrip("/")
+            url = f"{settings.c1_base_url}/validate_query"
             async with httpx.AsyncClient(auth=(settings.c1_username, settings.c1_password), timeout=10) as client:
-                resp = await client.post(f"{base}/hs/api/validate_query", json=payload)
+                resp = await client.post(url, json=payload)
                 data = resp.json()
-        else:
-            raise NotImplementedError("c1_client must have post() or _request()")
 
         return ValidationResult(
             is_valid=data.get("is_valid", False),
