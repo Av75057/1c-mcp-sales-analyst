@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Интеллектуальный аутсорсинг 1С — AI-автоматизация без риска</title>
+    <meta name="description" content="Аутсорсинг 1С:УТ, БП, КА, УНФ с AI-автоматизацией. Безопасные HTTP-микросервисы. Сокращаем рутину на 30% без доработки конфигурации.">
+    <meta name="keywords" content="аутсорсинг 1С, автоматизация 1С УТ, AI для 1С, 1С HTTP-микросервисы, 1С MCP">
+
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --border: #1e1e2e;
+            --text: #e2e2e8;
+            --muted: #6b6b80;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --error: #ef4444;
+            --radius: 12px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+        /* Navigation */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; max-width: 1100px; margin: 0 auto;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
+        .logo span { color: var(--accent); }
+        nav a:not(.logo) { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+        nav a:hover { color: var(--text); }
+
+        /* Hero */
+        .hero {
+            padding: 80px 0 60px; text-align: center;
+            background: radial-gradient(ellipse at 50% 0%, #1a1a3e 0%, transparent 70%);
+        }
+        .hero h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; }
+        .hero h1 span { background: linear-gradient(135deg, var(--accent), #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: clamp(16px, 2vw, 20px); color: var(--muted); max-width: 700px; margin: 0 auto 32px; }
+        .hero-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 14px 32px; border-radius: var(--radius);
+            font-size: 16px; font-weight: 600; text-decoration: none;
+            transition: all .2s; cursor: pointer; border: none;
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+        .btn-outline:hover { border-color: var(--accent); }
+
+        /* Sections */
+        section { padding: 80px 0; }
+        section:nth-child(even) { background: var(--surface); }
+        h2 { font-size: clamp(24px, 3.5vw, 36px); font-weight: 700; text-align: center; margin-bottom: 16px; }
+        .subtitle { text-align: center; color: var(--muted); font-size: 16px; max-width: 600px; margin: 0 auto 48px; }
+        .section-link { text-align: center; margin-top: 24px; }
+        .section-link a { color: var(--accent); text-decoration: none; font-size: 14px; }
+        .section-link a:hover { text-decoration: underline; }
+
+        /* Problems grid */
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 24px;
+            transition: border-color .2s, transform .2s;
+        }
+        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .card-icon { font-size: 28px; margin-bottom: 12px; }
+        .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .card p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+        /* Comparison */
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+        .bad { border-color: #ef444433; }
+        .bad:hover { border-color: #ef444466; }
+        .good { border-color: #10b98133; }
+        .good:hover { border-color: #10b98166; }
+        .bad h3 { color: var(--error); }
+        .good h3 { color: var(--success); }
+        .arrow-big { text-align: center; font-size: 32px; color: var(--accent); margin: 16px 0; }
+        .bullets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .bullet { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text); }
+        .bullet-icon { color: var(--success); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; }
+        .tab-btn {
+            padding: 10px 20px; border-radius: var(--radius); border: 1px solid var(--border);
+            background: transparent; color: var(--muted); cursor: pointer; font-size: 14px;
+            transition: all .2s; font-family: var(--font);
+        }
+        .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Security */
+        .security-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+
+        /* Pricing */
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+        .pricing-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 32px 24px;
+            text-align: center; transition: border-color .2s;
+        }
+        .pricing-card.featured { border-color: var(--accent); position: relative; }
+        .pricing-card.featured::before {
+            content: 'Популярно'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: var(--accent); color: #fff; font-size: 12px; font-weight: 600;
+            padding: 4px 16px; border-radius: 20px;
+        }
+        .pricing-card h3 { font-size: 20px; margin-bottom: 8px; }
+        .pricing-card .price { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+        .pricing-card ul { list-style: none; text-align: left; margin-bottom: 24px; }
+        .pricing-card ul li { padding: 6px 0; font-size: 14px; color: var(--muted); }
+        .pricing-card ul li::before { content: '✓ '; color: var(--success); }
+
+        /* FAQ */
+        .faq-item { border-bottom: 1px solid var(--border); padding: 16px 0; }
+        .faq-q {
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-size: 16px; font-weight: 500; user-select: none;
+        }
+        .faq-q::after { content: '+'; font-size: 20px; color: var(--muted); transition: transform .2s; }
+        .faq-q.open::after { transform: rotate(45deg); }
+        .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; font-size: 14px; color: var(--muted); line-height: 1.6; }
+        .faq-a.open { max-height: 200px; padding-top: 12px; }
+
+        /* Form */
+        .form-section { text-align: center; }
+        .form-box {
+            max-width: 500px; margin: 0 auto; background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--radius); padding: 32px;
+        }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px 14px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 14px; font-family: var(--font);
+            outline: none; transition: border-color .2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group select option { background: var(--surface); }
+        .form-success { display: none; padding: 20px; color: var(--success); font-size: 16px; }
+        .form-error { display: none; padding: 12px; color: var(--error); font-size: 14px; background: #ef444411; border-radius: 8px; margin-bottom: 16px; }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border); padding: 32px 0;
+            text-align: center; font-size: 13px; color: var(--muted);
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .hero { padding: 60px 0 40px; }
+            section { padding: 60px 0; }
+            .comparison { grid-template-columns: 1fr; }
+            .arrow-big { transform: rotate(90deg); }
+            nav a:not(.logo):not(.btn) { display: none; }
+            .pricing-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Animations */
+        .fade-in { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <a href="#" class="logo"><span>⟐</span> 1С Аналитик</a>
+    <a href="#problems">Проблемы</a>
+    <a href="#how">Технология</a>
+    <a href="#cases">Кейсы</a>
+    <a href="#pricing">Условия</a>
+    <a href="#form" class="btn btn-primary" style="padding:8px 20px;font-size:14px">Бесплатный аудит</a>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+    <div class="container">
+        <h1>Интеллектуальный аутсорсинг <span>1С: УТ, БП, КА, УНФ</span></h1>
+        <p>Поддержка и AI-автоматизация через безопасные микросервисы. Сокращаем рутину на 30% без доработки конфигурации и риска для данных.</p>
+        <a href="#form" class="btn btn-primary">Получить бесплатный AI-аудит</a>
+        <div class="hero-note">🔒 Конфиденциально. Без обязательств.</div>
+    </div>
+</section>
+
+<!-- Problems -->
+<section id="problems">
+    <div class="container">
+        <h2>Знакомые ситуации?</h2>
+        <p class="subtitle">Мы решаем это архитектурно, а не доработками</p>
+        <div class="grid-4">
+            <div class="card"><div class="card-icon">📦</div><h3>Управление торговлей</h3><p>Менеджеры часами оформляют заказы и ошибаются в номенклатуре</p></div>
+            <div class="card"><div class="card-icon">📊</div><h3>Бухгалтерия</h3><p>Бухгалтер тонет в первичке и ответах сотрудникам «где мой акт?»</p></div>
+            <div class="card"><div class="card-icon">🏢</div><h3>Комплексная автоматизация</h3><p>Новые сотрудники месяцами входят в курс дела. Зависимость от «гуру»</p></div>
+            <div class="card"><div class="card-icon">🔒</div><h3>Общая проблема</h3><p>Страшно подключать нейросети из-за утечки данных. Стандартные интеграции медленные</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Technology -->
+<section id="how">
+    <div class="container">
+        <h2>Как это работает: безопасно и быстро</h2>
+        <p class="subtitle">Точечный доступ к данным через микросервисы, а не открытая «форточка» в базу</p>
+
+        <div class="comparison">
+            <div class="card bad">
+                <h3>❌ Обычный подход (OData)</h3>
+                <p>Открытая «форточка» во всю базу. Тяжёлые запросы. Риск утечки. Медленная работа.</p>
+            </div>
+            <div class="card good">
+                <h3>✅ Наш подход (HTTP-сервисы + MCP)</h3>
+                <p>Точечный доступ только к нужным операциям. Лёгкие JSON-запросы. Контроль прав на стороне 1С.</p>
+            </div>
+        </div>
+
+        <div class="bullets">
+            <div class="bullet"><span class="bullet-icon">▶</span> AI видит только то, что мы ему разрешили</div>
+            <div class="bullet"><span class="bullet-icon">▶</span> Работает в 5–10 раз быстрее стандартных протоколов</div>
+            <div class="bullet"><span class="bullet-icon">▶</span> Не мешает работе пользователей и обновлениям 1С</div>
+            <div class="bullet"><span class="bullet-icon">▶</span> Подключаем даже нетиповые конфигурации за 1 день</div>
+        </div>
+
+        <div class="section-link">
+            <a href="https://github.com/Av75057/1c-mcp-sales-analyst" target="_blank">🔗 Открытый код. Прозрачная архитектура →</a>
+        </div>
+    </div>
+</section>
+
+<!-- Cases -->
+<section id="cases">
+    <div class="container">
+        <h2>Результаты внедрений</h2>
+        <p class="subtitle">Реальные кейсы и ожидаемые эффекты на основе пилотов</p>
+
+        <div class="tabs" id="caseTabs">
+            <button class="tab-btn active" data-tab="ut">УТ</button>
+            <button class="tab-btn" data-tab="bp">БП</button>
+            <button class="tab-btn" data-tab="ka">КА</button>
+            <button class="tab-btn" data-tab="unf">УНФ</button>
+        </div>
+
+        <div class="tab-content active" id="tab-ut">
+            <div class="card" style="text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:16px">🎙️</div>
+                <h3>Создание заказа голосом</h3>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">Менеджер диктует заказ — AI заполняет документ в 1С</p>
+                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+                    <div><strong style="font-size:28px;color:var(--success)">2 ч</strong><br><span style="color:var(--muted);font-size:13px">экономии в день</span></div>
+                    <div><strong style="font-size:28px;color:var(--success)">-80%</strong><br><span style="color:var(--muted);font-size:13px">ошибок ввода</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-bp">
+            <div class="card" style="text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:16px">🤖</div>
+                <h3>Чат-бот для сотрудников</h3>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">Сотрудники спрашивают статус платежа в чате — бухгалтер не отвлекается</p>
+                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+                    <div><strong style="font-size:28px;color:var(--success)">-40%</strong><br><span style="color:var(--muted);font-size:13px">времени на сверку</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-ka">
+            <div class="card" style="text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:16px">🧭</div>
+                <h3>AI-навигатор по модулям</h3>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">Новички получают подсказки по работе в системе без помощи коллег</p>
+                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+                    <div><strong style="font-size:28px;color:var(--success)">×2</strong><br><span style="color:var(--muted);font-size:13px">быстрее онбординг</span></div>
+                    <div><strong style="font-size:28px;color:var(--success)">✓</strong><br><span style="color:var(--muted);font-size:13px">снижение bus factor</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="tab-unf">
+            <div class="card" style="text-align:center;padding:40px">
+                <div style="font-size:48px;margin-bottom:16px">⚡</div>
+                <h3>Умный поиск по справочникам</h3>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">AI находит товар, контрагента или документ за секунды</p>
+                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
+                    <div><strong style="font-size:28px;color:var(--success)">15 сек</strong><br><span style="color:var(--muted);font-size:13px">вместо 2 минут</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Security -->
+<section id="security">
+    <div class="container">
+        <h2>Ваши данные под защитой</h2>
+        <p class="subtitle">Для бухгалтерии и комплексной автоматизации — безопасность главный приоритет</p>
+        <div class="security-grid">
+            <div class="card"><div class="card-icon">🛡️</div><h3>Никаких открытых срезов</h3><p>Только разрешённые методы — никакого прямого доступа к базе</p></div>
+            <div class="card"><div class="card-icon">🔐</div><h3>Локальные модели</h3><p>Работа с Qwen/Llama для полной изоляции данных</p></div>
+            <div class="card"><div class="card-icon">📝</div><h3>NDA и ответственность</h3><p>Договор с прописанной ответственностью за данные</p></div>
+            <div class="card"><div class="card-icon">📄</div><h3>Закрывающие документы</h3><p>Работаем как ИП/самозанятый, всё официально</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing">
+    <div class="container">
+        <h2>Прозрачные условия</h2>
+        <p class="subtitle">Начните с бесплатного аудита — выберите формат работы</p>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>🔍 Аудит</h3>
+                <div class="price">Бесплатно</div>
+                <ul>
+                    <li>30-минутная встреча</li>
+                    <li>Анализ ваших процессов</li>
+                    <li>План автоматизации с оценкой эффекта</li>
+                </ul>
+                <a href="#form" class="btn btn-outline" style="width:100%">Записаться</a>
+            </div>
+            <div class="pricing-card featured">
+                <h3>📋 Подписка</h3>
+                <div class="price">Фиксированная стоимость</div>
+                <ul>
+                    <li>Ежемесячная поддержка 1С</li>
+                    <li>Включённые AI-доработки</li>
+                    <li>Приоритетная поддержка</li>
+                </ul>
+                <a href="#form" class="btn btn-primary" style="width:100%">Обсудить задачу</a>
+            </div>
+            <div class="pricing-card">
+                <h3>🚀 Проект</h3>
+                <div class="price">Поэтапная оплата</div>
+                <ul>
+                    <li>Внедрение «под ключ»</li>
+                    <li>Фиксированная стоимость</li>
+                    <li>Поэтапная приёмка</li>
+                </ul>
+                <a href="#form" class="btn btn-outline" style="width:100%">Заказать</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+    <div class="container">
+        <h2>Частые вопросы</h2>
+        <p class="subtitle">Отвечаем на главные сомнения</p>
+        <div style="max-width:700px;margin:0 auto">
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFAQ(this)">Нужно ли публиковать базу в интернет?</div>
+                <div class="faq-a">Нет. Мы работаем через защищённый туннель или локальные модели. База остаётся в вашем контуре.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFAQ(this)">Какие конфигурации поддерживаются?</div>
+                <div class="faq-a">УТ, БП, КА, УНФ и другие на платформе 8.3. HTTP-сервисы работают в любой типовой и нетиповой конфигурации.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFAQ(this)">Что если у нас нетиповая конфигурация?</div>
+                <div class="faq-a">HTTP-сервисы — стандартный механизм 1С. Он работает в любой конфигурации. Адаптируем за 1–3 дня.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFAQ(this)">AI не ошибается (hallucinate)?</div>
+                <div class="faq-a">Все данные проверяются на стороне 1С перед записью. AI не может испортить данные — только предложить.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-q" onclick="toggleFAQ(this)">Как начать?</div>
+                <div class="faq-a">Запишитесь на бесплатный аудит. 30 минут — и вы получите план автоматизации с оценкой эффекта.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Form -->
+<section id="form" class="form-section">
+    <div class="container">
+        <h2>Готовы сократить рутину?</h2>
+        <p class="subtitle">Оставьте заявку на бесплатный AI-аудит. Покажем точки роста именно в вашей 1С.</p>
+
+        <div class="form-box">
+            <div id="formError" class="form-error"></div>
+            <div id="formSuccess" class="form-success">✅ Спасибо! Мы свяжемся с вами в ближайшее время.</div>
+
+            <form id="leadForm" onsubmit="return submitForm(event)">
+                <div class="form-group">
+                    <label for="name">Имя</label>
+                    <input type="text" id="name" name="name" required placeholder="Как к вам обращаться?">
+                </div>
+                <div class="form-group">
+                    <label for="contact">Telegram / Телефон</label>
+                    <input type="text" id="contact" name="contact" required placeholder="@username или +7...">
+                </div>
+                <div class="form-group">
+                    <label for="config">Конфигурация 1С</label>
+                    <select id="config" name="config" required>
+                        <option value="">Выберите...</option>
+                        <option value="УТ">Управление торговлей (УТ)</option>
+                        <option value="БП">Бухгалтерия (БП)</option>
+                        <option value="КА">Комплексная автоматизация (КА)</option>
+                        <option value="УНФ">Управление небольшой фирмой (УНФ)</option>
+                        <option value="ERP">ERP</option>
+                        <option value="other">Другая</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="comment">Краткое описание задачи (опционально)</label>
+                    <textarea id="comment" name="comment" placeholder="Что хотите автоматизировать?"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="formSubmitBtn">Получить бесплатный AI-аудит</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <p>⟐ 1С Аналитик — интеллектуальный аутсорсинг 1С</p>
+        <p style="margin-top:8px">
+            <a href="https://github.com/Av75057/1c-mcp-sales-analyst" target="_blank">GitHub</a>
+            &nbsp;·&nbsp; <a href="#" target="_blank">Telegram</a>
+            &nbsp;·&nbsp; <a href="mailto:">Почта</a>
+        </p>
+        <p style="margin-top:12px;font-size:12px">Работаем как ИП. Предоставляем закрывающие документы.</p>
+    </div>
+</footer>
+
+<script>
+// FAQ toggle
+function toggleFAQ(el) {
+    el.classList.toggle('open');
+    const answer = el.nextElementSibling;
+    answer.classList.toggle('open');
+}
+
+// Cases tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+});
+
+// Form submission
+async function submitForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('formSubmitBtn');
+    const errorEl = document.getElementById('formError');
+    const successEl = document.getElementById('formSuccess');
+
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Отправка...';
+
+    const data = {
+        name: document.getElementById('name').value,
+        contact: document.getElementById('contact').value,
+        config: document.getElementById('config').value,
+        comment: document.getElementById('comment').value,
+    };
+
+    try {
+        const resp = await fetch('/api/landing/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (resp.ok) {
+            document.getElementById('leadForm').reset();
+            successEl.style.display = 'block';
+        } else {
+            const err = await resp.json();
+            errorEl.textContent = err.detail || 'Ошибка отправки. Попробуйте позже.';
+            errorEl.style.display = 'block';
+        }
+    } catch {
+        errorEl.textContent = 'Ошибка сети. Попробуйте позже.';
+        errorEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Получить бесплатный AI-аудит';
+    }
+    return false;
+}
+
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('visible');
+    });
+}, { threshold: 0.1 });
+document.querySelectorAll('.card, .pricing-card, .security-grid > .card').forEach(el => {
+    el.classList.add('fade-in');
+    observer.observe(el);
+});
+</script>
+</body>
+</html>

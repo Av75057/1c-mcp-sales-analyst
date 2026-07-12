@@ -245,6 +245,52 @@ async def get_sim() -> WhatIfSimulator:
     return simulator
 
 
+# ---- Landing Page ----
+
+LANDING_LEADS: list = []
+
+@app.get("/landing")
+async def landing_page():
+    return HTMLResponse(Path("web/templates/landing.html").read_text(encoding="utf-8"))
+
+
+@app.post("/api/landing/lead")
+async def landing_lead(body: dict):
+    name = body.get("name", "").strip()
+    contact = body.get("contact", "").strip()
+    config = body.get("config", "").strip()
+    comment = body.get("comment", "").strip()
+
+    if not name or not contact or not config:
+        raise HTTPException(status_code=400, detail="Заполните обязательные поля")
+
+    from datetime import datetime, timezone
+    lead = {"name": name, "contact": contact, "config": config, "comment": comment, "created_at": datetime.now(timezone.utc).isoformat()}
+    LANDING_LEADS.append(lead)
+
+    # Уведомление в Telegram
+    try:
+        from src.dashboard.bot.service import telegram_bot
+        text = (
+            f"📩 <b>Новая заявка с лендинга</b>\n"
+            f"Имя: {name}\n"
+            f"Контакт: {contact}\n"
+            f"Конфигурация: {config}\n"
+            f"Комментарий: {comment}"
+        )
+        asyncio.ensure_future(telegram_bot.send_message(text))
+    except Exception as e:
+        logger.warning("[Landing] Telegram notify failed: {}", e)
+
+    logger.info("[Landing] New lead: {} ({}) — {}", name, contact, config)
+    return {"status": "success", "message": "Заявка принята"}
+
+
+@app.get("/api/landing/leads")
+async def landing_leads():
+    return {"leads": list(reversed(LANDING_LEADS))}
+
+
 # ---- Pages ----
 
 @app.get("/login")

@@ -19,6 +19,8 @@ PUBLIC_PATHS = [
     "/assets",
     "/login",
     "/share",
+    "/landing",
+    "/api/landing",
 ]
 
 
