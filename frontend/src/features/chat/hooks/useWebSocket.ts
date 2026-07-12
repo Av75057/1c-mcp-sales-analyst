@@ -33,6 +33,8 @@ export function useChatWebSocket() {
     ws.current.onopen = () => {
       console.log('WebSocket connected');
       setError(null);
+      // Автоматически загружаем сессии при подключении
+      ws.current?.send(JSON.stringify({ type: 'get_sessions' }));
     };
 
     ws.current.onmessage = (event) => {
