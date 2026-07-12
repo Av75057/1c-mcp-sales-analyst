@@ -32,7 +32,7 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                 msg_type = data.get("type", "")
 
                 if msg_type == "get_sessions":
-                    user_id = "web"
+                    user_id = "admin"
                     sessions = await repo.list_sessions(user_id=user_id, limit=50)
                     await websocket.send_json({
                         "type": "sessions",
@@ -73,7 +73,7 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                     # Create session if new
                     actual_session_id = session_id
                     if actual_session_id == "new" or not actual_session_id:
-                        session = await repo.create_session(user_id="web", title=content[:50])
+                        session = await repo.create_session(user_id="admin", title=content[:50])
                         actual_session_id = session.id
                         await websocket.send_json({"type": "session_created", "id": actual_session_id})
 
