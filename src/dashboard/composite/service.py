@@ -48,23 +48,6 @@ def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS dashboard_permissions (
                 id TEXT PRIMARY KEY,
-                owner_id TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                charts TEXT NOT NULL DEFAULT '[]',
-                tags TEXT DEFAULT '[]',
-                is_public INTEGER DEFAULT 0,
-                refresh_interval_minutes INTEGER DEFAULT 0,
-                is_favorite INTEGER DEFAULT 0,
-                view_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_composite_owner ON composite_dashboards(owner_id);
-            CREATE INDEX IF NOT EXISTS idx_composite_fav ON composite_dashboards(is_favorite) WHERE is_favorite=1;
-
-            CREATE TABLE IF NOT EXISTS dashboard_permissions (
-                id TEXT PRIMARY KEY,
                 dashboard_id TEXT NOT NULL,
                 user_id TEXT NOT NULL,
                 permission TEXT NOT NULL DEFAULT 'view',

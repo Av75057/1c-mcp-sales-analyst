@@ -21,6 +21,7 @@ PUBLIC_PATHS = [
     "/share",
     "/landing",
     "/api/landing",
+    "/ws/",
 ]
 
 

@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY pyproject.toml .
 COPY src/ src/
+COPY web/ web/
 COPY chat.py web_ui.py ./
 
 RUN pip install --no-cache-dir -e .
