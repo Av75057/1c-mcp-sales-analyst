@@ -6,218 +6,252 @@
     <title>Интеллектуальный аутсорсинг 1С — AI-автоматизация без риска</title>
     <meta name="description" content="Аутсорсинг 1С:УТ, БП, КА, УНФ с AI-автоматизацией. Безопасные HTTP-микросервисы. Сокращаем рутину на 30% без доработки конфигурации.">
     <meta name="keywords" content="аутсорсинг 1С, автоматизация 1С УТ, AI для 1С, 1С HTTP-микросервисы, 1С MCP">
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #0a0a0f;
-            --surface: #12121a;
-            --border: #1e1e2e;
-            --text: #e2e2e8;
-            --muted: #6b6b80;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --success: #10b981;
-            --error: #ef4444;
-            --radius: 12px;
-            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        }
         * { margin:0; padding:0; box-sizing:border-box; }
-        html { scroll-behavior: smooth; }
-        body {
-            font-family: var(--font);
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
+        :root {
+            --bg: #050508; --surface: #0c0c14; --card: #111122; --border: #1c1c32;
+            --text: #e8e8f0; --muted: #7a7a9a; --accent: #4f8cff; --accent2: #7c5cfc;
+            --success: #22d68c; --error: #ff4757; --radius: 16px;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+        html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
-        /* Navigation */
-        nav {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 20px; max-width: 1100px; margin: 0 auto;
-            border-bottom: 1px solid var(--border);
-        }
-        .logo { font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; }
-        .logo span { color: var(--accent); }
-        nav a:not(.logo) { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
-        nav a:hover { color: var(--text); }
+        /* Noise overlay */
+        body::before { content:''; position:fixed; inset:0; opacity:.03; background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); pointer-events:none; z-index:9999; }
 
-        /* Hero */
-        .hero {
-            padding: 80px 0 60px; text-align: center;
-            background: radial-gradient(ellipse at 50% 0%, #1a1a3e 0%, transparent 70%);
-        }
-        .hero h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 800; line-height: 1.15; margin-bottom: 20px; }
-        .hero h1 span { background: linear-gradient(135deg, var(--accent), #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { font-size: clamp(16px, 2vw, 20px); color: var(--muted); max-width: 700px; margin: 0 auto 32px; }
-        .hero-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+        /* Grid background */
+        .grid-bg { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+        .grid-bg::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:100%; height:100%; background-image: linear-gradient(rgba(79,140,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(79,140,255,.05) 1px, transparent 1px); background-size:60px 60px; mask-image:radial-gradient(ellipse at 50% 0%, black 30%, transparent 70%); -webkit-mask-image:radial-gradient(ellipse at 50% 0%, black 30%, transparent 70%); }
+
+        nav { position:sticky; top:0; z-index:100; backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); background:rgba(5,5,8,.8); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; padding:14px 24px; max-width:1100px; margin:0 auto; }
+        .logo { font-weight:800; font-size:18px; text-decoration:none; color:var(--text); display:flex; align-items:center; gap:8px; }
+        .logo-icon { width:28px; height:28px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+        .nav-links { display:flex; gap:24px; align-items:center; }
+        .nav-links a { color:var(--muted); text-decoration:none; font-size:14px; transition:color .2s; }
+        .nav-links a:hover { color:var(--text); }
+        @media (max-width:768px) { .nav-links a:not(.btn-nav) { display:none; } }
 
         /* Buttons */
-        .btn {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 14px 32px; border-radius: var(--radius);
-            font-size: 16px; font-weight: 600; text-decoration: none;
-            transition: all .2s; cursor: pointer; border: none;
-        }
-        .btn-primary { background: var(--accent); color: #fff; }
-        .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
-        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-        .btn-outline:hover { border-color: var(--accent); }
+        .btn { display:inline-flex; align-items:center; gap:8px; padding:14px 28px; border-radius:12px; font-size:15px; font-weight:600; text-decoration:none; cursor:pointer; border:none; transition:all .3s; position:relative; overflow:hidden; font-family:var(--font); }
+        .btn::before { content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; background:linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; }
+        .btn-primary { background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#fff; }
+        .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(79,140,255,.3); }
+        .btn-outline { background:rgba(255,255,255,.05); color:var(--text); }
+        .btn-outline:hover { background:rgba(255,255,255,.1); }
 
-        /* Sections */
-        section { padding: 80px 0; }
-        section:nth-child(even) { background: var(--surface); }
-        h2 { font-size: clamp(24px, 3.5vw, 36px); font-weight: 700; text-align: center; margin-bottom: 16px; }
-        .subtitle { text-align: center; color: var(--muted); font-size: 16px; max-width: 600px; margin: 0 auto 48px; }
-        .section-link { text-align: center; margin-top: 24px; }
-        .section-link a { color: var(--accent); text-decoration: none; font-size: 14px; }
-        .section-link a:hover { text-decoration: underline; }
+        /* Hero */
+        .hero { padding:120px 0 80px; text-align:center; position:relative; }
+        .hero .grid-bg { position:absolute; inset:0; }
+        .hero-content { position:relative; z-index:1; }
+        .hero-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(79,140,255,.1); border:1px solid rgba(79,140,255,.2); border-radius:100px; padding:6px 16px; font-size:13px; color:var(--accent); margin-bottom:24px; }
+        .hero h1 { font-size:clamp(32px,5vw,60px); font-weight:900; line-height:1.1; margin-bottom:20px; letter-spacing:-1px; }
+        .hero h1 span { background:linear-gradient(135deg, var(--accent), var(--accent2), #f472b6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .hero p { font-size:clamp(16px,2vw,20px); color:var(--muted); max-width:680px; margin:0 auto 36px; }
+        .hero-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+        .hero-meta { margin-top:16px; font-size:13px; color:var(--muted); display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+        .hero-meta a { color:var(--muted); text-decoration:none; border-bottom:1px dashed var(--border); }
+        .hero-meta a:hover { color:var(--accent); border-color:var(--accent); }
 
-        /* Problems grid */
-        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-        .card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 24px;
-            transition: border-color .2s, transform .2s;
-        }
-        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
-        .card-icon { font-size: 28px; margin-bottom: 12px; }
-        .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-        .card p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+        /* Hero visual */
+        .hero-visual { position:relative; max-width:600px; margin:48px auto 0; }
+        .hero-svg { width:100%; height:auto; }
+
+        section { padding:100px 0; position:relative; }
+        .section-label { text-align:center; font-size:13px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:2px; margin-bottom:8px; }
+        h2 { font-size:clamp(26px,3.5vw,40px); font-weight:800; text-align:center; margin-bottom:12px; letter-spacing:-.5px; }
+        .subtitle { text-align:center; color:var(--muted); font-size:16px; max-width:600px; margin:0 auto 48px; }
+
+        /* Cards grid */
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+        .grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+        .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px; transition:all .3s; position:relative; }
+        .card:hover { border-color:rgba(79,140,255,.3); transform:translateY(-2px); }
+        .card-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:16px; background:rgba(79,140,255,.1); }
+        .card h3 { font-size:16px; font-weight:600; margin-bottom:8px; }
+        .card p { font-size:14px; color:var(--muted); line-height:1.6; }
+
+        /* Problem cards */
+        .problem-icon { width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:16px; }
+        .problem-icon.red { background:rgba(255,71,87,.1); }
+        .problem-icon.blue { background:rgba(79,140,255,.1); }
+        .problem-icon.purple { background:rgba(124,92,252,.1); }
+        .problem-icon.green { background:rgba(34,214,140,.1); }
+        .problem-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:28px; transition:all .3s; }
+        .problem-card:hover { border-color:rgba(79,140,255,.2); transform:translateY(-2px); }
 
         /* Comparison */
-        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-        .bad { border-color: #ef444433; }
-        .bad:hover { border-color: #ef444466; }
-        .good { border-color: #10b98133; }
-        .good:hover { border-color: #10b98166; }
-        .bad h3 { color: var(--error); }
-        .good h3 { color: var(--success); }
-        .arrow-big { text-align: center; font-size: 32px; color: var(--accent); margin: 16px 0; }
-        .bullets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-        .bullet { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text); }
-        .bullet-icon { color: var(--success); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+        .comparison-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:32px; }
+        .comp-card { border-radius:var(--radius); padding:32px; position:relative; overflow:hidden; }
+        .comp-card.bad { background:linear-gradient(135deg,#1a0a0a,#110505); border:1px solid rgba(255,71,87,.2); }
+        .comp-card.good { background:linear-gradient(135deg,#0a1a10,#051105); border:1px solid rgba(34,214,140,.2); }
+        .comp-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+        .comp-label.bad { color:var(--error); }
+        .comp-label.good { color:var(--success); }
+        .comp-card h3 { font-size:18px; font-weight:700; margin-bottom:8px; }
+        .comp-card p { font-size:14px; color:var(--muted); line-height:1.6; }
+        .comp-list { margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+        .comp-item { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text); }
+        .comp-item .check { color:var(--success); font-weight:700; }
+        .comp-item .cross { color:var(--error); font-weight:700; }
+        .comp-arrow { display:flex; align-items:center; justify-content:center; font-size:28px; color:var(--accent); margin:0 -10px; }
 
         /* Tabs */
-        .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; justify-content: center; }
-        .tab-btn {
-            padding: 10px 20px; border-radius: var(--radius); border: 1px solid var(--border);
-            background: transparent; color: var(--muted); cursor: pointer; font-size: 14px;
-            transition: all .2s; font-family: var(--font);
-        }
-        .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-        .tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tabs { display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap; justify-content:center; }
+        .tab-btn { padding:10px 24px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-size:14px; font-weight:500; transition:all .2s; font-family:var(--font); }
+        .tab-btn.active { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; border-color:transparent; }
+        .tab-btn:hover:not(.active) { border-color:var(--accent); color:var(--text); }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        .case-metric { font-size:36px; font-weight:900; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .case-label { font-size:13px; color:var(--muted); }
 
         /* Security */
-        .security-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .security-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
 
         /* Pricing */
-        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
-        .pricing-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 32px 24px;
-            text-align: center; transition: border-color .2s;
-        }
-        .pricing-card.featured { border-color: var(--accent); position: relative; }
-        .pricing-card.featured::before {
-            content: 'Популярно'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-            background: var(--accent); color: #fff; font-size: 12px; font-weight: 600;
-            padding: 4px 16px; border-radius: 20px;
-        }
-        .pricing-card h3 { font-size: 20px; margin-bottom: 8px; }
-        .pricing-card .price { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
-        .pricing-card ul { list-style: none; text-align: left; margin-bottom: 24px; }
-        .pricing-card ul li { padding: 6px 0; font-size: 14px; color: var(--muted); }
-        .pricing-card ul li::before { content: '✓ '; color: var(--success); }
+        .pricing-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; align-items:start; }
+        .pricing-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:36px 28px; text-align:center; transition:all .3s; position:relative; }
+        .pricing-card:hover { border-color:rgba(79,140,255,.3); }
+        .pricing-card.featured { border-color:var(--accent); background:linear-gradient(180deg,rgba(79,140,255,.05),transparent); }
+        .pricing-card.featured::before { content:'Популярно'; position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; font-size:11px; font-weight:700; padding:4px 16px; border-radius:100px; letter-spacing:.5px; }
+        .pricing-card h3 { font-size:20px; margin-bottom:4px; }
+        .pricing-card .price { font-size:14px; color:var(--muted); margin-bottom:24px; }
+        .pricing-card ul { list-style:none; text-align:left; margin-bottom:28px; }
+        .pricing-card ul li { padding:8px 0; font-size:14px; color:var(--muted); border-bottom:1px solid rgba(255,255,255,.03); display:flex; align-items:center; gap:8px; }
+        .pricing-card ul li::before { content:'✓'; color:var(--success); font-weight:700; }
+        .pricing-card .btn { width:100%; justify-content:center; }
+
+        /* Stats */
+        .stats-row { display:flex; justify-content:center; gap:48px; flex-wrap:wrap; margin:48px 0; }
+        .stat-item { text-align:center; }
+        .stat-num { font-size:36px; font-weight:900; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .stat-label { font-size:13px; color:var(--muted); margin-top:4px; }
 
         /* FAQ */
-        .faq-item { border-bottom: 1px solid var(--border); padding: 16px 0; }
-        .faq-q {
-            display: flex; justify-content: space-between; align-items: center;
-            cursor: pointer; font-size: 16px; font-weight: 500; user-select: none;
-        }
-        .faq-q::after { content: '+'; font-size: 20px; color: var(--muted); transition: transform .2s; }
-        .faq-q.open::after { transform: rotate(45deg); }
-        .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; font-size: 14px; color: var(--muted); line-height: 1.6; }
-        .faq-a.open { max-height: 200px; padding-top: 12px; }
+        .faq-list { max-width:700px; margin:0 auto; }
+        .faq-item { border-bottom:1px solid var(--border); }
+        .faq-q { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:20px 0; font-size:16px; font-weight:500; user-select:none; transition:color .2s; }
+        .faq-q:hover { color:var(--accent); }
+        .faq-q::after { content:'+'; font-size:22px; color:var(--muted); transition:transform .3s; font-weight:300; }
+        .faq-q.open::after { transform:rotate(45deg); color:var(--accent); }
+        .faq-a { max-height:0; overflow:hidden; transition:max-height .3s ease; font-size:14px; color:var(--muted); line-height:1.7; }
+        .faq-a.open { max-height:300px; padding-bottom:20px; }
 
         /* Form */
-        .form-section { text-align: center; }
-        .form-box {
-            max-width: 500px; margin: 0 auto; background: var(--surface);
-            border: 1px solid var(--border); border-radius: var(--radius); padding: 32px;
-        }
-        .form-group { margin-bottom: 16px; text-align: left; }
-        .form-group label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 12px 14px; border-radius: 8px;
-            border: 1px solid var(--border); background: var(--bg);
-            color: var(--text); font-size: 14px; font-family: var(--font);
-            outline: none; transition: border-color .2s;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
-        .form-group textarea { resize: vertical; min-height: 80px; }
-        .form-group select option { background: var(--surface); }
-        .form-success { display: none; padding: 20px; color: var(--success); font-size: 16px; }
-        .form-error { display: none; padding: 12px; color: var(--error); font-size: 14px; background: #ef444411; border-radius: 8px; margin-bottom: 16px; }
+        .form-box { max-width:520px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:36px; }
+        .form-group { margin-bottom:16px; }
+        .form-group label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+        .form-group input,.form-group select,.form-group textarea { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px; font-family:var(--font); outline:none; transition:border-color .3s; }
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,140,255,.1); }
+        .form-group textarea { resize:vertical; min-height:80px; }
+        .form-success { display:none; padding:20px; text-align:center; color:var(--success); font-size:16px; }
+        .form-error { display:none; padding:12px; color:var(--error); font-size:14px; background:rgba(255,71,87,.1); border-radius:10px; margin-bottom:16px; }
+        .form-alternative { text-align:center; margin-top:16px; font-size:14px; color:var(--muted); }
+        .form-alternative a { color:var(--accent); text-decoration:none; }
 
         /* Footer */
-        footer {
-            border-top: 1px solid var(--border); padding: 32px 0;
-            text-align: center; font-size: 13px; color: var(--muted);
-        }
-        footer a { color: var(--accent); text-decoration: none; }
-
-        /* Mobile */
-        @media (max-width: 768px) {
-            .hero { padding: 60px 0 40px; }
-            section { padding: 60px 0; }
-            .comparison { grid-template-columns: 1fr; }
-            .arrow-big { transform: rotate(90deg); }
-            nav a:not(.logo):not(.btn) { display: none; }
-            .pricing-grid { grid-template-columns: 1fr; }
-        }
+        footer { border-top:1px solid var(--border); padding:48px 0; text-align:center; }
+        footer a { color:var(--accent); text-decoration:none; }
+        footer a:hover { text-decoration:underline; }
+        .footer-links { display:flex; justify-content:center; gap:24px; margin:16px 0; flex-wrap:wrap; }
+        .footer-links a { color:var(--muted); font-size:14px; }
+        .footer-links a:hover { color:var(--text); text-decoration:none; }
+        .footer-copy { font-size:13px; color:var(--muted); }
 
         /* Animations */
-        .fade-in { opacity: 0; transform: translateY(20px); transition: opacity .6s ease, transform .6s ease; }
-        .fade-in.visible { opacity: 1; transform: translateY(0); }
+        .fade-in { opacity:0; transform:translateY(24px); transition:opacity .6s ease,transform .6s ease; }
+        .fade-in.visible { opacity:1; transform:translateY(0); }
+        .fade-in:nth-child(2) { transition-delay:.1s; }
+        .fade-in:nth-child(3) { transition-delay:.2s; }
+        .fade-in:nth-child(4) { transition-delay:.3s; }
+
+        @media (max-width:768px) {
+            .hero { padding:80px 0 48px; }
+            section { padding:60px 0; }
+            .comparison-grid { grid-template-columns:1fr; }
+            .comp-arrow { transform:rotate(90deg); }
+            .grid-2 { grid-template-columns:1fr; }
+            .grid-3 { grid-template-columns:1fr; }
+            .stats-row { gap:24px; }
+            .hero-actions { flex-direction:column; align-items:stretch; }
+            .pricing-grid { grid-template-columns:1fr; }
+        }
     </style>
 </head>
 <body>
 
 <!-- Navigation -->
 <nav>
-    <a href="#" class="logo"><span>⟐</span> 1С Аналитик</a>
-    <a href="#problems">Проблемы</a>
-    <a href="#how">Технология</a>
-    <a href="#cases">Кейсы</a>
-    <a href="#pricing">Условия</a>
-    <a href="#form" class="btn btn-primary" style="padding:8px 20px;font-size:14px">Бесплатный аудит</a>
+    <a href="#" class="logo"><span class="logo-icon">⟐</span> 1С Аналитик</a>
+    <div class="nav-links">
+        <a href="#problems">Проблемы</a>
+        <a href="#how">Технология</a>
+        <a href="#cases">Кейсы</a>
+        <a href="#pricing">Условия</a>
+        <a href="#form" class="btn btn-primary btn-nav" style="padding:8px 20px;font-size:13px">Бесплатный аудит</a>
+    </div>
 </nav>
 
 <!-- Hero -->
 <section class="hero" id="hero">
-    <div class="container">
-        <h1>Интеллектуальный аутсорсинг <span>1С: УТ, БП, КА, УНФ</span></h1>
+    <div class="grid-bg"></div>
+    <div class="container hero-content">
+        <div class="hero-badge">✦ Безопасная AI-автоматизация 1С</div>
+        <h1>Интеллектуальный аутсорсинг<br><span>1С: УТ, БП, КА, УНФ</span></h1>
         <p>Поддержка и AI-автоматизация через безопасные микросервисы. Сокращаем рутину на 30% без доработки конфигурации и риска для данных.</p>
-        <a href="#form" class="btn btn-primary">Получить бесплатный AI-аудит</a>
-        <div class="hero-note">🔒 Конфиденциально. Без обязательств. · 📞 <a href="tel:+79166941550" style="color:var(--muted);text-decoration:none;border-bottom:1px dashed var(--muted)">+7 916 694-15-50</a> · ✉️ <a href="https://t.me/Kuzma_95" target="_blank" style="color:var(--muted);text-decoration:none;border-bottom:1px dashed var(--muted)">@Kuzma_95</a></div>
+        <div class="hero-actions">
+            <a href="#form" class="btn btn-primary">Получить бесплатный AI-аудит</a>
+            <a href="#how" class="btn btn-outline">Как это работает</a>
+        </div>
+        <div class="hero-meta">
+            <span>🔒 Конфиденциально</span>
+            <span>📋 Без обязательств</span>
+            <a href="tel:+79166941550">📞 +7 916 694-15-50</a>
+            <a href="https://t.me/Kuzma_95" target="_blank">✉️ @Kuzma_95</a>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-item"><div class="stat-num">-30%</div><div class="stat-label">рутины</div></div>
+            <div class="stat-item"><div class="stat-num">×5-10</div><div class="stat-label">быстрее OData</div></div>
+            <div class="stat-item"><div class="stat-num">1 день</div><div class="stat-label">подключение</div></div>
+            <div class="stat-item"><div class="stat-num">✓</div><div class="stat-label">полный контроль</div></div>
+        </div>
     </div>
 </section>
 
 <!-- Problems -->
 <section id="problems">
     <div class="container">
+        <div class="section-label">Проблемы</div>
         <h2>Знакомые ситуации?</h2>
         <p class="subtitle">Мы решаем это архитектурно, а не доработками</p>
         <div class="grid-4">
-            <div class="card"><div class="card-icon">📦</div><h3>Управление торговлей</h3><p>Менеджеры часами оформляют заказы и ошибаются в номенклатуре</p></div>
-            <div class="card"><div class="card-icon">📊</div><h3>Бухгалтерия</h3><p>Бухгалтер тонет в первичке и ответах сотрудникам «где мой акт?»</p></div>
-            <div class="card"><div class="card-icon">🏢</div><h3>Комплексная автоматизация</h3><p>Новые сотрудники месяцами входят в курс дела. Зависимость от «гуру»</p></div>
-            <div class="card"><div class="card-icon">🔒</div><h3>Общая проблема</h3><p>Страшно подключать нейросети из-за утечки данных. Стандартные интеграции медленные</p></div>
+            <div class="problem-card fade-in">
+                <div class="problem-icon red">📦</div>
+                <h3>Управление торговлей</h3>
+                <p>Менеджеры часами оформляют заказы и ошибаются в номенклатуре</p>
+            </div>
+            <div class="problem-card fade-in">
+                <div class="problem-icon blue">📊</div>
+                <h3>Бухгалтерия</h3>
+                <p>Бухгалтер тонет в первичке и ответах «где мой акт?»</p>
+            </div>
+            <div class="problem-card fade-in">
+                <div class="problem-icon purple">🏢</div>
+                <h3>Комплексная автоматизация</h3>
+                <p>Новые сотрудники месяцами входят в курс дела. Зависимость от «гуру»</p>
+            </div>
+            <div class="problem-card fade-in">
+                <div class="problem-icon green">🔒</div>
+                <h3>Общая проблема</h3>
+                <p>Страшно подключать нейросети из-за утечки данных. Интеграции медленные</p>
+            </div>
         </div>
     </div>
 </section>
@@ -225,29 +259,41 @@
 <!-- Technology -->
 <section id="how">
     <div class="container">
-        <h2>Как это работает: безопасно и быстро</h2>
-        <p class="subtitle">Точечный доступ к данным через микросервисы, а не открытая «форточка» в базу</p>
+        <div class="section-label">Технология</div>
+        <h2>Безопаснее и быстрее</h2>
+        <p class="subtitle">Точечный доступ через микросервисы, а не открытая «форточка» в базу</p>
 
-        <div class="comparison">
-            <div class="card bad">
-                <h3>❌ Обычный подход (OData)</h3>
-                <p>Открытая «форточка» во всю базу. Тяжёлые запросы. Риск утечки. Медленная работа.</p>
+        <div class="comparison-grid">
+            <div class="comp-card bad">
+                <div class="comp-label bad">✕ Обычный подход (OData)</div>
+                <h3>Открытый доступ ко всей базе</h3>
+                <p>Тяжёлые запросы, риск утечки, медленная работа</p>
+                <div class="comp-list">
+                    <div class="comp-item"><span class="cross">✕</span> Полный доступ к данным</div>
+                    <div class="comp-item"><span class="cross">✕</span> Тяжёлые XML-запросы</div>
+                    <div class="comp-item"><span class="cross">✕</span> Блокирует пользователей</div>
+                    <div class="comp-item"><span class="cross">✕</span> Проблемы с обновлениями</div>
+                </div>
             </div>
-            <div class="card good">
-                <h3>✅ Наш подход (HTTP-сервисы + MCP)</h3>
-                <p>Точечный доступ только к нужным операциям. Лёгкие JSON-запросы. Контроль прав на стороне 1С.</p>
+
+            <div style="display:flex;flex-direction:column;gap:20px">
+                <div class="comp-arrow">▶</div>
+                <div class="comp-card good">
+                    <div class="comp-label good">✓ Наш подход (HTTP-сервисы + MCP)</div>
+                    <h3>Точечный доступ к операциям</h3>
+                    <p>Лёгкие JSON-запросы, полный контроль прав</p>
+                    <div class="comp-list">
+                        <div class="comp-item"><span class="check">✓</span> Только разрешённые методы</div>
+                        <div class="comp-item"><span class="check">✓</span> В 5–10 раз быстрее</div>
+                        <div class="comp-item"><span class="check">✓</span> Не мешает пользователям</div>
+                        <div class="comp-item"><span class="check">✓</span> Любая конфигурация</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="bullets">
-            <div class="bullet"><span class="bullet-icon">▶</span> AI видит только то, что мы ему разрешили</div>
-            <div class="bullet"><span class="bullet-icon">▶</span> Работает в 5–10 раз быстрее стандартных протоколов</div>
-            <div class="bullet"><span class="bullet-icon">▶</span> Не мешает работе пользователей и обновлениям 1С</div>
-            <div class="bullet"><span class="bullet-icon">▶</span> Подключаем даже нетиповые конфигурации за 1 день</div>
-        </div>
-
-        <div class="section-link">
-            <a href="https://github.com/Av75057/1c-mcp-sales-analyst" target="_blank">🔗 Открытый код. Прозрачная архитектура →</a>
+        <div style="text-align:center;margin-top:24px">
+            <a href="https://github.com/Av75057/1c-mcp-sales-analyst" target="_blank" style="color:var(--accent);text-decoration:none;font-size:14px">🔗 Открытый код на GitHub →</a>
         </div>
     </div>
 </section>
@@ -255,58 +301,59 @@
 <!-- Cases -->
 <section id="cases">
     <div class="container">
+        <div class="section-label">Кейсы</div>
         <h2>Результаты внедрений</h2>
-        <p class="subtitle">Реальные кейсы и ожидаемые эффекты на основе пилотов</p>
+        <p class="subtitle">Реальные кейсы и ожидаемые эффекты</p>
 
         <div class="tabs" id="caseTabs">
-            <button class="tab-btn active" data-tab="ut">УТ</button>
-            <button class="tab-btn" data-tab="bp">БП</button>
-            <button class="tab-btn" data-tab="ka">КА</button>
-            <button class="tab-btn" data-tab="unf">УНФ</button>
+            <button class="tab-btn active" data-tab="ut">📦 УТ</button>
+            <button class="tab-btn" data-tab="bp">📊 БП</button>
+            <button class="tab-btn" data-tab="ka">🏢 КА</button>
+            <button class="tab-btn" data-tab="unf">⚡ УНФ</button>
         </div>
 
         <div class="tab-content active" id="tab-ut">
-            <div class="card" style="text-align:center;padding:40px">
+            <div class="card" style="text-align:center;padding:48px">
                 <div style="font-size:48px;margin-bottom:16px">🎙️</div>
                 <h3>Создание заказа голосом</h3>
                 <p style="color:var(--muted);max-width:500px;margin:8px auto">Менеджер диктует заказ — AI заполняет документ в 1С</p>
-                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-                    <div><strong style="font-size:28px;color:var(--success)">2 ч</strong><br><span style="color:var(--muted);font-size:13px">экономии в день</span></div>
-                    <div><strong style="font-size:28px;color:var(--success)">-80%</strong><br><span style="color:var(--muted);font-size:13px">ошибок ввода</span></div>
+                <div style="display:flex;gap:40px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+                    <div><div class="case-metric">2 ч</div><div class="case-label">экономии в день</div></div>
+                    <div><div class="case-metric">-80%</div><div class="case-label">ошибок ввода</div></div>
+                    <div><div class="case-metric">15 с</div><div class="case-label">на создание заказа</div></div>
                 </div>
             </div>
         </div>
-
         <div class="tab-content" id="tab-bp">
-            <div class="card" style="text-align:center;padding:40px">
+            <div class="card" style="text-align:center;padding:48px">
                 <div style="font-size:48px;margin-bottom:16px">🤖</div>
                 <h3>Чат-бот для сотрудников</h3>
-                <p style="color:var(--muted);max-width:500px;margin:8px auto">Сотрудники спрашивают статус платежа в чате — бухгалтер не отвлекается</p>
-                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-                    <div><strong style="font-size:28px;color:var(--success)">-40%</strong><br><span style="color:var(--muted);font-size:13px">времени на сверку</span></div>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">Сотрудники спрашивают статус в чате — бухгалтер не отвлекается</p>
+                <div style="display:flex;gap:40px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+                    <div><div class="case-metric">-40%</div><div class="case-label">времени на сверку</div></div>
+                    <div><div class="case-metric">24/7</div><div class="case-label">доступность</div></div>
                 </div>
             </div>
         </div>
-
         <div class="tab-content" id="tab-ka">
-            <div class="card" style="text-align:center;padding:40px">
+            <div class="card" style="text-align:center;padding:48px">
                 <div style="font-size:48px;margin-bottom:16px">🧭</div>
                 <h3>AI-навигатор по модулям</h3>
-                <p style="color:var(--muted);max-width:500px;margin:8px auto">Новички получают подсказки по работе в системе без помощи коллег</p>
-                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-                    <div><strong style="font-size:28px;color:var(--success)">×2</strong><br><span style="color:var(--muted);font-size:13px">быстрее онбординг</span></div>
-                    <div><strong style="font-size:28px;color:var(--success)">✓</strong><br><span style="color:var(--muted);font-size:13px">снижение bus factor</span></div>
+                <p style="color:var(--muted);max-width:500px;margin:8px auto">Новички получают подсказки без помощи коллег</p>
+                <div style="display:flex;gap:40px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+                    <div><div class="case-metric">×2</div><div class="case-label">быстрее онбординг</div></div>
+                    <div><div class="case-metric">✓</div><div class="case-label">снижение bus factor</div></div>
                 </div>
             </div>
         </div>
-
         <div class="tab-content" id="tab-unf">
-            <div class="card" style="text-align:center;padding:40px">
+            <div class="card" style="text-align:center;padding:48px">
                 <div style="font-size:48px;margin-bottom:16px">⚡</div>
                 <h3>Умный поиск по справочникам</h3>
                 <p style="color:var(--muted);max-width:500px;margin:8px auto">AI находит товар, контрагента или документ за секунды</p>
-                <div style="display:flex;gap:24px;justify-content:center;margin-top:20px;flex-wrap:wrap">
-                    <div><strong style="font-size:28px;color:var(--success)">15 сек</strong><br><span style="color:var(--muted);font-size:13px">вместо 2 минут</span></div>
+                <div style="display:flex;gap:40px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+                    <div><div class="case-metric">15 с</div><div class="case-label">вместо 2 мин</div></div>
+                    <div><div class="case-metric">+95%</div><div class="case-label">точность поиска</div></div>
                 </div>
             </div>
         </div>
@@ -316,13 +363,14 @@
 <!-- Security -->
 <section id="security">
     <div class="container">
+        <div class="section-label">Безопасность</div>
         <h2>Ваши данные под защитой</h2>
-        <p class="subtitle">Для бухгалтерии и комплексной автоматизации — безопасность главный приоритет</p>
+        <p class="subtitle">Для бухгалтерии и КА — безопасность главный приоритет</p>
         <div class="security-grid">
-            <div class="card"><div class="card-icon">🛡️</div><h3>Никаких открытых срезов</h3><p>Только разрешённые методы — никакого прямого доступа к базе</p></div>
-            <div class="card"><div class="card-icon">🔐</div><h3>Локальные модели</h3><p>Работа с Qwen/Llama для полной изоляции данных</p></div>
-            <div class="card"><div class="card-icon">📝</div><h3>NDA и ответственность</h3><p>Договор с прописанной ответственностью за данные</p></div>
-            <div class="card"><div class="card-icon">📄</div><h3>Закрывающие документы</h3><p>Работаем как ИП/самозанятый, всё официально</p></div>
+            <div class="card fade-in"><div class="card-icon">🛡️</div><h3>Никаких открытых срезов</h3><p>Только разрешённые HTTP-методы — нет прямого доступа к базе</p></div>
+            <div class="card fade-in"><div class="card-icon">🔐</div><h3>Локальные модели AI</h3><p>Qwen/Llama для полной изоляции данных в вашем контуре</p></div>
+            <div class="card fade-in"><div class="card-icon">📝</div><h3>NDA и ответственность</h3><p>Договор с прописанной ответственностью за сохранность данных</p></div>
+            <div class="card fade-in"><div class="card-icon">📄</div><h3>Закрывающие документы</h3><p>Работаем официально, предоставляем все документы</p></div>
         </div>
     </div>
 </section>
@@ -330,10 +378,11 @@
 <!-- Pricing -->
 <section id="pricing">
     <div class="container">
-        <h2>Прозрачные условия</h2>
-        <p class="subtitle">Начните с бесплатного аудита — выберите формат работы</p>
+        <div class="section-label">Условия</div>
+        <h2>Прозрачные форматы работы</h2>
+        <p class="subtitle">Начните с бесплатного аудита</p>
         <div class="pricing-grid">
-            <div class="pricing-card">
+            <div class="pricing-card fade-in">
                 <h3>🔍 Аудит</h3>
                 <div class="price">Бесплатно</div>
                 <ul>
@@ -341,9 +390,9 @@
                     <li>Анализ ваших процессов</li>
                     <li>План автоматизации с оценкой эффекта</li>
                 </ul>
-                <a href="#form" class="btn btn-outline" style="width:100%">Записаться</a>
+                <a href="#form" class="btn btn-outline">Записаться</a>
             </div>
-            <div class="pricing-card featured">
+            <div class="pricing-card featured fade-in">
                 <h3>📋 Подписка</h3>
                 <div class="price">Фиксированная стоимость</div>
                 <ul>
@@ -351,9 +400,9 @@
                     <li>Включённые AI-доработки</li>
                     <li>Приоритетная поддержка</li>
                 </ul>
-                <a href="#form" class="btn btn-primary" style="width:100%">Обсудить задачу</a>
+                <a href="#form" class="btn btn-primary">Обсудить задачу</a>
             </div>
-            <div class="pricing-card">
+            <div class="pricing-card fade-in">
                 <h3>🚀 Проект</h3>
                 <div class="price">Поэтапная оплата</div>
                 <ul>
@@ -361,7 +410,7 @@
                     <li>Фиксированная стоимость</li>
                     <li>Поэтапная приёмка</li>
                 </ul>
-                <a href="#form" class="btn btn-outline" style="width:100%">Заказать</a>
+                <a href="#form" class="btn btn-outline">Заказать</a>
             </div>
         </div>
     </div>
@@ -370,39 +419,28 @@
 <!-- FAQ -->
 <section id="faq">
     <div class="container">
+        <div class="section-label">FAQ</div>
         <h2>Частые вопросы</h2>
         <p class="subtitle">Отвечаем на главные сомнения</p>
-        <div style="max-width:700px;margin:0 auto">
-            <div class="faq-item">
-                <div class="faq-q" onclick="toggleFAQ(this)">Нужно ли публиковать базу в интернет?</div>
-                <div class="faq-a">Нет. Мы работаем через защищённый туннель или локальные модели. База остаётся в вашем контуре.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q" onclick="toggleFAQ(this)">Какие конфигурации поддерживаются?</div>
-                <div class="faq-a">УТ, БП, КА, УНФ и другие на платформе 8.3. HTTP-сервисы работают в любой типовой и нетиповой конфигурации.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q" onclick="toggleFAQ(this)">Что если у нас нетиповая конфигурация?</div>
-                <div class="faq-a">HTTP-сервисы — стандартный механизм 1С. Он работает в любой конфигурации. Адаптируем за 1–3 дня.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q" onclick="toggleFAQ(this)">AI не ошибается (hallucinate)?</div>
-                <div class="faq-a">Все данные проверяются на стороне 1С перед записью. AI не может испортить данные — только предложить.</div>
-            </div>
-            <div class="faq-item">
-                <div class="faq-q" onclick="toggleFAQ(this)">Как начать?</div>
-                <div class="faq-a">Запишитесь на бесплатный аудит. 30 минут — и вы получите план автоматизации с оценкой эффекта.</div>
-            </div>
+        <div class="faq-list">
+            <div class="faq-item"><div class="faq-q" onclick="toggleFAQ(this)">Нужно ли публиковать базу в интернет?</div><div class="faq-a">Нет. Мы работаем через защищённый туннель или локальные модели. База остаётся в вашем контуре.</div></div>
+            <div class="faq-item"><div class="faq-q" onclick="toggleFAQ(this)">Какие конфигурации поддерживаются?</div><div class="faq-a">УТ, БП, КА, УНФ, ERP и другие на платформе 8.3. HTTP-сервисы работают в любой конфигурации.</div></div>
+            <div class="faq-item"><div class="faq-q" onclick="toggleFAQ(this)">Что если у нас нетиповая конфигурация?</div><div class="faq-a">HTTP-сервисы — стандартный механизм 1С. Адаптируемся за 1–3 дня без изменения вашей конфигурации.</div></div>
+            <div class="faq-item"><div class="faq-q" onclick="toggleFAQ(this)">AI не ошибается?</div><div class="faq-a">Все данные проверяются на стороне 1С перед записью. AI только предлагает — решение всегда за вами.</div></div>
+            <div class="faq-item"><div class="faq-q" onclick="toggleFAQ(this)">Как начать?</div><div class="faq-a">Запишитесь на бесплатный аудит. 30 минут — и вы получите план автоматизации с оценкой эффекта.</div></div>
         </div>
     </div>
 </section>
 
 <!-- Form -->
-<section id="form" class="form-section">
-    <div class="container">
+<section id="form" style="background:linear-gradient(180deg,transparent,var(--surface))">
+    <div class="container" style="text-align:center">
+        <div class="section-label">Связь</div>
         <h2>Готовы сократить рутину?</h2>
-        <p class="subtitle">Оставьте заявку на бесплатный AI-аудит. Покажем точки роста именно в вашей 1С.</p>
-        <p style="text-align:center;margin:-32px 0 32px;font-size:14px;color:var(--muted)">Или напишите напрямую: <a href="https://t.me/Kuzma_95" target="_blank" style="color:var(--accent);text-decoration:none">✉️ @Kuzma_95</a></p>
+        <p class="subtitle">Покажем точки роста именно в вашей 1С</p>
+        <div class="form-alternative" style="margin-bottom:24px">
+            Или свяжитесь напрямую: <a href="https://t.me/Kuzma_95" target="_blank">✉️ @Kuzma_95</a> · <a href="tel:+79166941550">📞 +7 916 694-15-50</a>
+        </div>
 
         <div class="form-box">
             <div id="formError" class="form-error"></div>
@@ -425,12 +463,11 @@
                         <option value="БП">Бухгалтерия (БП)</option>
                         <option value="КА">Комплексная автоматизация (КА)</option>
                         <option value="УНФ">Управление небольшой фирмой (УНФ)</option>
-                        <option value="ERP">ERP</option>
-                        <option value="other">Другая</option>
+                        <option value="ERP">ERP</option><option value="other">Другая</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="comment">Краткое описание задачи (опционально)</label>
+                    <label for="comment">Описание задачи (опционально)</label>
                     <textarea id="comment" name="comment" placeholder="Что хотите автоматизировать?"></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center" id="formSubmitBtn">Получить бесплатный AI-аудит</button>
@@ -442,25 +479,23 @@
 <!-- Footer -->
 <footer>
     <div class="container">
-        <p>⟐ 1С Аналитик — интеллектуальный аутсорсинг 1С</p>
-        <p style="margin-top:8px">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
+            <span class="logo-icon" style="display:inline-flex">⟐</span>
+            <strong style="font-size:16px">1С Аналитик</strong>
+        </div>
+        <div class="footer-links">
             <a href="https://github.com/Av75057/1c-mcp-sales-analyst" target="_blank">GitHub</a>
-            &nbsp;·&nbsp; <a href="https://t.me/Kuzma_95" target="_blank">✉️ Telegram</a>
-            &nbsp;·&nbsp; <a href="tel:+79166941550">📞 +7 916 694-15-50</a>
-        </p>
-        <p style="margin-top:12px;font-size:12px">Работаем как ИП. Предоставляем закрывающие документы.</p>
+            <a href="https://t.me/Kuzma_95" target="_blank">✉️ Telegram</a>
+            <a href="tel:+79166941550">📞 +7 916 694-15-50</a>
+            <a href="mailto:">Почта</a>
+        </div>
+        <div class="footer-copy">Интеллектуальный аутсорсинг 1С · Работаем официально</div>
     </div>
 </footer>
 
 <script>
-// FAQ toggle
-function toggleFAQ(el) {
-    el.classList.toggle('open');
-    const answer = el.nextElementSibling;
-    answer.classList.toggle('open');
-}
+function toggleFAQ(el) { el.classList.toggle('open'); el.nextElementSibling.classList.toggle('open'); }
 
-// Cases tabs
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -470,59 +505,30 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-// Form submission
 async function submitForm(e) {
     e.preventDefault();
     const btn = document.getElementById('formSubmitBtn');
     const errorEl = document.getElementById('formError');
     const successEl = document.getElementById('formSuccess');
-
     errorEl.style.display = 'none';
     successEl.style.display = 'none';
-    btn.disabled = true;
-    btn.textContent = 'Отправка...';
-
-    const data = {
-        name: document.getElementById('name').value,
-        contact: document.getElementById('contact').value,
-        config: document.getElementById('config').value,
-        comment: document.getElementById('comment').value,
-    };
-
+    btn.disabled = true; btn.textContent = 'Отправка...';
     try {
-        const resp = await fetch('/api/landing/lead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (resp.ok) {
-            document.getElementById('leadForm').reset();
-            successEl.style.display = 'block';
-        } else {
-            const err = await resp.json();
-            errorEl.textContent = err.detail || 'Ошибка отправки. Попробуйте позже.';
-            errorEl.style.display = 'block';
-        }
-    } catch {
-        errorEl.textContent = 'Ошибка сети. Попробуйте позже.';
-        errorEl.style.display = 'block';
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Получить бесплатный AI-аудит';
-    }
+        const resp = await fetch('/api/landing/lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+            name: document.getElementById('name').value,
+            contact: document.getElementById('contact').value,
+            config: document.getElementById('config').value,
+            comment: document.getElementById('comment').value,
+        })});
+        if (resp.ok) { document.getElementById('leadForm').reset(); successEl.style.display = 'block'; }
+        else { const err = await resp.json(); errorEl.textContent = err.detail || 'Ошибка'; errorEl.style.display = 'block'; }
+    } catch { errorEl.textContent = 'Ошибка сети'; errorEl.style.display = 'block'; }
+    finally { btn.disabled = false; btn.textContent = 'Получить бесплатный AI-аудит'; }
     return false;
 }
 
-// Scroll animations
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-        if (e.isIntersecting) e.target.classList.add('visible');
-    });
-}, { threshold: 0.1 });
-document.querySelectorAll('.card, .pricing-card, .security-grid > .card').forEach(el => {
-    el.classList.add('fade-in');
-    observer.observe(el);
-});
+const observer = new IntersectionObserver(e => { e.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold:.1 });
+document.querySelectorAll('.fade-in,.card,.pricing-card,.problem-card').forEach(el => observer.observe(el));
 </script>
 </body>
 </html>
