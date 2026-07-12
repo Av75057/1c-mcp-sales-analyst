@@ -33,3 +33,51 @@ body {
   background-color: #0f1117;
   color: #e5e7eb;
 }
+
+/* Markdown styling for chat messages */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.markdown-content th {
+  background: #2563eb22;
+  color: #e5e7eb;
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid #2d3139;
+  text-align: left;
+}
+.markdown-content td {
+  padding: 4px 10px;
+  border: 1px solid #2d3139;
+  color: #d1d5db;
+}
+.markdown-content tr:nth-child(even) {
+  background: #0f1117;
+}
+.markdown-content tr:hover {
+  background: #22262e;
+}
+.markdown-content p {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+.markdown-content strong {
+  color: #e5e7eb;
+}
+.markdown-content code {
+  background: #0f1117;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #91cc75;
+}
+.markdown-content ul, .markdown-content ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+.markdown-content li {
+  margin: 2px 0;
+}

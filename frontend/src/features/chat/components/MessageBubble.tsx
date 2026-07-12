@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '../stores/chatStore';
 import { Badge } from '@/shared/components/ui/Badge';
 
@@ -47,7 +49,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`rounded-lg p-3 max-w-[80%] ${isUser ? 'bg-brand-600 text-white' : 'bg-[#1a1d23] border border-[#2d3139]'}`}>
         {message.content && (
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          <div className="text-sm markdown-content">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          </div>
         )}
 
         {message.tool_calls?.map((tc, i) => (
