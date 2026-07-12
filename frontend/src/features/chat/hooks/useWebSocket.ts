@@ -150,6 +150,14 @@ export function useChatWebSocket() {
     ws.current?.send(JSON.stringify({ type: 'get_messages', session_id: sessionId }));
   }, []);
 
+  const deleteSession = useCallback((sessionId: string) => {
+    ws.current?.send(JSON.stringify({ type: 'delete_session', session_id: sessionId }));
+    if (useChatStore.getState().currentSessionId === sessionId) {
+      setCurrentSession(null);
+      setMessages([]);
+    }
+  }, []);
+
   const newSession = useCallback(() => {
     setCurrentSession(null);
     setMessages([]);
@@ -164,5 +172,5 @@ export function useChatWebSocket() {
     return () => disconnect();
   }, []);
 
-  return { sendMessage, loadSessions, loadMessages, newSession, connect, disconnect };
+  return { sendMessage, loadSessions, loadMessages, deleteSession, newSession, connect, disconnect };
 }

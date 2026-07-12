@@ -65,6 +65,32 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                         "id": sid,
                     })
 
+                elif msg_type == "delete_session":
+                    sid = data.get("session_id", "")
+                    if sid:
+                        try:
+                            await repo.delete_session(sid)
+                            await websocket.send_json({"type": "session_deleted", "id": sid})
+                            # Отправляем обновлённый список сессий
+                            user_id = "admin"
+                            sessions = await repo.list_sessions(user_id=user_id, limit=50)
+                            await websocket.send_json({
+                                "type": "sessions",
+                                "sessions": [
+                                    {
+                                        "id": s["id"],
+                                        "title": s.get("title", "Новый чат"),
+                                        "created_at": s.get("created_at", ""),
+                                        "updated_at": s.get("updated_at", ""),
+                                        "message_count": s.get("messages_count", 0),
+                                    }
+                                    for s in sessions
+                                ],
+                            })
+                        except Exception as e:
+                            logger.warning("[WS] Failed to delete session: {}", e)
+                            await websocket.send_json({"type": "error", "content": f"Ошибка удаления: {e}"})
+
                 elif msg_type == "message":
                     content = data.get("content", "")
                     if not content:

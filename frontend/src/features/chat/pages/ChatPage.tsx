@@ -3,13 +3,14 @@ import { ChatWindow } from '../components/ChatWindow';
 import { ChatSidebar } from '../components/ChatSidebar';
 
 export default function ChatPage() {
-  const { sendMessage, loadSessions, loadMessages, newSession } = useChatWebSocket();
+  const { sendMessage, loadSessions, loadMessages, deleteSession, newSession } = useChatWebSocket();
 
   return (
     <div className="flex h-[calc(100vh-3rem)] gap-4">
       <ChatSidebar
         onLoadSessions={loadSessions}
         onLoadMessages={loadMessages}
+        onDeleteSession={deleteSession}
         onNewSession={newSession}
       />
       <div className="flex-1 flex flex-col">
