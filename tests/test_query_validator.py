@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 import pytest
-from src.mcp.tools.query_validator import QueryValidationGuardrails, QueryValidator
+from src.mcp.query_validator import QueryValidationGuardrails, QueryValidator
 
 
 class TestGuardrails:
