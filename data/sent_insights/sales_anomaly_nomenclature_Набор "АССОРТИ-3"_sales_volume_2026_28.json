@@ -1,9 +1,0 @@
-{
-  "dedup_key": "sales_anomaly:nomenclature:Набор \"АССОРТИ-3\":sales_volume:2026:28",
-  "detector": "sales_anomaly",
-  "entity_id": "Набор \"АССОРТИ-3\"",
-  "metric_name": "sales_volume",
-  "priority": "critical",
-  "sent_at": "2026-07-08T18:39:00.861043+00:00",
-  "title": "Падение продаж: Набор \"АССОРТИ-3\""
-}

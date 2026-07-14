@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:ООО «ВЕСТА-ТРАНС-СЕРВИС»:receivables_amount:2026:27",
-  "detector": "receivables_alert",
-  "entity_id": "ООО «ВЕСТА-ТРАНС-СЕРВИС»",
-  "metric_name": "receivables_amount",
-  "priority": "info",
-  "sent_at": "2026-06-29T19:10:40.798419+00:00",
-  "title": "Задолженность: ООО «ВЕСТА-ТРАНС-СЕРВИС»"
-}

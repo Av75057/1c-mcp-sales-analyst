@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:Махвиц Сергей:receivables_amount:2026:27",
-  "detector": "receivables_alert",
-  "entity_id": "Махвиц Сергей",
-  "metric_name": "receivables_amount",
-  "priority": "critical",
-  "sent_at": "2026-07-04T16:52:12.043235+00:00",
-  "title": "Задолженность: Махвиц Сергей"
-}

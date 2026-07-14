@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Уровень лазерный:stock_days:2026:27",
-  "detector": "stock_shortage",
-  "entity_id": "Уровень лазерный",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-07-03T19:37:39.528203+00:00",
-  "title": "Товар заканчивается: Уровень лазерный"
-}

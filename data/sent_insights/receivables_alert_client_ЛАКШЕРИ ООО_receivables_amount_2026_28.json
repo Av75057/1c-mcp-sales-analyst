@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:ЛАКШЕРИ ООО:receivables_amount:2026:28",
-  "detector": "receivables_alert",
-  "entity_id": "ЛАКШЕРИ ООО",
-  "metric_name": "receivables_amount",
-  "priority": "info",
-  "sent_at": "2026-07-08T18:39:00.863826+00:00",
-  "title": "Задолженность: ЛАКШЕРИ ООО"
-}

@@ -17,6 +17,8 @@ logs/
 *.log
 src/auth/users.json
 data/*.db
+data/sent_insights/
+data/search_queries.jsonl
 htmlcov/
 .coverage
 .coverage.*

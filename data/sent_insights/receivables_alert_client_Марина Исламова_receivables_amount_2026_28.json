@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:Марина Исламова:receivables_amount:2026:28",
-  "detector": "receivables_alert",
-  "entity_id": "Марина Исламова",
-  "metric_name": "receivables_amount",
-  "priority": "info",
-  "sent_at": "2026-07-08T18:39:00.865222+00:00",
-  "title": "Задолженность: Марина Исламова"
-}

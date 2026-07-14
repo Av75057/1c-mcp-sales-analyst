@@ -1,9 +1,0 @@
-{
-  "dedup_key": "stock_shortage:nomenclature:Ведро 10л:stock_days:2026:27",
-  "detector": "stock_shortage",
-  "entity_id": "Ведро 10л",
-  "metric_name": "stock_days",
-  "priority": "warning",
-  "sent_at": "2026-07-03T19:37:39.527914+00:00",
-  "title": "Товар заканчивается: Ведро 10л"
-}

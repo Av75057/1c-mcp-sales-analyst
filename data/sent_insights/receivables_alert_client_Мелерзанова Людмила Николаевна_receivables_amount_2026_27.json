@@ -1,9 +1,0 @@
-{
-  "dedup_key": "receivables_alert:client:Мелерзанова Людмила Николаевна:receivables_amount:2026:27",
-  "detector": "receivables_alert",
-  "entity_id": "Мелерзанова Людмила Николаевна",
-  "metric_name": "receivables_amount",
-  "priority": "info",
-  "sent_at": "2026-06-29T19:10:40.798277+00:00",
-  "title": "Задолженность: Мелерзанова Людмила Николаевна"
-}
