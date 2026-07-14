@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grace:knowledge-graph xmlns:grace="https://opencode.ai/grace/knowledge-graph/v1"
+  project="1c-mcp-sales-analyst"
+  description="Граф зависимостей: объекты 1С → HTTP-эндпоинты → MCP-инструменты → Python-модули">
+
+  <!-- ============================================================ -->
+  <!-- Объекты метаданных 1С -->
+  <!-- ============================================================ -->
+
+  <grace:entity id="Catalog.Номенклатура" type="Catalog" description="Товары и услуги">
+    <grace:fields>
+      <grace:field name="Наименование" type="String" length="100" />
+      <grace:field name="Код" type="String" length="25" />
+      <grace:field name="Артикул" type="String" length="25" />
+      <grace:field name="ТипНоменклатуры" type="Enum" />
+      <grace:field name="ЕдиницаИзмерения" type="CatalogRef.ЕдиницыИзмерения" />
+      <grace:field name="Цена" type="Number" precision="10" scale="2" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/nomenclature/search</grace:endpoint>
+      <grace:tool>list_nomenclature</grace:tool>
+      <grace:tool>get_stock</grace:tool>
+      <grace:tool>get_sales</grace:tool>
+      <grace:tool>forecast_sales</grace:tool>
+      <grace:tool>forecast_stockout</grace:tool>
+      <grace:tool>get_sales_documents</grace:tool>
+      <grace:tool>simulate_scenario</grace:tool>
+      <grace:tool>abc_xyz_analysis</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="Catalog.Контрагенты" type="Catalog" description="Контрагенты (клиенты и поставщики)">
+    <grace:fields>
+      <grace:field name="Наименование" type="String" length="100" />
+      <grace:field name="ИНН" type="String" length="12" />
+      <grace:field name="КПП" type="String" length="9" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:tool>get_receivables</grace:tool>
+      <grace:tool>get_sales</grace:tool>
+      <grace:tool>get_sales_documents</grace:tool>
+      <grace:tool>abc_xyz_analysis</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="Catalog.Склады" type="Catalog" description="Места хранения">
+    <grace:fields>
+      <grace:field name="Наименование" type="String" length="50" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:tool>get_stock</grace:tool>
+      <grace:tool>get_sales</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="Catalog.Пользователи" type="Catalog" description="Пользователи / менеджеры">
+    <grace:fields>
+      <grace:field name="Наименование" type="String" length="100" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:tool>get_sales_by_manager</grace:tool>
+      <grace:tool>get_sales</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="AccumulationRegister.Продажи" type="AccumulationRegister" description="Обороты продаж">
+    <grace:fields>
+      <grace:field name="Период" type="DateTime" />
+      <grace:field name="Номенклатура" type="CatalogRef.Номенклатура" />
+      <grace:field name="Контрагент" type="CatalogRef.Контрагенты" />
+      <grace:field name="Менеджер" type="CatalogRef.Пользователи" />
+      <grace:field name="Количество" type="Number" precision="15" scale="3" />
+      <grace:field name="Сумма" type="Number" precision="15" scale="2" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/sales</grace:endpoint>
+      <grace:endpoint>/sales/by_manager</grace:endpoint>
+      <grace:endpoint>/sales/summary</grace:endpoint>
+      <grace:endpoint>/sales/by-product</grace:endpoint>
+      <grace:endpoint>/customers/top</grace:endpoint>
+      <grace:endpoint>/sales/slow-moving</grace:endpoint>
+      <grace:endpoint>/sales/with-docs</grace:endpoint>
+      <grace:endpoint>/itemmovement</grace:endpoint>
+      <grace:tool>get_sales</grace:tool>
+      <grace:tool>get_sales_by_manager</grace:tool>
+      <grace:tool>get_analytics_context</grace:tool>
+      <grace:tool>get_sales_documents</grace:tool>
+      <grace:tool>forecast_sales</grace:tool>
+      <grace:tool>forecast_stockout</grace:tool>
+      <grace:tool>abc_xyz_analysis</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="AccumulationRegister.ЗапасыНаСкладах" type="AccumulationRegister" description="Остатки товаров">
+    <grace:fields>
+      <grace:field name="Номенклатура" type="CatalogRef.Номенклатура" />
+      <grace:field name="Склад" type="CatalogRef.Склады" />
+      <grace:field name="КоличествоОстаток" type="Number" precision="15" scale="3" />
+      <grace:field name="СуммаОстаток" type="Number" precision="15" scale="2" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/stock</grace:endpoint>
+      <grace:endpoint>/inventory/stock</grace:endpoint>
+      <grace:tool>get_stock</grace:tool>
+      <grace:tool>get_analytics_context</grace:tool>
+      <grace:tool>forecast_stockout</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="AccumulationRegister.РасчетыСПокупателями" type="AccumulationRegister" description="Взаиморасчеты с клиентами">
+    <grace:fields>
+      <grace:field name="Контрагент" type="CatalogRef.Контрагенты" />
+      <grace:field name="Сумма" type="Number" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/receivables</grace:endpoint>
+      <grace:tool>get_receivables</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="AccumulationRegister.Закупки" type="AccumulationRegister" description="Обороты закупок">
+    <grace:fields>
+      <grace:field name="Период" type="DateTime" />
+      <grace:field name="Номенклатура" type="CatalogRef.Номенклатура" />
+      <grace:field name="Контрагент" type="CatalogRef.Контрагенты" />
+      <grace:field name="Количество" type="Number" />
+      <grace:field name="Сумма" type="Number" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/purchases</grace:endpoint>
+      <grace:tool>get_purchases</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="InformationRegister.ЦеныНоменклатуры" type="InformationRegister" description="История цен">
+    <grace:fields>
+      <grace:field name="Номенклатура" type="CatalogRef.Номенклатура" />
+      <grace:field name="Цена" type="Number" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/pricehistory</grace:endpoint>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="Document.РеализацияТоваровУслуг" type="Document" description="Документы продаж">
+    <grace:fields>
+      <grace:field name="Номер" type="String" />
+      <grace:field name="Дата" type="DateTime" />
+      <grace:field name="Контрагент" type="CatalogRef.Контрагенты" />
+      <grace:field name="Сумма" type="Number" />
+    </grace:fields>
+    <grace:used-by>
+      <grace:endpoint>/documents/sales</grace:endpoint>
+      <grace:endpoint>/sales/with-docs</grace:endpoint>
+      <grace:tool>get_sales_documents</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <!-- ============================================================ -->
+  <!-- HTTP-эндпоинты 1С -->
+  <!-- ============================================================ -->
+
+  <grace:entity id="batch_endpoint" type="endpoint" description="POST /hs/api/v1/batch — групповое выполнение запросов">
+    <grace:bsl>batch_endpoint.bsl</grace:bsl>
+    <grace:used-by>
+      <grace:tool>get_analytics_context</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <grace:entity id="execute_query_endpoint" type="endpoint" description="POST /hs/query/execute — произвольный SELECT">
+    <grace:bsl>execute_query.bsl</grace:bsl>
+    <grace:note>read-only guard: запрещены ИЗМЕНИТЬ/ДОБАВИТЬ/УДАЛИТЬ/ПРОВЕСТИ/ЗАПИСАТЬ</grace:note>
+  </grace:entity>
+
+  <grace:entity id="sales_aggregated" type="endpoint" description="Агрегированные запросы (summary, by-product, customers/top, inventory/stock, slow-moving)">
+    <grace:bsl>sales_aggregated.bsl</grace:bsl>
+    <grace:note>Возвращает только агрегированные данные для batch-эндпоинта</grace:note>
+  </grace:entity>
+
+  <grace:entity id="materialized_view" type="endpoint" description="Материализованная витрина продаж по дням">
+    <grace:bsl>materialized_view_sales_daily.bsl</grace:bsl>
+    <grace:note>Регистр сведений ВитринаПродажПоДням, обновление каждые 15 мин</grace:note>
+    <grace:used-by>
+      <grace:tool>forecast_sales</grace:tool>
+      <grace:tool>abc_xyz_analysis</grace:tool>
+    </grace:used-by>
+  </grace:entity>
+
+  <!-- ============================================================ -->
+  <!-- Python-модули (слои архитектуры) -->
+  <!-- ============================================================ -->
+
+  <grace:layer id="transport" description="MCP транспорт">
+    <grace:module>src/server.py</grace:module>
+    <grace:module>src/proxy_server.py</grace:module>
+    <grace:depends-on>src/mcp/tools.py</grace:depends-on>
+  </grace:layer>
+
+  <grace:layer id="tools" description="Регистрация и диспетчеризация инструментов">
+    <grace:module>src/tools.py</grace:module>
+    <grace:module>src/mcp/tools.py</grace:module>
+    <grace:module>src/mcp/documents_tool.py</grace:module>
+    <grace:module>src/mcp/query_validator.py</grace:module>
+    <grace:module>src/whatif/mcp/tools.py</grace:module>
+    <grace:depends-on>clients, charts, analysis, forecasting, whatif, metadata</grace:depends-on>
+  </grace:layer>
+
+  <grace:layer id="clients" description="Клиенты 1С HTTP API">
+    <grace:module>src/clients/c1_client.py</grace:module>
+    <grace:module>src/clients/batch_client.py</grace:module>
+    <grace:module>src/clients/mock_c1_client.py</grace:module>
+    <grace:depends-on>src/config.py, src/resilience/circuit_breaker.py</grace:depends-on>
+  </grace:layer>
+
+  <grace:layer id="analytics" description="Аналитические модули">
+    <grace:module>src/analysis/abc_xyz.py</grace:module>
+    <grace:module>src/forecasting/tool.py</grace:module>
+    <grace:module>src/whatif/engine/simulator.py</grace:module>
+    <grace:module>src/whatif/scenarios/price_change.py</grace:module>
+    <grace:module>src/whatif/scenarios/promotion.py</grace:module>
+    <grace:module>src/whatif/scenarios/purchase_change.py</grace:module>
+    <grace:module>src/whatif/scenarios/employee_departure.py</grace:module>
+    <grace:depends-on>pandas, numpy, scipy, statsmodels, prophet, scikit-learn</grace:depends-on>
+  </grace:layer>
+
+  <grace:layer id="metadata" description="Метаданные 1С">
+    <grace:module>src/metadata/service.py</grace:module>
+    <grace:module>src/metadata/routes.py</grace:module>
+  </grace:layer>
+
+  <grace:layer id="insights" description="Автоматические инсайты и уведомления">
+    <grace:module>src/insights/engine.py</grace:module>
+    <grace:module>src/insights/detectors/sales_anomaly.py</grace:module>
+    <grace:module>src/insights/detectors/stock_shortage.py</grace:module>
+    <grace:module>src/insights/detectors/receivables_alert.py</grace:module>
+    <grace:module>src/insights/detectors/sales_growth.py</grace:module>
+    <grace:module>src/insights/detectors/inactive_clients.py</grace:module>
+    <grace:module>src/insights/interpreter/llm_interpreter.py</grace:module>
+    <grace:module>src/insights/delivery/telegram.py</grace:module>
+    <grace:depends-on>src/clients/c1_client.py, openai, pandas</grace:depends-on>
+  </grace:layer>
+
+  <grace:layer id="guardrails" description="Безопасность и проверки">
+    <grace:module>src/guardrails/injection_detector.py</grace:module>
+    <grace:module>src/guardrails/number_verifier.py</grace:module>
+    <grace:module>src/security/readonly_guard.py</grace:module>
+  </grace:layer>
+
+  <grace:layer id="infra" description="Инфраструктура сервера">
+    <grace:module>src/config.py</grace:module>
+    <grace:module>src/logger.py</grace:module>
+    <grace:module>src/cache.py</grace:module>
+    <grace:module>src/server.py</grace:module>
+    <grace:module>src/health/checks.py</grace:module>
+    <grace:module>src/resilience/circuit_breaker.py</grace:module>
+    <grace:module>src/observability/metrics.py</grace:module>
+    <grace:module>src/observability/logging_setup.py</grace:module>
+    <grace:module>src/auth/service.py</grace:module>
+    <grace:module>src/auth/middleware.py</grace:module>
+  </grace:layer>
+
+  <!-- ============================================================ -->
+  <!-- Сводные связи: инструмент → какие объекты 1С он читает -->
+  <!-- ============================================================ -->
+
+  <grace:edge from="get_stock" to="AccumulationRegister.ЗапасыНаСкладах" type="reads" />
+  <grace:edge from="get_stock" to="Catalog.Номенклатура" type="reads" />
+  <grace:edge from="get_stock" to="Catalog.Склады" type="reads" />
+
+  <grace:edge from="get_sales" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="get_sales" to="Catalog.Номенклатура" type="reads" />
+  <grace:edge from="get_sales" to="Catalog.Контрагенты" type="reads" />
+  <grace:edge from="get_sales" to="Catalog.Пользователи" type="reads" />
+
+  <grace:edge from="get_sales_by_manager" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="get_sales_by_manager" to="Catalog.Пользователи" type="reads" />
+
+  <grace:edge from="get_receivables" to="AccumulationRegister.РасчетыСПокупателями" type="reads" />
+  <grace:edge from="get_receivables" to="Catalog.Контрагенты" type="reads" />
+
+  <grace:edge from="get_purchases" to="AccumulationRegister.Закупки" type="reads" />
+  <grace:edge from="get_purchases" to="Catalog.Номенклатура" type="reads" />
+  <grace:edge from="get_purchases" to="Catalog.Контрагенты" type="reads" />
+
+  <grace:edge from="list_nomenclature" to="Catalog.Номенклатура" type="reads" />
+
+  <grace:edge from="get_analytics_context" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="get_analytics_context" to="AccumulationRegister.ЗапасыНаСкладах" type="reads" />
+
+  <grace:edge from="get_sales_documents" to="Document.РеализацияТоваровУслуг" type="reads" />
+  <grace:edge from="get_sales_documents" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="get_sales_documents" to="Catalog.Контрагенты" type="reads" />
+
+  <grace:edge from="forecast_sales" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="forecast_sales" to="Catalog.Номенклатура" type="reads" />
+
+  <grace:edge from="forecast_stockout" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="forecast_stockout" to="AccumulationRegister.ЗапасыНаСкладах" type="reads" />
+  <grace:edge from="forecast_stockout" to="Catalog.Номенклатура" type="reads" />
+
+  <grace:edge from="abc_xyz_analysis" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="abc_xyz_analysis" to="Catalog.Номенклатура" type="reads" />
+  <grace:edge from="abc_xyz_analysis" to="Catalog.Контрагенты" type="reads" />
+
+  <grace:edge from="simulate_scenario" to="AccumulationRegister.Продажи" type="reads" />
+  <grace:edge from="simulate_scenario" to="Catalog.Номенклатура" type="reads" />
+
+  <grace:edge from="config" to="MetadataService.get_config" type="reads" />
+  <grace:edge from="describe" to="MetadataService.describe" type="reads" />
+  <grace:edge from="get_structure" to="MetadataService.get_structure" type="reads" />
+
+</grace:knowledge-graph>

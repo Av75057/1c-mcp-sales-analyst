@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grace:requirements xmlns:grace="https://opencode.ai/grace/requirements/v1"
+  project="1c-mcp-sales-analyst"
+  version="0.1.0"
+  description="MCP-сервер аналитики продаж 1С:УНФ">
+
+  <!-- ============================================================ -->
+  <!-- Глобальные требования -->
+  <!-- ============================================================ -->
+  <grace:global>
+    <grace:language python="3.11" />
+    <grace:framework>mcp&gt;=1.0.0</grace:framework>
+    <grace:transport>stdio</grace:transport>
+    <grace:pattern>functional-core, immutable-tools</grace:pattern>
+    <grace:errors>все ошибки возвращаются в CallToolResult.isError=true с TextContent</grace:errors>
+    <grace:i18n>русский — описание, входы, выходы, сообщения об ошибках</grace:i18n>
+  </grace:global>
+
+  <!-- ============================================================ -->
+  <!-- Контракты MCP инструментов -->
+  <!-- ============================================================ -->
+
+  <grace:contract id="get_stock" group="data">
+    <grace:description>Получить остатки товаров на складах</grace:description>
+    <grace:source>src/tools.py:get_stock_tool</grace:source>
+    <grace:transport>GET /hs/api/stock</grace:transport>
+    <grace:onec-object>РегистрНакопления.ЗапасыНаСкладах.Остатки</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="warehouse" type="string|null" desc="Название склада" example="Основной" />
+      <grace:field name="nomenclature" type="string|null" desc="Название номенклатуры" example="Кофе" />
+      <grace:field name="min_quantity" type="integer|null" desc="Минимальное количество" example="10" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="nomenclature" type="string" desc="Наименование товара" />
+      <grace:field name="warehouse" type="string" desc="Склад" />
+      <grace:field name="quantity" type="number" desc="Количество" />
+      <grace:field name="unit" type="string" desc="Единица измерения" example="шт" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+    <grace:cache-ttl seconds="30">CachedC1Client</grace:cache-ttl>
+    <grace:errors>
+      <grace:error code="C1_TIMEOUT">1С не отвечает</grace:error>
+      <grace:error code="CIRCUIT_OPEN">1С временно недоступна</grace:error>
+    </grace:errors>
+  </grace:contract>
+
+  <grace:contract id="get_sales" group="data">
+    <grace:description>Данные о продажах за период с фильтрацией</grace:description>
+    <grace:source>src/tools.py:get_sales_tool</grace:source>
+    <grace:transport>GET /hs/api/sales</grace:transport>
+    <grace:onec-object>РегистрНакопления.Продажи</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string|null" desc="Начальная дата YYYY-MM-DD" example="2026-01-01" />
+      <grace:field name="date_to" type="string|null" desc="Конечная дата YYYY-MM-DD" example="2026-06-30" />
+      <grace:field name="manager" type="string|null" desc="ФИО менеджера" example="Иванов Иван" />
+      <grace:field name="warehouse" type="string|null" desc="Название склада" example="Основной" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="date" type="string" desc="Дата продажи" />
+      <grace:field name="nomenclature" type="string" desc="Товар" />
+      <grace:field name="quantity" type="number" desc="Количество" />
+      <grace:field name="sum" type="number" desc="Сумма" />
+      <grace:field name="manager" type="string" desc="Менеджер" />
+      <grace:field name="client" type="string" desc="Клиент" />
+      <grace:field name="warehouse" type="string" desc="Склад" />
+      <grace:field name="document_number" type="string" desc="Номер документа" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+    <grace:normalization>_normalize_sales — имена полей item→nomenclature, cost→sum, counterparty→client</grace:normalization>
+  </grace:contract>
+
+  <grace:contract id="get_sales_by_manager" group="data">
+    <grace:description>Продажи в разрезе менеджеров (агрегированные)</grace:description>
+    <grace:source>src/tools.py:get_sales_by_manager_tool</grace:source>
+    <grace:transport>GET /hs/api/sales/by_manager</grace:transport>
+    <grace:onec-object>РегистрНакопления.Продажи</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string|null" desc="Начальная дата YYYY-MM-DD" />
+      <grace:field name="date_to" type="string|null" desc="Конечная дата YYYY-MM-DD" />
+      <grace:field name="manager" type="string|null" desc="ФИО менеджера" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="manager" type="string" desc="ФИО менеджера" />
+      <grace:field name="total_sum" type="number" desc="Сумма продаж" />
+      <grace:field name="total_quantity" type="number" desc="Количество" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="get_receivables" group="data">
+    <grace:description>Задолженность клиентов</grace:description>
+    <grace:source>src/tools.py:get_receivables_tool</grace:source>
+    <grace:transport>GET /hs/api/receivables</grace:transport>
+    <grace:onec-object>РегистрНакопления.РасчетыСПокупателями</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="min_amount" type="number|null" desc="Минимальная сумма долга" />
+      <grace:field name="date_from" type="string|null" desc="Начальная дата YYYY-MM-DD" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="client" type="string" desc="Клиент" />
+      <grace:field name="amount" type="number" desc="Сумма долга" />
+      <grace:field name="overdue_days" type="number" desc="Дней просрочки" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="get_purchases" group="data">
+    <grace:description>Закупки товаров/услуг у поставщиков</grace:description>
+    <grace:source>src/tools.py:get_purchases_tool</grace:source>
+    <grace:transport>GET /hs/api/purchases</grace:transport>
+    <grace:onec-object>РегистрНакопления.Закупки</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string|null" desc="Начальная дата YYYY-MM-DD" />
+      <grace:field name="date_to" type="string|null" desc="Конечная дата YYYY-MM-DD" />
+      <grace:field name="item" type="string|null" desc="Номенклатура" />
+      <grace:field name="supplier" type="string|null" desc="Поставщик" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="date" type="string" desc="Дата" />
+      <grace:field name="nomenclature" type="string" desc="Номенклатура" />
+      <grace:field name="quantity" type="number" desc="Количество" />
+      <grace:field name="sum" type="number" desc="Сумма" />
+      <grace:field name="supplier" type="string" desc="Поставщик" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="list_nomenclature" group="data">
+    <grace:description>Поиск номенклатуры по названию</grace:description>
+    <grace:source>src/tools.py:list_nomenclature_tool</grace:source>
+    <grace:transport>POST /hs/api/nomenclature/search</grace:transport>
+    <grace:onec-object>Справочник.Номенклатура</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="query" type="string" required="true" desc="Поисковый запрос" example="Кофе" />
+      <grace:field name="limit" type="integer|null" desc="Лимит результатов" example="10" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="ref" type="string" desc="UUID ссылки" />
+      <grace:field name="name" type="string" desc="Наименование" />
+      <grace:field name="unit" type="string" desc="Единица измерения" />
+      <grace:field name="item_type" type="string" desc="Тип номенклатуры" />
+      <grace:field name="article" type="string" desc="Артикул" />
+      <grace:field name="code" type="string" desc="Код" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+    <grace:known-issue>кириллица может не декодироваться на стороне 1С → fallback с логом</grace:known-issue>
+  </grace:contract>
+
+  <grace:contract id="get_analytics_context" group="analytics">
+    <grace:description>Полный контекст для AI-аналитики одним batch-запросом</grace:description>
+    <grace:source>src/tools.py:get_analytics_context_tool</grace:source>
+    <grace:transport>POST /hs/api/v1/batch (BatchC1Client)</grace:transport>
+    <grace:onec-object>РегистрНакопления.Продажи + РегистрНакопления.ЗапасыНаСкладах</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string" required="true" desc="Начальная дата YYYY-MM-DD" />
+      <grace:field name="date_to" type="string" required="true" desc="Конечная дата YYYY-MM-DD" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="sales" type="array" desc="Продажи (лимит 20)" />
+      <grace:field name="sales_by_manager" type="array" desc="Продажи по менеджерам" />
+      <grace:field name="stock" type="array" desc="Остатки (лимит 10)" />
+      <grace:field name="execution_time_ms" type="number" desc="Время выполнения" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, batch-запрос</grace:side-effects>
+    <grace:fallback>при 404 batch → последовательные запросы через C1Client</grace:fallback>
+  </grace:contract>
+
+  <grace:contract id="get_sales_documents" group="data">
+    <grace:description>Список документов реализации с пагинацией</grace:description>
+    <grace:source>src/tools.py:get_sales_documents_tool</grace:source>
+    <grace:transport>GET /hs/api/v1/documents/sales</grace:transport>
+    <grace:onec-object>Документ.РеализацияТоваровУслуг</grace:onec-object>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string" required="true" desc="Дата начала YYYY-MM-DD" />
+      <grace:field name="date_to" type="string" required="true" desc="Дата окончания YYYY-MM-DD" />
+      <grace:field name="counterparty" type="string|null" desc="Фильтр по контрагенту" />
+      <grace:field name="sum_min" type="number|null" desc="Мин. сумма" />
+      <grace:field name="sum_max" type="number|null" desc="Макс. сумма" />
+      <grace:field name="posted_only" type="boolean" default="true" desc="Только проведённые" />
+      <grace:field name="sort_by" type="string" enum="date,sum,number" default="date" />
+      <grace:field name="sort_order" type="string" enum="asc,desc" default="desc" />
+      <grace:field name="page" type="integer" default="1" />
+      <grace:field name="page_size" type="integer" default="50" max="500" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="documents" type="array" desc="Список документов" />
+      <grace:field name="pagination" type="object" desc="page, page_size, total_count, total_pages" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <!-- ============================================================ -->
+  <!-- Аналитические инструменты -->
+  <!-- ============================================================ -->
+
+  <grace:contract id="forecast_sales" group="analytics">
+    <grace:description>Прогноз продаж товара на N дней</grace:description>
+    <grace:source>src/forecasting/tool.py:forecast_sales_tool</grace:source>
+    <grace:methods>auto|prophet|holt_winters|linear</grace:methods>
+
+    <grace:inputs>
+      <grace:field name="nomenclature" type="string" required="true" desc="Название товара" />
+      <grace:field name="days" type="integer" default="30" desc="Горизонт прогноза" />
+      <grace:field name="method" type="string" default="auto" enum="auto,prophet,holt_winters,linear" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="forecast" type="array" desc="Прогнозные значения по дням" />
+      <grace:field name="method_used" type="string" desc="Выбранный метод" />
+      <grace:field name="metrics" type="object" desc="MAE, RMSE, MAPE" />
+      <grace:field name="recommendation" type="string" desc="Торговая рекомендация" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, вычислительный</grace:side-effects>
+    <grace:dependencies>prophet, statsmodels, scikit-learn, pandas, numpy</grace:dependencies>
+  </grace:contract>
+
+  <grace:contract id="forecast_stockout" group="analytics">
+    <grace:description>Прогноз окончания товаров на складе</grace:description>
+    <grace:source>src/forecasting/tool.py:forecast_stockout_tool</grace:source>
+
+    <grace:inputs>
+      <grace:field name="lead_time_days" type="integer" default="7" desc="Время поставки в днях" />
+      <grace:field name="safety_stock_days" type="integer" default="3" desc="Страховой запас" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="at_risk" type="array" desc="Товары, которые закончатся" />
+      <grace:field name="within_lead_time" type="array" desc="Риск до следующей поставки" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, вычислительный</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="compare_forecasts" group="analytics">
+    <grace:description>Сравнение методов прогнозирования</grace:description>
+    <grace:source>src/forecasting/tool.py:compare_forecasts_tool</grace:source>
+
+    <grace:inputs>
+      <grace:field name="nomenclature" type="string" required="true" />
+      <grace:field name="test_days" type="integer" default="14" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="results" type="array" desc="Метрики по каждому методу" />
+      <grace:field name="best_method" type="string" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="abc_xyz_analysis" group="analytics">
+    <grace:description>ABC/XYZ классификация товаров/клиентов/менеджеров</grace:description>
+    <grace:source>src/analysis/tool.py:abc_xyz_analysis_tool</grace:source>
+
+    <grace:inputs>
+      <grace:field name="date_from" type="string" required="true" desc="YYYY-MM-DD" />
+      <grace:field name="date_to" type="string" required="true" desc="YYYY-MM-DD" />
+      <grace:field name="group_by" type="string" default="nomenclature" enum="nomenclature,client,manager" />
+      <grace:field name="abc_thresholds" type="array|null" default="[70,90,100]" />
+      <grace:field name="xyz_thresholds" type="array|null" default="[10,25,100]" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="classification" type="array" desc="Элементы с классами A/B/C и X/Y/Z" />
+      <grace:field name="matrix" type="object" desc="Распределение по 9 категориям AX-AY-AZ..." />
+      <grace:field name="recommendations" type="array" desc="Стратегии для каждой категории" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, вычислительный</grace:side-effects>
+    <grace:dependencies>numpy, scikit-learn</grace:dependencies>
+  </grace:contract>
+
+  <!-- ============================================================ -->
+  <!-- What-if сценарии -->
+  <!-- ============================================================ -->
+
+  <grace:contract id="simulate_scenario" group="whatif">
+    <grace:description>Симуляция бизнес-сценария «Что если»</grace:description>
+    <grace:source>src/whatif/mcp/tools.py:simulate_scenario_tool</grace:source>
+
+    <grace:inputs>
+      <grace:field name="scenario_type" type="string" required="true" enum="price_change,promotion,purchase_change,employee_departure" />
+      <grace:field name="entity_name" type="string" desc="Товар/категория/менеджер" />
+      <grace:field name="change_percent" type="number" desc="Изменение цены % (price_change)" />
+      <grace:field name="discount_percent" type="number" desc="Скидка % (promotion)" />
+      <grace:field name="period_days" type="integer" default="30" />
+      <grace:field name="promotion_days" type="integer" desc="Длительность акции" />
+      <grace:field name="order_size_change_percent" type="number" desc="Изменение заказа % (purchase_change)" />
+      <grace:field name="employee_name" type="string" desc="Имя сотрудника (employee_departure)" />
+      <grace:field name="has_replacement" type="boolean" default="true" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="success" type="boolean" />
+      <grace:field name="use_real_data" type="boolean" />
+      <grace:field name="baseline_metrics" type="object" desc="Базовые показатели" />
+      <grace:field name="projected_metrics" type="object" desc="Прогнозные показатели" />
+      <grace:field name="delta_percent" type="object" desc="Изменения в %" />
+      <grace:field name="risks" type="array" />
+      <grace:field name="recommendations" type="array" />
+      <grace:field name="confidence" type="number" />
+      <grace:field name="chart_params" type="object|null" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, вычислительный; генерирует тестовые данные при use_mock_data=true</grace:side-effects>
+    <grace:dependencies>numpy, pandas, scipy, statsmodels</grace:dependencies>
+  </grace:contract>
+
+  <grace:contract id="list_whatif_scenarios" group="whatif">
+    <grace:description>Список доступных сценариев «Что если»</grace:description>
+    <grace:source>src/whatif/mcp/tools.py:list_whatif_scenarios_tool</grace:source>
+    <grace:inputs />
+    <grace:outputs>
+      <grace:field name="scenarios" type="array" />
+      <grace:field name="total" type="integer" />
+    </grace:outputs>
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <!-- ============================================================ -->
+  <!-- Визуализация -->
+  <!-- ============================================================ -->
+
+  <grace:contract id="create_chart" group="viz">
+    <grace:description>Построить график (Plotly)</grace:description>
+    <grace:source>src/charts/tool.py:create_chart_tool</grace:source>
+
+    <grace:inputs>
+      <grace:field name="chart_type" type="string" required="true" enum="line,bar,hbar,pie,area" />
+      <grace:field name="title" type="string" required="true" />
+      <grace:field name="x_data" type="array" required="true" />
+      <grace:field name="y_data" type="array" required="true" />
+      <grace:field name="x_label" type="string" />
+      <grace:field name="y_label" type="string" />
+      <grace:field name="series_names" type="array" />
+      <grace:field name="color_scheme" type="string" enum="default,corporate,vibrant" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="chart_html" type="string" desc="HTML-код графика" />
+      <grace:field name="chart_base64" type="string" desc="PNG изображение base64" />
+    </grace:outputs>
+
+    <grace:side-effects>read-only, генерирует HTML/PNG</grace:side-effects>
+    <grace:dependencies>plotly, kaleido (для PNG)</grace:dependencies>
+  </grace:contract>
+
+  <!-- ============================================================ -->
+  <!-- Метаданные 1С -->
+  <!-- ============================================================ -->
+
+  <grace:contract id="config" group="metadata">
+    <grace:description>Паспорт базы 1С</grace:description>
+    <grace:source>src/tools.py:config_tool</grace:source>
+    <grace:transport>GET /hs/metadata/config</grace:transport>
+
+    <grace:inputs />
+    <grace:outputs>
+      <grace:field name="name" type="string" desc="Имя базы" />
+      <grace:field name="configuration" type="string" desc="Конфигурация (УНФ/УТ/БП)" />
+      <grace:field name="version" type="string" />
+      <grace:field name="server" type="string" />
+    </grace:outputs>
+    <grace:side-effects>read-only, cache TTL=3600</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="describe" group="metadata">
+    <grace:description>Список объектов метаданных 1С</grace:description>
+    <grace:source>src/tools.py:describe_tool</grace:source>
+    <grace:transport>GET /hs/metadata/describe</grace:transport>
+
+    <grace:inputs>
+      <grace:field name="object_type" type="string|null" desc="Catalog|Document|AccumulationRegister|InformationRegister" />
+      <grace:field name="search" type="string|null" desc="Поиск по имени" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="objects" type="array" />
+      <grace:field name="total" type="integer" />
+    </grace:outputs>
+    <grace:side-effects>read-only</grace:side-effects>
+  </grace:contract>
+
+  <grace:contract id="get_structure" group="metadata">
+    <grace:description>Структура объекта метаданных: поля, типы, синонимы</grace:description>
+    <grace:source>src/tools.py:get_structure_tool</grace:source>
+    <grace:transport>GET /hs/metadata/structure</grace:transport>
+
+    <grace:inputs>
+      <grace:field name="object_name" type="string" required="true" desc="Имя объекта, напр. Номенклатура, Продажи" />
+    </grace:inputs>
+
+    <grace:outputs>
+      <grace:field name="name" type="string" />
+      <grace:field name="type" type="string" />
+      <grace:field name="fields" type="array" desc="Поля с именем, типом, длиной" />
+    </grace:outputs>
+    <grace:side-effects>read-only, cache TTL=3600</grace:side-effects>
+  </grace:contract>
+
+</grace:requirements>

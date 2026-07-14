@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grace:development-plan xmlns:grace="https://opencode.ai/grace/development-plan/v1"
+  project="1c-mcp-sales-analyst"
+  version="0.1.0"
+  description="Модульные контракты и план разработки/рефакторинга">
+
+  <!-- ============================================================ -->
+  <!-- Модульные контракты (Module Contracts) -->
+  <!-- ============================================================ -->
+
+  <grace:module id="src/clients/c1_client.py" layer="clients">
+    <grace:description>HTTP-клиент для 1С:УНФ с Basic Auth, retry, circuit breaker, нормализацией данных</grace:description>
+    <grace:responsibility>
+      - HTTP-запросы к эндпоинтам 1С с таймаутами и retry
+      - Нормализация полей 1С → единый формат (item→nomenclature, и т.д.)
+      - Интеграция с CircuitBreaker (c1_cb)
+      - Метрики Prometheus (c1_requests_total, c1_request_duration_seconds, c1_errors_total)
+    </grace:responsibility>
+    <grace:contract>
+      <grace:method name="get_stock" params="warehouse,nomenclature,min_quantity" returns="list[dict]" />
+      <grace:method name="get_sales" params="date_from,date_to,manager,warehouse" returns="list[dict]" />
+      <grace:method name="get_sales_by_manager" params="date_from,date_to,manager" returns="list[dict]" />
+      <grace:method name="get_receivables" params="min_amount,date_from" returns="list[dict]" />
+      <grace:method name="get_purchases" params="date_from,date_to,item,supplier" returns="list[dict]" />
+      <grace:method name="list_nomenclature" params="query,limit" returns="list[dict]" />
+      <grace:method name="get_price_history" params="item,date_from,date_to,limit" returns="list[dict]" />
+      <grace:method name="get_purchase_orders" params="item,supplier,status" returns="list[dict]" />
+      <grace:method name="get_item_movement" params="item,date_from,date_to" returns="list[dict]" />
+      <grace:method name="ping" returns="bool" />
+    </grace:contract>
+    <grace:errors>
+      <grace:error>C1ClientError — базовое исключение</grace:error>
+      <grace:error>C1TimeoutError — таймаут</grace:error>
+      <grace:error>C1ConnectionError — недоступность 1С / circuit breaker open</grace:error>
+    </grace:errors>
+    <grace:testing>
+      <grace:test>tests/test_mock_client.py</grace:test>
+      <grace:test>tests/test_resilience.py</grace:test>
+    </grace:testing>
+  </grace:module>
+
+  <grace:module id="src/clients/batch_client.py" layer="clients">
+    <grace:description>Batch-клиент для группировки запросов к 1С в один HTTP-вызов</grace:description>
+    <grace:contract>
+      <grace:method name="execute_batch" params="requests,timeout" returns="dict results + total_execution_time_ms" />
+      <grace:method name="get_analytics_context" params="date_from,date_to" returns="dict: sales, sales_by_manager, stock" />
+      <grace:method name="get_sales_summary" params="date_from,date_to" returns="dict" />
+      <grace:method name="get_top_products" params="date_from,date_to,limit" returns="list" />
+      <grace:method name="get_top_customers" params="date_from,date_to,limit" returns="list" />
+    </grace:contract>
+    <grace:fallback>при 404/таймауте — последовательное выполнение через C1Client</grace:fallback>
+  </grace:module>
+
+  <grace:module id="src/tools.py" layer="tools">
+    <grace:description>Фабрика инструментов MCP — адаптеры между MCP-вызовами и клиентами/аналитикой</grace:description>
+    <grace:contract>
+      <grace:method name="get_client" returns="C1ClientProtocol" desc="Singleton CachedC1Client или MockC1Client" />
+      <grace:method name="get_stock_tool" params="warehouse,nomenclature,min_quantity" returns="list[dict]" />
+      <grace:method name="get_sales_tool" params="date_from,date_to,manager,warehouse" returns="list[dict]" />
+      <grace:method name="get_sales_by_manager_tool" params="date_from,date_to,manager" returns="list[dict]" />
+      <grace:method name="get_receivables_tool" params="min_amount,date_from" returns="list[dict]" />
+      <grace:method name="list_nomenclature_tool" params="query,limit" returns="list[dict]" />
+      <grace:method name="get_purchases_tool" params="date_from,date_to,item,supplier" returns="list[dict]" />
+      <grace:method name="create_chart_tool" params="chart_type,title,x_data,y_data,..." returns="dict" />
+      <grace:method name="simulate_scenario_tool" params="scenario_type,entity_name,..." returns="dict" />
+      <grace:method name="abc_xyz_analysis_tool" params="date_from,date_to,group_by,..." returns="dict" />
+      <grace:method name="forecast_sales_tool" params="nomenclature,days,method" returns="dict" />
+      <grace:method name="forecast_stockout_tool" params="lead_time_days,safety_stock_days" returns="dict" />
+      <grace:method name="compare_forecasts_tool" params="nomenclature,test_days" returns="dict" />
+      <grace:method name="get_sales_documents_tool" params="date_from,date_to,..." returns="dict" />
+      <grace:method name="config_tool" returns="dict" />
+      <grace:method name="describe_tool" params="object_type,search" returns="dict" />
+      <grace:method name="get_structure_tool" params="object_name" returns="dict" />
+    </grace:contract>
+    <grace:lock>C1ClientProtocol — синглтон на уровне модуля</grace:lock>
+  </grace:module>
+
+  <grace:module id="src/server.py" layer="transport">
+    <grace:description>MCP сервер (stdio транспорт) — регистрация инструментов и диспетчеризация вызовов</grace:description>
+    <grace:contract>
+      <grace:method name="list_tools" returns="ListToolsResult" desc="Регистрирует 7 базовых инструментов" />
+      <grace:method name="call_tool" params="name,arguments" returns="CallToolResult" desc="Диспетчеризация в tool_map" />
+    </grace:contract>
+    <grace:note>Не включает аналитические/визуализационные инструменты — они доступны через proxy_server.py</grace:note>
+  </grace:module>
+
+  <grace:module id="src/proxy_server.py" layer="transport">
+    <grace:description>OpenAI-совместимый HTTP-прокси для MCP tools + DeepSeek Chat Completions</grace:description>
+    <grace:contract>
+      <grace:endpoint>POST /v1/chat/completions — прокси к DeepSeek API с tool calling</grace:endpoint>
+      <grace:endpoint>GET /health — проверка работоспособности</grace:endpoint>
+      <grace:scheme>TOOLS_REGISTRY из src/mcp/tools.py</grace:scheme>
+    </grace:contract>
+  </grace:module>
+
+  <grace:module id="src/charts/engine.py" layer="analytics">
+    <grace:description>Построение графиков Plotly (line, bar, hbar, pie, area)</grace:description>
+    <grace:contract>
+      <grace:method name="create_chart_figure" params="chart_type,title,x_data,y_data,x_label,y_label,series_names,color_scheme" returns="plotly.graph_objects.Figure" />
+    </grace:contract>
+  </grace:module>
+
+  <grace:module id="src/analysis/abc_xyz.py" layer="analytics">
+    <grace:description>ABC/XYZ классификация: ABC по сумме, XYZ по коэффициенту вариации</grace:description>
+    <grace:contract>
+      <grace:method name="classify_abc" params="items,values,thresholds" returns="list[dict]" />
+      <grace:method name="classify_xyz" params="items,time_series,thresholds" returns="list[dict]" />
+      <grace:method name="build_matrix" params="abc_result,xyz_result" returns="dict" />
+    </grace:contract>
+  </grace:module>
+
+  <grace:module id="src/insights/" layer="insights">
+    <grace:description>Детекторы бизнес-инсайтов + LLM-интерпретация + Telegram-доставка</grace:description>
+    <grace:contract>
+      <grace:component>engine.py — ScanEngine: запуск детекторов, дедупликация, интерпретация</grace:component>
+      <grace:component>detectors/ — SalesAnomalyDetector, StockShortageDetector, ReceivablesAlertDetector, SalesGrowthDetector, InactiveClientsDetector</grace:component>
+      <grace:component>interpreter/llm_interpreter.py — LLM-интерпретация через DeepSeek</grace:component>
+      <grace:component>delivery/telegram.py — отправка в Telegram</grace:component>
+      <grace:component>deduplication/dedup_engine.py — защита от дублирования инсайтов</grace:component>
+    </grace:contract>
+  </grace:module>
+
+  <grace:module id="src/search/" layer="analytics">
+    <grace:description>Полнотекстовый поиск номенклатуры с FTS5, fuzzy matching, автодополнением и синонимами</grace:description>
+    <grace:contract>
+      <grace:method name="search" params="request:SearchRequest" returns="SearchResponse" />
+      <grace:method name="autocomplete" params="prefix,limit" returns="list" />
+      <grace:component>fts_cache.py — SQLite FTS5 кэш номенклатуры</grace:component>
+      <grace:component>synonyms.py — расширение запросов через файл синонимов</grace:component>
+    </grace:contract>
+  </grace:module>
+
+  <!-- ============================================================ -->
+  <!-- План рефакторинга / доработок -->
+  <!-- ============================================================ -->
+
+  <grace:milestone id="phase1" status="completed" description="Базовый MCP сервер с 7 инструментами и HTTP-прокси">
+    <grace:task status="done">src/server.py — list_tools + call_tool с 7 инструментами</grace:task>
+    <grace:task status="done">src/proxy_server.py — OpenAI-совместимый прокси с tool calling</grace:task>
+    <grace:task status="done">src/clients/c1_client.py — HTTP клиент с retry + circuit breaker</grace:task>
+    <grace:task status="done">src/clients/mock_c1_client.py — мок-данные для разработки</grace:task>
+  </grace:milestone>
+
+  <grace:milestone id="phase2" status="completed" description="Аналитика: ABC/XYZ, прогнозирование, графики, what-if">
+    <grace:task status="done">src/analysis/abc_xyz.py — классификация по выручке и стабильности</grace:task>
+    <grace:task status="done">src/forecasting/tool.py — Prophet/Holt-Winters/Linear прогнозы</grace:task>
+    <grace:task status="done">src/charts/engine.py — Plotly графики</grace:task>
+    <grace:task status="done">src/whatif/ — 4 сценария: price, promotion, purchase, employee</grace:task>
+  </grace:milestone>
+
+  <grace:milestone id="phase3" status="completed" description="Автоматические инсайты и Telegram-уведомления">
+    <grace:task status="done">src/insights/engine.py — ScanEngine с запуском детекторов</grace:task>
+    <grace:task status="done">src/insights/detectors/ — 5 детекторов аномалий</grace:task>
+    <grace:task status="done">src/insights/delivery/telegram.py — интеграция с Telegram</grace:task>
+  </grace:milestone>
+
+  <grace:milestone id="phase4" status="completed" description="Metadata API, batch-запросы, документы, nginx, CI/CD">
+    <grace:task status="done">1c_http_services/batch_endpoint.bsl — batch-эндпоинт</grace:task>
+    <grace:task status="done">1c_http_services/metadata_api.bsl — config/describe/structure</grace:task>
+    <grace:task status="done">1c_http_services/execute_query.bsl — произвольные SELECT-запросы</grace:task>
+    <grace:task status="done">1c_http_services/documents_sales.bsl — документы с пагинацией</grace:task>
+    <grace:task status="done">deploy/nginx.conf — обратный прокси</grace:task>
+    <grace:task status="done">.github/workflows/ — CI/CD</grace:task>
+  </grace:milestone>
+
+  <grace:milestone id="phase5" status="completed" description="Админ-панель, безопасность, observability, telegram dashboard">
+    <grace:task status="done">src/admin/ — пользователи, API-ключи, аудит, мониторинг</grace:task>
+    <grace:task status="done">src/auth/ — JWT, роли, middleware</grace:task>
+    <grace:task status="done">src/security/ — rate limit, CSP, readonly guard, шифрование</grace:task>
+    <grace:task status="done">src/observability/ — Prometheus метрики, structlog</grace:task>
+    <grace:task status="done">src/proactive/ — APScheduler с ежедневными отчетами</grace:task>
+  </grace:milestone>
+
+  <grace:milestone id="phase6" status="pending" description="GRACE-интеграция и семантическая разметка">
+    <grace:task status="done">docs/requirements.xml — контракты всех 19 MCP инструментов</grace:task>
+    <grace:task status="done">docs/knowledge-graph.xml — граф 10 объектов 1С → 19 инструментов</grace:task>
+    <grace:task status="done">docs/development-plan.xml — модульные контракты и план</grace:task>
+    <grace:task status="done">docs/verification-plan.xml — команды верификации</grace:task>
+    <grace:task status="pending">src/*.py — семантическая разметка START_BLOCK_ / END_BLOCK_</grace:task>
+    <grace:task status="pending">pre-commit hook — grace lint</grace:task>
+  </grace:milestone>
+
+</grace:development-plan>

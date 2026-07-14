@@ -1,3 +1,10 @@
+# START_MODULE_CONTRACT: batch_client
+# DESCRIPTION: Batch-клиент для группировки запросов к 1С в один HTTP-вызов
+# DEPENDENCIES: httpx, src.clients.c1_client
+# CONTRACTS: docs/requirements.xml#get_analytics_context
+# FALLBACK: sequential через C1Client при 404/timeout
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 import asyncio

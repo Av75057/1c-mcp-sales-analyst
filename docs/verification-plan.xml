@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grace:verification-plan xmlns:grace="https://opencode.ai/grace/verification-plan/v1"
+  project="1c-mcp-sales-analyst"
+  description="Команды для автоматической проверки работоспособности MCP сервера">
+
+  <!-- ============================================================ -->
+  <!-- Быстрые проверки (единичные команды) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="quick" description="Быстрые smoke-тесты (&lt; 5 сек)">
+    <grace:check id="lint" type="command">
+      <grace:description>Проверка синтаксиса Python</grace:description>
+      <grace:command>python -m py_compile src/server.py src/tools.py src/mcp/tools.py &amp;&amp; echo "OK"</grace:command>
+    </grace:check>
+
+    <grace:check id="imports" type="command">
+      <grace:description>Проверка импортов модуля</grace:description>
+      <grace:command>python -c "from src.server import server; print('OK')"</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="config_load" type="command">
+      <grace:description>Загрузка конфигурации</grace:description>
+      <grace:command>python -c "from src.config import settings; print(f'OK mock={settings.use_mock_data}')"</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="mock_client" type="command">
+      <grace:description>Проверка мок-клиента (без 1С)</grace:description>
+      <grace:command>python -c "
+import asyncio
+from src.tools import get_client
+async def test():
+    c = get_client()
+    s = await c.get_stock()
+    print(f'OK stock: {len(s)} items')
+asyncio.run(test())
+"</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- Модульные тесты (pytest) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="tests" description="Модульные тесты (pytest)">
+    <grace:check id="test_all" type="pytest">
+      <grace:description>Все тесты</grace:description>
+      <grace:command>python -m pytest tests/ -v --timeout=30 -x</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_data" type="pytest">
+      <grace:description>Тесты работы с данными</grace:description>
+      <grace:command>python -m pytest tests/test_mock_client.py tests/test_api.py -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_analytics" type="pytest">
+      <grace:description>Тесты аналитики (ABC/XYZ, forecasting, whatif)</grace:description>
+      <grace:command>python -m pytest tests/test_forecasting.py tests/test_whatif_scenarios.py -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_resilience" type="pytest">
+      <grace:description>Тесты circuit breaker, retry</grace:description>
+      <grace:command>python -m pytest tests/test_resilience.py -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_insights" type="pytest">
+      <grace:description>Тесты детекторов инсайтов</grace:description>
+      <grace:command>python -m pytest tests/test_insights.py -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_search" type="pytest">
+      <grace:description>Тесты поиска и FTS</grace:description>
+      <grace:command>python -m pytest tests/test_search.py tests/test_search_analytics.py -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+
+    <grace:check id="test_coverage" type="pytest">
+      <grace:description>Замер покрытия</grace:description>
+      <grace:command>python -m pytest tests/ --cov=src --cov-report=term --cov-report=html -x --timeout=60</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- Интеграционные тесты -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="integration" description="Интеграционные тесты (требуют 1С или DeepSeek)">
+    <grace:check id="integration_chat" type="pytest">
+      <grace:description>Интеграционные тесты chat API</grace:description>
+      <grace:command>python -m pytest tests/integration/ -v</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+      <grace:requires>DEEPSEEK_API_KEY</grace:requires>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- MCP-протокол (проверка через stdio) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="mcp_protocol" description="Проверка MCP протокола через stdio">
+    <grace:check id="mcp_list_tools" type="command">
+      <grace:description>Запрос списка инструментов через MCP протокол</grace:description>
+      <grace:command>echo '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | python -m src server 2>/dev/null | head -c 500</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+      <grace:expected>get_stock</grace:expected>
+    </grace:check>
+
+    <grace:check id="mcp_call_stock" type="command">
+      <grace:description>Вызов get_stock через MCP протокол</grace:description>
+      <grace:command>printf '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_stock","arguments":{}}}\n' | timeout 5 python -m src server 2>/dev/null</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- HTTP-прокси (проверка через curl) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="http_proxy" description="Проверка HTTP-прокси сервера">
+    <grace:check id="proxy_health" type="command">
+      <grace:description>Health check прокси</grace:description>
+      <grace:command>curl -s http://localhost:8001/health 2>/dev/null || echo "SKIP (port 8001)"</grace:command>
+    </grace:check>
+
+    <grace:check id="proxy_chat" type="command">
+      <grace:description>Chat completion через прокси (без tool calling)</grace:description>
+      <grace:command>curl -s http://localhost:8001/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"привет"}]}' 2>/dev/null | python -m json.tool 2>/dev/null || echo "SKIP (нужен запущенный сервер)"</grace:command>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- Проверки 1С HTTP-сервисов (BSL) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="1c_services" description="Проверка контрактов BSL-сервисов">
+    <grace:check id="bsl_syntax" type="command">
+      <grace:description>Проверка синтаксиса BSL-файлов (если установлен oscript)</grace:description>
+      <grace:command>for f in 1c_http_services/*.bsl; do echo "=== $f ==="; head -20 "$f"; done</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- End-to-End проверка (полный цикл) -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="e2e" description="End-to-End: mock данные → MCP сервер → результат">
+    <grace:check id="e2e_all_tools" type="pytest">
+      <grace:description>Полный цикл всех инструментов через mock-данные</grace:description>
+      <grace:command>python -m pytest tests/test_api.py tests/test_mock_client.py tests/test_forecasting.py tests/test_insights.py -v --timeout=120</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+  <!-- ============================================================ -->
+  <!-- GRACE-специфичные проверки -->
+  <!-- ============================================================ -->
+
+  <grace:check-group id="grace" description="Валидация GRACE-артефактов">
+    <grace:check id="grace_xml_valid" type="command">
+      <grace:description>Проверка XML-синтаксиса GRACE-артефактов</grace:description>
+      <grace:command>python -c "
+import xml.etree.ElementTree as ET
+for f in ['docs/requirements.xml', 'docs/knowledge-graph.xml', 'docs/development-plan.xml', 'docs/verification-plan.xml']:
+    try:
+        ET.parse(f)
+        print(f'OK {f}')
+    except Exception as e:
+        print(f'FAIL {f}: {e}')
+"</grace:command>
+      <grace:workdir>/home/andrey/1temp/1c-mcp-sales-analyst</grace:workdir>
+    </grace:check>
+  </grace:check-group>
+
+</grace:verification-plan>

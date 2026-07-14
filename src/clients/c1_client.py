@@ -1,3 +1,10 @@
+# START_MODULE_CONTRACT: c1_http_client
+# DESCRIPTION: HTTP-клиент для 1С:УНФ с Basic Auth, retry, circuit breaker
+# DEPENDENCIES: httpx, src.resilience.circuit_breaker, src.observability.metrics
+# CONTRACTS: docs/requirements.xml
+# ERRORS: C1ClientError, C1TimeoutError, C1ConnectionError, CircuitBreakerOpenError
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 import asyncio

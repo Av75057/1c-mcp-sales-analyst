@@ -1,3 +1,9 @@
+# START_MODULE_CONTRACT: mcp_tools_registry
+# DESCRIPTION: Реестр всех MCP инструментов для proxy_server.py
+# DEPENDENCIES: src.tools, src.whatif.mcp.tools
+# TOOLS: 19 инструментов (data + analytics + whatif + viz + metadata)
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 from typing import Any

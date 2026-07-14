@@ -1,3 +1,9 @@
+# START_MODULE_CONTRACT: mcp_server
+# DESCRIPTION: MCP сервер (stdio транспорт) — регистрация и диспетчеризация инструментов
+# DEPENDENCIES: src.tools, src.mcp.tools, src.clients.batch_client, src.mcp.documents_tool
+# CONTRACTS: docs/requirements.xml
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 import json
@@ -16,6 +22,12 @@ from src.logger import logger
 server = Server("1c-mcp-sales-analyst")
 
 
+# START_BLOCK_list_tools
+# DESCRIPTION: Регистрация 7 базовых MCP инструментов
+# INPUTS: нет
+# OUTPUTS: ListToolsResult с описаниями tools
+# SIDE_EFFECTS: read-only
+# END_BLOCK_list_tools
 @server.list_tools()
 async def list_tools() -> ListToolsResult:
     tools = [
@@ -112,6 +124,13 @@ async def list_tools() -> ListToolsResult:
     return ListToolsResult(tools=tools)
 
 
+# START_BLOCK_call_tool
+# DESCRIPTION: Диспетчеризация вызовов MCP инструментов
+# INPUTS: name (str), arguments (dict)
+# OUTPUTS: CallToolResult — json результат или ошибка
+# SIDE_EFFECTS: зависит от инструмента (см. contracts в docs/requirements.xml)
+# ERROR_HANDLING: все исключения перехватываются и возвращаются в isError=true
+# END_BLOCK_call_tool
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
     from src.tools import (

@@ -1,3 +1,10 @@
+# START_MODULE_CONTRACT: mcp_tools_factory
+# DESCRIPTION: Фабрика MCP инструментов — адаптеры между MCP-вызовами и бизнес-логикой
+# DEPENDENCIES: src.clients.*, src.cache, src.config, src.analysis, src.forecasting, src.charts, src.whatif, src.metadata
+# CONTRACTS: docs/requirements.xml
+# NOTE: C1ClientProtocol — синглтон, ленивая инициализация
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 from typing import Any
@@ -37,6 +44,9 @@ async def close_client() -> None:
         _client_instance = None
 
 
+# START_BLOCK_get_stock_tool
+# CONTRACT: docs/requirements.xml#get_stock
+# END_BLOCK_get_stock_tool
 @measure_time("get_stock")
 async def get_stock_tool(
     warehouse: str | None = None,
@@ -52,6 +62,9 @@ async def get_stock_tool(
     )
 
 
+# START_BLOCK_get_sales_tool
+# CONTRACT: docs/requirements.xml#get_sales
+# END_BLOCK_get_sales_tool
 @measure_time("get_sales")
 async def get_sales_tool(
     date_from: str | None = None,
@@ -69,6 +82,9 @@ async def get_sales_tool(
     )
 
 
+# START_BLOCK_get_sales_by_manager_tool
+# CONTRACT: docs/requirements.xml#get_sales_by_manager
+# END_BLOCK_get_sales_by_manager_tool
 @measure_time("get_sales_by_manager")
 async def get_sales_by_manager_tool(
     date_from: str | None = None,
@@ -84,6 +100,9 @@ async def get_sales_by_manager_tool(
     )
 
 
+# START_BLOCK_get_receivables_tool
+# CONTRACT: docs/requirements.xml#get_receivables
+# END_BLOCK_get_receivables_tool
 @measure_time("get_receivables")
 async def get_receivables_tool(
     min_amount: float | None = None,

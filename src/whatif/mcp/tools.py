@@ -1,3 +1,10 @@
+# START_MODULE_CONTRACT: whatif_mcp_tools
+# DESCRIPTION: MCP инструменты для «Что если» сценариев (price_change, promotion, purchase_change, employee_departure)
+# DEPENDENCIES: numpy, pandas, src.whatif.engine, src.whatif.scenarios
+# CONTRACTS: docs/requirements.xml#simulate_scenario, docs/requirements.xml#list_whatif_scenarios
+# NOTE: при use_mock_data=true генерирует синтетические данные; иначе загружает из 1С
+# END_MODULE_CONTRACT
+
 from __future__ import annotations
 
 from typing import Any
