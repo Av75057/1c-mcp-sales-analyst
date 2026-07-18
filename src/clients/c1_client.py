@@ -187,6 +187,7 @@ class C1Client:
                 "nomenclature": d.get("item", d.get("nomenclature", "")),
                 "quantity": d.get("quantity", 0),
                 "sum": d.get("sum", d.get("cost", 0)),
+                "cost": d.get("Себестоимость", d.get("cost_price", d.get("cost", 0))),
                 "manager": d.get("manager", ""),
                 "client": d.get("client", d.get("counterparty", "")),
                 "warehouse": d.get("organization", d.get("warehouse", "")),

@@ -225,8 +225,24 @@ async def get_executive_kpi(
     return result
 
 
-async def _fetch_profit_data(client: Any, d_from: str, d_to: str, pd_from: str, pd_to: str) -> tuple[float, float, float, float]:
-    return 0.0, 0.0, 25.0, 25.0
+async def _fetch_profit_data(cur_sales: list[dict], prev_sales: list[dict]) -> tuple[float, float, float, float]:
+    rev_c = sum(s.get("sum", 0) for s in cur_sales if s.get("sum", 0) > 0)
+    rev_p = sum(s.get("sum", 0) for s in prev_sales if s.get("sum", 0) > 0)
+    cost_c = sum(s.get("cost", 0) for s in cur_sales if s.get("cost", 0) > 0)
+    cost_p = sum(s.get("cost", 0) for s in prev_sales if s.get("cost", 0) > 0)
+    if cost_c > 0:
+        prof_c = round(rev_c - cost_c, 2)
+        marg_c = round((prof_c / rev_c * 100) if rev_c else 0, 1)
+    else:
+        prof_c = rev_c * 0.25
+        marg_c = 25.0
+    if cost_p > 0:
+        prof_p = round(rev_p - cost_p, 2)
+        marg_p = round((prof_p / rev_p * 100) if rev_p else 0, 1)
+    else:
+        prof_p = rev_p * 0.25
+        marg_p = 25.0
+    return prof_c, prof_p, marg_c, marg_p
 
 
 async def _fetch_from_1c(
@@ -268,16 +284,8 @@ async def _fetch_from_1c(
     ord_c = len(billed_c)
     ord_p = len(billed_p)
 
-    # Прибыль и маржа из регистра Продажи (себестоимость). Если не удалось — fallback 25%
-    profit_c, profit_p, margin_c, margin_p = await _fetch_profit_data(client, d_from, d_to, pd_from, pd_to)
-    if profit_c == 0 and rev_c > 0:
-        profit_c = rev_c * 0.25
-    if profit_p == 0 and rev_p > 0:
-        profit_p = rev_p * 0.25
-    if margin_c == 0 and rev_c > 0:
-        margin_c = 25.0
-    if margin_p == 0 and rev_p > 0:
-        margin_p = 25.0
+    # Прибыль и маржа (из поля Себестоимость в ответе sales, если есть)
+    profit_c, profit_p, margin_c, margin_p = await _fetch_profit_data(cur_sales, prev_sales)
 
     # Топ-менеджер
     top_mgr = {"name": "", "revenue": 0}
