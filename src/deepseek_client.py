@@ -496,12 +496,14 @@ class DeepSeekClient:
         self,
         messages: list[ChatCompletionMessageParam],
         tools: list[ChatCompletionToolParam] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
     ) -> Any:
         kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
+            "temperature": temperature if temperature is not None else self.temperature,
+            "max_tokens": max_tokens if max_tokens is not None else self.max_tokens,
         }
         if tools:
             kwargs["tools"] = tools
