@@ -6,8 +6,11 @@ export const kpiApi = {
     period: string;
     organization?: string;
     include_sparklines?: boolean;
+    manager?: string;
+    category?: string;
   }): Promise<ExecutiveKPIResponse> => {
-    const { data } = await api.get<ExecutiveKPIResponse>('/api/v3/executive-kpi', { params });
+    const clean = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined && v !== ''));
+    const { data } = await api.get<ExecutiveKPIResponse>('/api/v3/executive-kpi', { params: clean });
     return data;
   },
 };

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { EChartsWrapper } from '@/shared/components/charts/EChartsWrapper';
 import type { EChartsOption } from 'echarts';
 import { KPICard } from '@/features/dashboard/components/KPICard';
@@ -9,6 +7,7 @@ import { GlobalFilterBar } from '@/features/dashboard/components/GlobalFilterBar
 import { FilterBreadcrumb } from '@/features/dashboard/components/FilterBreadcrumb';
 import { InteractiveChart } from '@/features/dashboard/components/InteractiveChart';
 import { kpiApi } from '@/features/dashboard/api/kpiApi';
+import { useFilteredQuery } from '@/features/dashboard/hooks/useFilteredQuery';
 import { useDashboardFilterStore } from '@/features/dashboard/stores/dashboardFilterStore';
 
 function sparklineOption(data: { date: string; value: number }[], trendPercent: number): EChartsOption {
@@ -26,11 +25,15 @@ function sparklineOption(data: { date: string; value: number }[], trendPercent: 
 export default function ExecutiveDashboardPage() {
   const period = useDashboardFilterStore((s) => s.globalFilters.period);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['executive_kpi', period],
-    queryFn: () => kpiApi.getExecutiveKPI({ period, include_sparklines: true }),
+  const { data, isLoading, isError } = useFilteredQuery({
+    baseQueryKey: ['executive_kpi'],
+    widgetId: 'executive-kpi-main',
+    queryFn: (filters) => kpiApi.getExecutiveKPI({
+      period: filters.period || 'this_month',
+      include_sparklines: true,
+      manager: filters.manager,
+    }),
     staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
   });
 
   function managersOption(managers: { name: string; revenue: number }[]): EChartsOption {
