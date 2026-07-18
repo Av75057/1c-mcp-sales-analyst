@@ -8,6 +8,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+import base64
+
+import httpx
+
 from src.cache import cache
 from src.config import settings
 from src.logger import logger
@@ -225,6 +229,47 @@ async def get_executive_kpi(
     return result
 
 
+async def _fetch_profit_data(client: Any, d_from: str, d_to: str, pd_from: str, pd_to: str) -> tuple[float, float, float, float]:
+    try:
+        raw = f"{settings.c1_username}:{settings.c1_password}"
+        auth = "Basic " + base64.b64encode(raw.encode("utf-8")).decode("ascii")
+        base = settings.c1_base_url.rstrip("/")
+        url = base.rstrip("/") + "/execute"
+
+        def _dt(d: str) -> str:
+            parts = d[:10].split("-")
+            return f"ДАТАВРЕМЯ({parts[0]}, {int(parts[1])}, {int(parts[2])})"
+
+        sql = (
+            "ВЫБРАТЬ "
+            "СУММА(Продажи.СуммаОборот) КАК Выручка, "
+            "СУММА(Продажи.СебестоимостьОборот) КАК Себестоимость "
+            "ИЗ РегистрНакопления.Продажи.Обороты(, {}, {}, , ) КАК Продажи"
+        )
+
+        async with httpx.AsyncClient(headers={"Authorization": auth, "Content-Type": "text/plain"}, timeout=15) as http:
+            resp = await http.post(url, content=(sql.format(_dt(d_from), _dt(d_to))).encode("utf-8"))
+            resp.raise_for_status()
+            cur_data = resp.json()
+            rev_c = float(cur_data.get("rows", [[0]])[0][0] if cur_data.get("rows") else 0)
+            cost_c = float(cur_data.get("rows", [[0]])[0][1] if cur_data.get("rows") else 0)
+
+            resp2 = await http.post(url, content=(sql.format(_dt(pd_from), _dt(pd_to))).encode("utf-8"))
+            resp2.raise_for_status()
+            prev_data = resp2.json()
+            rev_p = float(prev_data.get("rows", [[0]])[0][0] if prev_data.get("rows") else 0)
+            cost_p = float(prev_data.get("rows", [[0]])[0][1] if prev_data.get("rows") else 0)
+
+        prof_c = round(rev_c - cost_c, 2)
+        prof_p = round(rev_p - cost_p, 2)
+        marg_c = round((prof_c / rev_c * 100) if rev_c else 0, 1)
+        marg_p = round((prof_p / rev_p * 100) if rev_p else 0, 1)
+        return prof_c, prof_p, marg_c, marg_p
+    except Exception as e:
+        logger.warning("[KPI] Profit fetch failed, using fallback 25%: {}", e)
+        return 0.0, 0.0, 25.0, 25.0
+
+
 async def _fetch_from_1c(
     period: PeriodType,
     organization: str | None,
@@ -264,12 +309,16 @@ async def _fetch_from_1c(
     ord_c = len(billed_c)
     ord_p = len(billed_p)
 
-    # Прибыль аппроксимируем как 25% от выручки (в УНФ нет себестоимости в продажах)
-    MARGIN_RATIO = 0.25
-    prof_c = rev_c * MARGIN_RATIO
-    prof_p = rev_p * MARGIN_RATIO
-    marg_c = MARGIN_RATIO * 100
-    marg_p = MARGIN_RATIO * 100
+    # Прибыль и маржа из регистра Продажи (себестоимость). Если не удалось — fallback 25%
+    profit_c, profit_p, margin_c, margin_p = await _fetch_profit_data(client, d_from, d_to, pd_from, pd_to)
+    if profit_c == 0 and rev_c > 0:
+        profit_c = rev_c * 0.25
+    if profit_p == 0 and rev_p > 0:
+        profit_p = rev_p * 0.25
+    if margin_c == 0 and rev_c > 0:
+        margin_c = 25.0
+    if margin_p == 0 and rev_p > 0:
+        margin_p = 25.0
 
     # Топ-менеджер
     top_mgr = {"name": "", "revenue": 0}
@@ -305,16 +354,16 @@ async def _fetch_from_1c(
             trend_percent=calculate_trend(rev_c, rev_p),
         ),
         profit=MetricData(
-            current=round(prof_c, 2), previous=round(prof_p, 2),
-            trend_percent=calculate_trend(prof_c, prof_p),
+            current=round(profit_c, 2), previous=round(profit_p, 2),
+            trend_percent=calculate_trend(profit_c, profit_p),
         ),
         orders_count=MetricData(
             current=ord_c, previous=ord_p,
             trend_percent=calculate_trend(float(ord_c), float(ord_p)),
         ),
         margin_percent=MetricData(
-            current=marg_c, previous=marg_p,
-            trend_percent=calculate_trend(marg_c, marg_p),
+            current=margin_c, previous=margin_p,
+            trend_percent=calculate_trend(margin_c, margin_p),
         ),
         top_manager=top_mgr,
         sparklines=sparklines,
