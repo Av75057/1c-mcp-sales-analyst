@@ -120,6 +120,18 @@ async def list_tools() -> ListToolsResult:
                 "required": ["date_from", "date_to"],
             },
         ),
+        Tool(
+            name="get_executive_kpi",
+            description="Агрегированные KPI для панели руководителя: выручка, прибыль, заказы, маржа, топ-менеджер. Сравнение с предыдущим периодом + спарклайны.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "period": {"type": "string", "enum": ["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_quarter", "this_year"], "description": "Период расчёта"},
+                    "organization": {"type": "string", "description": "Фильтр по организации"},
+                    "include_sparklines": {"type": "boolean", "description": "Включать данные для мини-графиков"},
+                },
+            },
+        ),
     ]
     return ListToolsResult(tools=tools)
 
@@ -134,6 +146,7 @@ async def list_tools() -> ListToolsResult:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResult:
     from src.tools import (
+        get_executive_kpi_tool,
         get_receivables_tool,
         get_sales_by_manager_tool,
         get_sales_tool,
@@ -149,6 +162,7 @@ async def call_tool(name: str, arguments: dict[str, Any] | None) -> CallToolResu
         "list_nomenclature": list_nomenclature_tool,
         "get_analytics_context": _get_analytics_context,
         "get_sales_documents": _get_sales_documents,
+        "get_executive_kpi": get_executive_kpi_tool,
     }
 
     func = tool_map.get(name)

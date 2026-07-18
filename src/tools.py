@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from typing import Literal
+
 from src.cache import CachedC1Client
 from src.clients.c1_client import C1Client
 from src.clients.mock_c1_client import MockC1Client
@@ -292,3 +294,20 @@ async def get_analytics_context_tool(
             date_from=date_from or None,
             date_to=date_to or None,
         )
+
+
+@measure_time("get_executive_kpi")
+async def get_executive_kpi_tool(
+    period: Literal["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_quarter", "this_year"] = "today",
+    organization: str | None = None,
+    include_sparklines: bool = True,
+) -> dict[str, Any]:
+    """Получить KPI для панели руководителя (выручка, прибыль, заказы, маржа, топ-менеджер)."""
+    logger.info("Вызов get_executive_kpi: period={}, org={}, sparklines={}", period, organization, include_sparklines)
+    from src.mcp.kpi_dashboard import get_executive_kpi
+    result = await get_executive_kpi(
+        period=period,
+        organization=organization,
+        include_sparklines=include_sparklines,
+    )
+    return result.model_dump(mode="json")

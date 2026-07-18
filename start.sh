@@ -32,6 +32,15 @@ _port_check() {
 start_web() {
     PORT="${PORT:-8000}"
     _port_check "$PORT" || return 1
+
+    # Сборка React SPA, если есть frontend
+    if [ -d "frontend" ]; then
+        if [ ! -d "frontend/dist" ] || [ "$1" == "--rebuild" ]; then
+            info "Сборка React SPA..."
+            (cd frontend && npx vite build 2>/dev/null) || warn "Vite build skipped (проверьте frontend)"
+        fi
+    fi
+
     _cmd "$VENV/bin/uvicorn" web.app:app --host 0.0.0.0 --port "$PORT" --proxy-headers --log-level info web
     sleep 1
     if kill -0 "$(cat "$PID_DIR/web.pid")" 2>/dev/null; then
@@ -130,6 +139,7 @@ case "${1:-menu}" in
         echo "Использование: $0 {web|mcp|proxy|react|all|stop|restart|status|logs|menu}"
         echo "  ./start.sh              — интерактивное меню"
         echo "  ./start.sh web          — Web UI на http://localhost:8000"
+        echo "  ./start.sh web --rebuild — Web UI с пересборкой React SPA"
         echo "  ./start.sh react        — React Dev на http://localhost:5173"
         echo "  ./start.sh react prod   — Сборка React + Web UI"
         echo "  ./start.sh all          — всё сразу"

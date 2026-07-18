@@ -408,6 +408,22 @@ async def api_health_performance():
     }
 
 
+@app.get("/api/v3/executive-kpi")
+async def api_executive_kpi(
+    period: str = Query("this_month", description="Период: today/yesterday/this_week/last_week/this_month/last_month/this_quarter/this_year"),
+    organization: str | None = Query(None, description="Фильтр по организации"),
+    include_sparklines: bool = Query(True, description="Включать спарклайны"),
+):
+    """KPI для панели руководителя (выручка, прибыль, заказы, маржа)."""
+    from src.mcp.kpi_dashboard import get_executive_kpi
+    result = await get_executive_kpi(
+        period=period,  # type: ignore
+        organization=organization,
+        include_sparklines=include_sparklines,
+    )
+    return result.model_dump(mode="json")
+
+
 @app.get("/health/live")
 async def health_live():
     return {"status": "alive"}

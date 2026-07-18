@@ -15,6 +15,7 @@ const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
 const WhatIfPage = lazy(() => import('@/features/whatif/pages/WhatIfPage'));
 const AbcXyzPage = lazy(() => import('@/features/analysis/pages/AbcXyzPage'));
 const OverviewPage = lazy(() => import('@/features/dashboard/pages/OverviewPage'));
+const ExecutiveDashboardPage = lazy(() => import('@/features/dashboard/pages/ExecutiveDashboardPage'));
 const LegacyDashboardPage = lazy(() => import('@/features/dashboard/pages/LegacyDashboardPage'));
 const DocumentsPage = lazy(() => import('@/features/documents/pages/DocumentsPage'));
 const SalesPage = lazy(() => import('@/features/documents/pages/SalesPage'));
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
       { index: true, element: <LazyPage Component={OverviewPage} /> },
       { path: '/library', element: <LazyPage Component={LibraryPage} /> },
       { path: '/library/:id', element: <LazyPage Component={DashboardViewPage} /> },
+      { path: '/executive', element: <LazyPage Component={ExecutiveDashboardPage} /> },
       { path: '/chat', element: <LazyPage Component={ChatPage} /> },
       { path: '/search', element: <LazyPage Component={SearchPage} /> },
       { path: '/whatif', element: <LazyPage Component={WhatIfPage} /> },

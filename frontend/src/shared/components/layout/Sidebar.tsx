@@ -2,7 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/shared/lib/utils';
 
 const NAV_ITEMS = [
-  { path: '/', icon: '📊', label: 'Дашборд' },
+  { path: '/', icon: '📊', label: 'Главная' },
+  { path: '/executive', icon: '🎯', label: 'KPI руководителя' },
   { path: '/library', icon: '📚', label: 'Библиотека' },
   { path: '/chat', icon: '💬', label: 'AI Чат' },
   { path: '/search', icon: '🔍', label: 'Поиск' },
