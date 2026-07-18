@@ -39,14 +39,16 @@ async def login(
     )
 
     if response:
-        response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=True, samesite="lax", max_age=token.expires_in)
+        is_https = request.url.scheme == "https" if request else False
+        response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=is_https, samesite="lax", max_age=token.expires_in)
 
     return token
 
 
 @router.post("/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token")
+async def logout(request: Request, response: Response):
+    is_https = request.url.scheme == "https" if request else False
+    response.delete_cookie("access_token", secure=is_https)
     return {"message": "Logged out"}
 
 
