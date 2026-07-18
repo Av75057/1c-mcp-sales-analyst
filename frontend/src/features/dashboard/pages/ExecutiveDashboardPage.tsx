@@ -1,4 +1,3 @@
-import { EChartsWrapper } from '@/shared/components/charts/EChartsWrapper';
 import type { EChartsOption } from 'echarts';
 import { KPICard } from '@/features/dashboard/components/KPICard';
 import { KPISkeleton } from '@/features/dashboard/components/KPISkeleton';
@@ -17,7 +16,7 @@ function sparklineOption(data: { date: string; value: number }[], trendPercent: 
     grid: { left: 48, right: 8, top: 8, bottom: 20 },
     xAxis: { type: 'category', show: true, data: data.map(d => d.date), axisLine: { lineStyle: { color: '#e5e7eb' } }, axisTick: { lineStyle: { color: '#e5e7eb' } }, axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { show: false } },
     yAxis: { type: 'value', show: true, min: 'dataMin' as any, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' as const } } },
-    series: [{ type: 'line', data: data.map(d => d.value), smooth: true, showSymbol: true, symbolSize: 6, triggerEvent: true, lineStyle: { width: 2.5, color }, itemStyle: { color }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `${color}1A` }, { offset: 1, color: `${color}00` }] } } }],
+    series: [{ type: 'line', data: data.map(d => d.value), smooth: true, showSymbol: true, symbolSize: 6, lineStyle: { width: 2.5, color }, itemStyle: { color }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `${color}1A` }, { offset: 1, color: `${color}00` }] } } }],
     tooltip: { show: false },
   };
 }
@@ -32,6 +31,7 @@ export default function ExecutiveDashboardPage() {
       period: filters.period || 'this_month',
       include_sparklines: true,
       manager: filters.manager,
+      date: filters.date,
     }),
     staleTime: 5 * 60 * 1000,
   });

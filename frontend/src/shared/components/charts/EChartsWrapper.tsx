@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 
@@ -7,9 +7,10 @@ interface EChartsWrapperProps {
   height?: number | string;
   loading?: boolean;
   onEvents?: Record<string, (params: any) => void>;
+  onChartClick?: (name: string) => void;
 }
 
-export function EChartsWrapper({ option, height = 400, loading = false, onEvents }: EChartsWrapperProps) {
+export function EChartsWrapper({ option, height = 400, loading = false, onEvents, onChartClick }: EChartsWrapperProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<echarts.ECharts>();
 
@@ -46,5 +47,23 @@ export function EChartsWrapper({ option, height = 400, loading = false, onEvents
     }
   }, [option, loading]);
 
-  return <div ref={chartRef} style={{ width: '100%', height }} />;
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    if (!chartRef.current || !onChartClick) return;
+    const instance = echarts.getInstanceByDom(chartRef.current);
+    if (!instance) return;
+    const rect = chartRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const pixel = instance.convertFromPixel({ seriesIndex: 0 }, [x, y]);
+    if (pixel && Array.isArray(pixel) && pixel[0] !== undefined && pixel[0] >= 0) {
+      const dataIndex = Math.round(pixel[0]);
+      const opt = instance.getOption();
+      const categories = (opt.xAxis as any[])?.[0]?.data as string[];
+      if (categories && categories[dataIndex]) {
+        onChartClick(categories[dataIndex]);
+      }
+    }
+  }, [onChartClick]);
+
+  return <div ref={chartRef} onClick={handleClick} style={{ width: '100%', height, cursor: onChartClick ? 'pointer' : undefined }} />;
 }

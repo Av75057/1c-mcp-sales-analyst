@@ -20,17 +20,15 @@ export const InteractiveChart: React.FC<InteractiveChartProps> = React.memo(({
   const isActive = activeWidgetId === widgetId;
   const isDimmed = crossFilters.length > 0 && !isActive;
 
-  const handleClick = useCallback((params: any) => {
-    const value = params.name || params.value;
-    if (value === undefined) return;
-    setCrossFilter({ widgetId, field: filterField, value, label: `${title || filterField}: ${value}` });
+  const onChartClick = useCallback((name: string) => {
+    setCrossFilter({ widgetId, field: filterField, value: name, label: `${title || filterField}: ${name}` });
   }, [widgetId, filterField, title, setCrossFilter]);
 
   return (
     <div className={`rounded-xl border p-4 transition-all duration-200 ${isActive ? 'ring-2' : ''} ${isDimmed ? 'opacity-50' : ''}`}
       style={{ backgroundColor: 'var(--bg-card)', borderColor: isActive ? 'var(--brand)' : 'var(--border)' }}>
       {title && <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>{title}</h3>}
-      <EChartsWrapper option={{ ...option, emphasis: { focus: 'series' } as any }} height={height} onEvents={{ click: handleClick }} />
+      <EChartsWrapper option={option} height={height} onChartClick={onChartClick} />
       {isActive && (
         <div className="mt-2 text-xs text-center" style={{ color: 'var(--brand)' }}>🔍 Фильтр: {filterField}</div>
       )}
