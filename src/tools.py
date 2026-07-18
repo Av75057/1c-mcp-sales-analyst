@@ -296,6 +296,24 @@ async def get_analytics_context_tool(
         )
 
 
+@measure_time("generate_executive_summary")
+async def generate_executive_summary_tool(
+    period: str = "today",
+    organization: str | None = None,
+    include_sparklines: bool = True,
+) -> dict[str, Any]:
+    """Сгенерировать AI-сводку для руководителя на основе KPI-данных."""
+    from src.mcp.summary_generator import generate_executive_summary
+
+    from src.mcp.kpi_dashboard import get_executive_kpi
+    kpi = await get_executive_kpi(period=period, organization=organization, include_sparklines=include_sparklines)
+    return await generate_executive_summary(
+        period=period,
+        kpi_data=kpi.model_dump(mode="json"),
+        organization=organization,
+    )
+
+
 @measure_time("get_executive_kpi")
 async def get_executive_kpi_tool(
     period: Literal["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_quarter", "this_year"] = "today",

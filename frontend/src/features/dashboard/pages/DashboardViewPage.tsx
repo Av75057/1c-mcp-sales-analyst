@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useDashboard } from '@/features/library/hooks/useDashboards';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useDashboard, useDeleteDashboard } from '@/features/library/hooks/useDashboards';
 import { api } from '@/shared/lib/api';
 import { ChartRenderer } from '@/shared/components/charts/ChartRenderer';
 import { formatDate } from '@/shared/lib/utils';
+import { Dialog } from '@/shared/components/ui/Dialog';
 
 export default function DashboardViewPage() {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { data: initialData, isLoading, error } = useDashboard(id!);
   const [dashboard, setDashboard] = useState<any>(null);
+  const [showDelete, setShowDelete] = useState(false);
+  const deleteMutation = useDeleteDashboard();
 
   useEffect(() => {
     if (!initialData) return;
@@ -66,6 +70,11 @@ export default function DashboardViewPage() {
             {dashboard.is_public && <span className="text-success">🌐 Публичный</span>}
           </div>
         </div>
+        <button onClick={() => setShowDelete(true)}
+          className="p-2 rounded-lg border text-sm transition-colors hover:bg-red-500/20 hover:text-red-500"
+          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+          🗑️
+        </button>
       </div>
 
       {dashboard.tags?.length > 0 && (
@@ -112,6 +121,20 @@ export default function DashboardViewPage() {
           );
         })}
       </div>
+
+      <Dialog open={showDelete} onClose={() => setShowDelete(false)} title="Удалить дашборд?">
+        <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Дашборд «{dashboard.title}» будет безвозвратно удалён.</p>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setShowDelete(false)}
+            className="px-4 py-2 rounded-lg border text-sm"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Отмена</button>
+          <button onClick={() => { deleteMutation.mutate(id!, { onSuccess: () => navigate('/library') }); }}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+            style={{ backgroundColor: 'var(--color-error, #ef4444)' }}>
+            {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+          </button>
+        </div>
+      </Dialog>
     </div>
   );
 }

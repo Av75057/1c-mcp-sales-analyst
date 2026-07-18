@@ -1,14 +1,18 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useDashboards } from '../hooks/useDashboards';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDashboards, useDeleteDashboard } from '../hooks/useDashboards';
 import type { ListFilters } from '@/shared/types/dashboard';
 import { formatDate, formatNumber } from '@/shared/lib/utils';
+import { Dialog } from '@/shared/components/ui/Dialog';
 
 export default function LibraryPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
   const [chartType, setChartType] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const deleteMutation = useDeleteDashboard();
 
   const filters: ListFilters = useMemo(() => ({
     search,
@@ -20,7 +24,7 @@ export default function LibraryPage() {
   const { data, isLoading, error } = useDashboards(filters);
 
   return (
-    <div>
+    <>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📚 Библиотека дашбордов</h1>
@@ -115,12 +119,11 @@ export default function LibraryPage() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {data.dashboards.map((dashboard) => (
-              <Link
-                key={dashboard.id}
-                to={`/library/${dashboard.id}`}
-                className="border rounded-lg p-4 hover:border-brand-500 transition-colors group block"
+              <div key={dashboard.id}
+                className="border rounded-lg p-4 transition-colors group relative"
                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
               >
+                <Link to={`/library/${dashboard.id}`} className="block">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-medium truncate flex-1" style={{ color: 'var(--text-primary)' }}>{dashboard.title || 'Без названия'}</h3>
                   <div className="flex gap-1 ml-2">
@@ -157,7 +160,13 @@ export default function LibraryPage() {
                 <div className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
                   {formatDate(dashboard.updated_at)}
                 </div>
-              </Link>
+                </Link>
+                <button onClick={(e) => { e.preventDefault(); setDeleteTarget(dashboard.id); }}
+                  className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity text-xs hover:bg-red-500/20 hover:text-red-500"
+                  style={{ color: 'var(--text-muted)' }}>
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
 
@@ -189,6 +198,20 @@ export default function LibraryPage() {
           )}
         </>
       )}
-    </div>
+
+      <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Удалить дашборд?">
+        <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Дашборд будет безвозвратно удалён.</p>
+        <div className="flex justify-end gap-2">
+          <button onClick={() => setDeleteTarget(null)}
+            className="px-4 py-2 rounded-lg border text-sm"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Отмена</button>
+          <button onClick={() => { if (deleteTarget) { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); } }}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+            style={{ backgroundColor: 'var(--color-error, #ef4444)' }}>
+            {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+          </button>
+        </div>
+      </Dialog>
+    </>
   );
 }

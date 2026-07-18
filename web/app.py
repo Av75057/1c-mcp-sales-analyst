@@ -408,6 +408,15 @@ async def api_health_performance():
     }
 
 
+@app.get("/api/v3/executive-summary")
+async def api_executive_summary(period: str = Query("this_month"), organization: str | None = Query(None)):
+    from src.mcp.summary_generator import generate_executive_summary
+    from src.mcp.kpi_dashboard import get_executive_kpi
+    kpi = await get_executive_kpi(period=period, organization=organization)
+    result = await generate_executive_summary(period=period, kpi_data=kpi.model_dump(mode="json"), organization=organization)
+    return result
+
+
 @app.get("/api/v3/executive-kpi")
 async def api_executive_kpi(
     period: str = Query("this_month", description="Период: today/yesterday/this_week/last_week/this_month/last_month/this_quarter/this_year"),
