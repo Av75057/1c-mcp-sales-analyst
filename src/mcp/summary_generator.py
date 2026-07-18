@@ -96,13 +96,15 @@ async def generate_executive_summary(
         ds = DeepSeekClient()
         response = await ds._call_llm(
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
+            max_tokens=2000,
             temperature=0.7,
         )
 
         choice = response.choices[0]
         text = choice.message.content or ""
         tokens_used = response.usage.total_tokens if response.usage else 0
+        finish_reason = choice.finish_reason if hasattr(choice, 'finish_reason') else 'unknown'
+        logger.info("[Summary] DeepSeek finish_reason={}, tokens={}", finish_reason, tokens_used)
 
         parsed = _parse_response(text)
         result = {
