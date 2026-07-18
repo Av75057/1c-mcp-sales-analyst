@@ -230,43 +230,27 @@ async def get_executive_kpi(
 
 
 async def _fetch_profit_data(client: Any, d_from: str, d_to: str, pd_from: str, pd_to: str) -> tuple[float, float, float, float]:
-    try:
-        raw = f"{settings.c1_username}:{settings.c1_password}"
-        auth = "Basic " + base64.b64encode(raw.encode("utf-8")).decode("ascii")
-        base = settings.c1_base_url.rstrip("/")
-        url = base.rstrip("/") + "/execute"
+    auth = "Basic " + base64.b64encode(f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")).decode("ascii")
+    base = settings.c1_base_url.rstrip("/")
+    margin_url = base + "/margin"
 
-        def _dt(d: str) -> str:
-            parts = d[:10].split("-")
-            return f"ДАТАВРЕМЯ({parts[0]}, {int(parts[1])}, {int(parts[2])})"
-
-        sql = (
-            "ВЫБРАТЬ "
-            "СУММА(Продажи.СуммаОборот) КАК Выручка, "
-            "СУММА(Продажи.СебестоимостьОборот) КАК Себестоимость "
-            "ИЗ РегистрНакопления.Продажи.Обороты(, {}, {}, , ) КАК Продажи"
-        )
-
-        async with httpx.AsyncClient(headers={"Authorization": auth, "Content-Type": "text/plain"}, timeout=15) as http:
-            resp = await http.post(url, content=(sql.format(_dt(d_from), _dt(d_to))).encode("utf-8"))
+    async def _get_margin(d_from: str, d_to: str) -> tuple[float, float]:
+        async with httpx.AsyncClient(headers={"Authorization": auth, "Content-Type": "application/json"}, timeout=15) as http:
+            resp = await http.post(margin_url, json={"date_from": d_from[:10], "date_to": d_to[:10]})
             resp.raise_for_status()
-            cur_data = resp.json()
-            rev_c = float(cur_data.get("rows", [[0]])[0][0] if cur_data.get("rows") else 0)
-            cost_c = float(cur_data.get("rows", [[0]])[0][1] if cur_data.get("rows") else 0)
+            d = resp.json()
+            return float(d.get("revenue", 0)), float(d.get("cost", 0))
 
-            resp2 = await http.post(url, content=(sql.format(_dt(pd_from), _dt(pd_to))).encode("utf-8"))
-            resp2.raise_for_status()
-            prev_data = resp2.json()
-            rev_p = float(prev_data.get("rows", [[0]])[0][0] if prev_data.get("rows") else 0)
-            cost_p = float(prev_data.get("rows", [[0]])[0][1] if prev_data.get("rows") else 0)
-
+    try:
+        rev_c, cost_c = await _get_margin(d_from, d_to)
+        rev_p, cost_p = await _get_margin(pd_from, pd_to)
         prof_c = round(rev_c - cost_c, 2)
         prof_p = round(rev_p - cost_p, 2)
         marg_c = round((prof_c / rev_c * 100) if rev_c else 0, 1)
         marg_p = round((prof_p / rev_p * 100) if rev_p else 0, 1)
         return prof_c, prof_p, marg_c, marg_p
     except Exception as e:
-        logger.warning("[KPI] Profit fetch failed, using fallback 25%: {}", e)
+        logger.warning("[KPI] Margin endpoint failed, using fallback 25%: {}", e)
         return 0.0, 0.0, 25.0, 25.0
 
 
