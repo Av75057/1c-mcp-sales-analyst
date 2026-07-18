@@ -189,8 +189,8 @@ def _generate_mock_kpi(period_label: str, include_sparklines: bool) -> Executive
     )
 
 
-def _build_cache_key(period: str, organization: str | None, include_sparklines: bool, manager: str | None = None, category: str | None = None) -> str:
-    raw = json.dumps({"period": period, "org": organization, "sp": include_sparklines, "mgr": manager, "cat": category}, sort_keys=True)
+def _build_cache_key(period: str, organization: str | None, include_sparklines: bool, manager: str | None = None, category: str | None = None, date: str | None = None) -> str:
+    raw = json.dumps({"period": period, "org": organization, "sp": include_sparklines, "mgr": manager, "cat": category, "dt": date}, sort_keys=True)
     return f"kpi:{hashlib.md5(raw.encode()).hexdigest()[:16]}"
 
 
@@ -208,8 +208,9 @@ async def get_executive_kpi(
     include_sparklines: bool = True,
     manager: str | None = None,
     category: str | None = None,
+    date: str | None = None,
 ) -> ExecutiveKPIResponse:
-    cache_key = _build_cache_key(period, organization, include_sparklines, manager, category)
+    cache_key = _build_cache_key(period, organization, include_sparklines, manager, category, date)
     cached = cache.get(cache_key)
     if cached is not None:
         logger.info("[KPI] Cache HIT: {}", cache_key)
@@ -223,7 +224,7 @@ async def get_executive_kpi(
         period_label, *_ = get_period_boundaries(period)
         result = _generate_mock_kpi(period_label, include_sparklines)
     else:
-        result = await _fetch_from_1c(period, organization, include_sparklines, manager, category)
+        result = await _fetch_from_1c(period, organization, include_sparklines, manager, category, date)
 
     cache.set(cache_key, result.model_dump(mode="json"), ttl=_get_ttl(period))
     return result
@@ -255,6 +256,7 @@ async def _fetch_from_1c(
     include_sparklines: bool,
     manager: str | None = None,
     category: str | None = None,
+    date: str | None = None,
 ) -> ExecutiveKPIResponse:
     period_label, cur_start, cur_end, prev_start, prev_end = get_period_boundaries(period)
 
@@ -275,6 +277,11 @@ async def _fetch_from_1c(
         cur_sales = [s for s in cur_sales if s.get("manager") and manager.lower() in s["manager"].lower()]
         prev_sales = [s for s in prev_sales if s.get("manager") and manager.lower() in s["manager"].lower()]
         cur_managers = [m for m in cur_managers if m.get("manager") and manager.lower() in m["manager"].lower()]
+
+    if date:
+        date_str = date[:10]
+        cur_sales = [s for s in cur_sales if s.get("date", "")[:10] == date_str]
+        prev_sales = [s for s in prev_sales if s.get("date", "")[:10] == date_str]
 
     def _safe_sales(data: Any) -> list[dict]:
         if isinstance(data, Exception):

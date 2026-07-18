@@ -424,6 +424,7 @@ async def api_executive_kpi(
     include_sparklines: bool = Query(True, description="Включать спарклайны"),
     manager: str | None = Query(None, description="Фильтр по менеджеру"),
     category: str | None = Query(None, description="Фильтр по категории"),
+    date: str | None = Query(None, description="Фильтр по дате (YYYY-MM-DD)"),
 ):
     """KPI для панели руководителя (выручка, прибыль, заказы, маржа)."""
     from src.mcp.kpi_dashboard import get_executive_kpi
@@ -433,6 +434,7 @@ async def api_executive_kpi(
         include_sparklines=include_sparklines,
         manager=manager,
         category=category,
+        date=date,
     )
     return result.model_dump(mode="json")
 

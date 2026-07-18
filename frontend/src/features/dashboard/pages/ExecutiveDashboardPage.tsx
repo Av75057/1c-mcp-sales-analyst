@@ -17,7 +17,7 @@ function sparklineOption(data: { date: string; value: number }[], trendPercent: 
     grid: { left: 48, right: 8, top: 8, bottom: 20 },
     xAxis: { type: 'category', show: true, data: data.map(d => d.date), axisLine: { lineStyle: { color: '#e5e7eb' } }, axisTick: { lineStyle: { color: '#e5e7eb' } }, axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { show: false } },
     yAxis: { type: 'value', show: true, min: 'dataMin' as any, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' as const } } },
-    series: [{ type: 'line', data: data.map(d => d.value), smooth: true, showSymbol: false, lineStyle: { width: 2.5, color }, itemStyle: { color }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `${color}1A` }, { offset: 1, color: `${color}00` }] } } }],
+    series: [{ type: 'line', data: data.map(d => d.value), smooth: true, showSymbol: true, symbolSize: 6, triggerEvent: true, lineStyle: { width: 2.5, color }, itemStyle: { color }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: `${color}1A` }, { offset: 1, color: `${color}00` }] } } }],
     tooltip: { show: false },
   };
 }
@@ -88,10 +88,7 @@ export default function ExecutiveDashboardPage() {
         {/* Charts row */}
         {data?.sparklines?.revenue?.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>📈 Выручка (по дням)</div>
-              <EChartsWrapper option={sparklineOption(data.sparklines.revenue, data.revenue.trend_percent)} height={120} />
-            </div>
+            <InteractiveChart widgetId="chart-revenue" title="Выручка (по дням)" option={sparklineOption(data.sparklines.revenue, data.revenue.trend_percent)} filterField="date" height={120} />
             <InteractiveChart widgetId="chart-managers" title="Топ менеджеров" option={managersOption(data.top_managers || [])} filterField="manager" height={240} />
           </div>
         )}
