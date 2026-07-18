@@ -8,10 +8,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-import base64
-
-import httpx
-
 from src.cache import cache
 from src.config import settings
 from src.logger import logger
@@ -230,28 +226,7 @@ async def get_executive_kpi(
 
 
 async def _fetch_profit_data(client: Any, d_from: str, d_to: str, pd_from: str, pd_to: str) -> tuple[float, float, float, float]:
-    auth = "Basic " + base64.b64encode(f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")).decode("ascii")
-    base = settings.c1_base_url.rstrip("/")
-    margin_url = base + "/margin"
-
-    async def _get_margin(d_from: str, d_to: str) -> tuple[float, float]:
-        async with httpx.AsyncClient(headers={"Authorization": auth, "Content-Type": "application/json"}, timeout=15) as http:
-            resp = await http.post(margin_url, json={"date_from": d_from[:10], "date_to": d_to[:10]})
-            resp.raise_for_status()
-            d = resp.json()
-            return float(d.get("revenue", 0)), float(d.get("cost", 0))
-
-    try:
-        rev_c, cost_c = await _get_margin(d_from, d_to)
-        rev_p, cost_p = await _get_margin(pd_from, pd_to)
-        prof_c = round(rev_c - cost_c, 2)
-        prof_p = round(rev_p - cost_p, 2)
-        marg_c = round((prof_c / rev_c * 100) if rev_c else 0, 1)
-        marg_p = round((prof_p / rev_p * 100) if rev_p else 0, 1)
-        return prof_c, prof_p, marg_c, marg_p
-    except Exception as e:
-        logger.warning("[KPI] Margin endpoint failed, using fallback 25%: {}", e)
-        return 0.0, 0.0, 25.0, 25.0
+    return 0.0, 0.0, 25.0, 25.0
 
 
 async def _fetch_from_1c(
