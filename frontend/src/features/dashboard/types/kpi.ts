@@ -16,6 +16,7 @@ export interface ExecutiveKPIResponse {
   orders_count: MetricData;
   margin_percent: MetricData;
   top_manager: { name: string; revenue: number };
+  top_managers: { name: string; revenue: number }[];
   sparklines: Record<string, SparklinePoint[]>;
   cache_status: string;
 }

@@ -33,13 +33,15 @@ export default function ExecutiveDashboardPage() {
     refetchOnWindowFocus: false,
   });
 
-  const mockBarOption: EChartsOption = {
-    backgroundColor: 'transparent',
-    grid: { left: 50, right: 16, top: 16, bottom: 24 },
-    xAxis: { type: 'category', data: ['Иванов', 'Петров', 'Сидоров', 'Кузнецов'], axisLabel: { color: '#9ca3af' } },
-    yAxis: { type: 'value', axisLabel: { color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6' } } },
-    series: [{ type: 'bar', data: [120, 200, 150, 80], itemStyle: { color: '#3b82f6' } }],
-  };
+  function managersOption(managers: { name: string; revenue: number }[]): EChartsOption {
+    return {
+      backgroundColor: 'transparent',
+      grid: { left: 80, right: 16, top: 16, bottom: 24 },
+      xAxis: { type: 'category', data: managers.map(m => m.name.split(' ')[0]), axisLabel: { color: '#9ca3af', rotate: 20 } },
+      yAxis: { type: 'value', axisLabel: { color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6' } } },
+      series: [{ type: 'bar', data: managers.map(m => m.revenue), itemStyle: { color: '#3b82f6' } }],
+    };
+  }
 
   return (
     <div style={{ backgroundColor: 'var(--bg-page)', minHeight: '100vh' }}>
@@ -73,7 +75,7 @@ export default function ExecutiveDashboardPage() {
           </div>
         ) : data ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KPICard widgetId="kpi-revenue" title="Выручка" metric={data.revenue} unit="currency" filterField="period" filterValue={period} />
+            <KPICard widgetId="kpi-revenue" title="Выручка" metric={data.revenue} unit="currency" />
             <KPICard widgetId="kpi-profit" title="Валовая прибыль" metric={data.profit} unit="currency" />
             <KPICard widgetId="kpi-orders" title="Заказы" metric={data.orders_count} unit="number" />
             <KPICard widgetId="kpi-margin" title="Маржинальность" metric={data.margin_percent} unit="percent" />
@@ -87,7 +89,7 @@ export default function ExecutiveDashboardPage() {
               <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-secondary)' }}>📈 Выручка (по дням)</div>
               <EChartsWrapper option={sparklineOption(data.sparklines.revenue, data.revenue.trend_percent)} height={120} />
             </div>
-            <InteractiveChart widgetId="chart-managers" title="Топ менеджеров" option={mockBarOption} filterField="manager" height={240} />
+            <InteractiveChart widgetId="chart-managers" title="Топ менеджеров" option={managersOption(data.top_managers || [])} filterField="manager" height={240} />
           </div>
         )}
 

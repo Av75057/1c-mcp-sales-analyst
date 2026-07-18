@@ -30,6 +30,7 @@ class ExecutiveKPIResponse(BaseModel):
     orders_count: MetricData
     margin_percent: MetricData
     top_manager: dict = Field(default_factory=dict)
+    top_managers: list = Field(default_factory=list)
     sparklines: dict = Field(default_factory=dict)
     cache_status: str = "miss"
 
@@ -182,6 +183,7 @@ def _generate_mock_kpi(period_label: str, include_sparklines: bool) -> Executive
             trend_percent=calculate_trend(margin_current, margin_previous),
         ),
         top_manager={"name": "Иванов И.И.", "revenue": round(rev_current * rng.uniform(0.25, 0.4), 2)},
+        top_managers=[ {"name": "Иванов И.И.", "revenue": round(rev_current * 0.3, 2)}, {"name": "Петров П.П.", "revenue": round(rev_current * 0.2, 2)}, {"name": "Сидоров С.С.", "revenue": round(rev_current * 0.15, 2)} ],
         sparklines=sparklines_data,
         cache_status="miss",
     )
@@ -296,10 +298,13 @@ async def _fetch_from_1c(
     # Прибыль и маржа (из поля Себестоимость в ответе sales, если есть)
     profit_c, profit_p, margin_c, margin_p = await _fetch_profit_data(cur_sales, prev_sales)
 
-    # Топ-менеджер
+    # Топ-менеджеры
     top_mgr = {"name": "", "revenue": 0}
+    top_managers_list: list[dict] = []
     if cur_managers:
-        best = max(cur_managers, key=lambda m: m.get("total_sum", 0))
+        sorted_mgrs = sorted(cur_managers, key=lambda m: m.get("total_sum", 0), reverse=True)
+        top_managers_list = [{"name": m.get("manager", ""), "revenue": m.get("total_sum", 0)} for m in sorted_mgrs[:10]]
+        best = sorted_mgrs[0]
         top_mgr = {"name": best.get("manager", ""), "revenue": best.get("total_sum", 0)}
 
     # Спарклайны (группировка по дням, с заполнением пропусков)
@@ -342,6 +347,7 @@ async def _fetch_from_1c(
             trend_percent=calculate_trend(margin_c, margin_p),
         ),
         top_manager=top_mgr,
+        top_managers=top_managers_list,
         sparklines=sparklines,
         cache_status="miss",
     )
