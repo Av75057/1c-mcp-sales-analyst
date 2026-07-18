@@ -419,9 +419,11 @@ async def api_executive_summary(period: str = Query("this_month"), organization:
 
 @app.get("/api/v3/executive-kpi")
 async def api_executive_kpi(
-    period: str = Query("this_month", description="Период: today/yesterday/this_week/last_week/this_month/last_month/this_quarter/this_year"),
+    period: str = Query("this_month", description="Период"),
     organization: str | None = Query(None, description="Фильтр по организации"),
     include_sparklines: bool = Query(True, description="Включать спарклайны"),
+    manager: str | None = Query(None, description="Фильтр по менеджеру"),
+    category: str | None = Query(None, description="Фильтр по категории"),
 ):
     """KPI для панели руководителя (выручка, прибыль, заказы, маржа)."""
     from src.mcp.kpi_dashboard import get_executive_kpi
@@ -429,6 +431,8 @@ async def api_executive_kpi(
         period=period,  # type: ignore
         organization=organization,
         include_sparklines=include_sparklines,
+        manager=manager,
+        category=category,
     )
     return result.model_dump(mode="json")
 
