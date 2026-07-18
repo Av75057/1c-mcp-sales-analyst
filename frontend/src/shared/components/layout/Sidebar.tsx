@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/shared/lib/utils';
+import { useTheme } from '@/shared/lib/theme';
 
 const NAV_ITEMS = [
   { path: '/', icon: '📊', label: 'Главная' },
@@ -19,12 +20,14 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const location = useLocation();
+  const { theme, toggle } = useTheme();
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-60 bg-[#1a1d23] border-r border-[#2d3139] flex flex-col z-50">
-      <div className="p-4 border-b border-[#2d3139]">
-        <h1 className="text-white font-bold text-lg">📊 1C Аналитик</h1>
-        <p className="text-[#6b7280] text-xs mt-1">AI-powered analytics</p>
+    <aside style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
+      className="fixed left-0 top-0 bottom-0 w-60 border-r flex flex-col z-50">
+      <div style={{ borderColor: 'var(--border)' }} className="p-4 border-b">
+        <h1 style={{ color: 'var(--text-primary)' }} className="font-bold text-lg">📊 1C Аналитик</h1>
+        <p style={{ color: 'var(--text-muted)' }} className="text-xs mt-1">AI-powered analytics</p>
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto">
@@ -44,9 +47,16 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 px-4 py-2.5 text-sm transition-colors',
                 isActive
-                  ? 'text-white bg-[#2563eb22] border-l-2 border-[#2563eb]'
-                  : 'text-[#9ca3af] hover:text-white hover:bg-[#22262e]'
+                  ? 'border-l-2 font-medium'
+                  : 'hover:brightness-110'
               )}
+              style={{
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                backgroundColor: isActive ? 'var(--bg-active)' : 'transparent',
+                borderLeftColor: isActive ? 'var(--brand)' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'; }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               <span className="text-base">{item.icon}</span>
               <span>{item.label}</span>
@@ -55,12 +65,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-[#2d3139]">
-        <Link
-          to="/profile"
-          className="flex items-center gap-2 text-sm text-[#9ca3af] hover:text-white transition-colors"
-        >
-          <div className="w-8 h-8 rounded-full bg-[#2563eb] flex items-center justify-center text-white text-xs font-bold">
+      <div style={{ borderColor: 'var(--border)' }} className="p-3 border-t space-y-2">
+        <button onClick={toggle}
+          className="flex items-center gap-3 w-full px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer"
+          style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}>
+          <span className="text-base">{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
+        </button>
+
+        <Link to="/profile"
+          className="flex items-center gap-2 text-sm transition-colors"
+          style={{ color: 'var(--text-secondary)' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+            style={{ backgroundColor: 'var(--brand)' }}>
             A
           </div>
           <span>Профиль</span>

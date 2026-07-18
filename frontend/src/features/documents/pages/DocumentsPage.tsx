@@ -56,18 +56,18 @@ export default function DocumentsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">📋 Реализации</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Документы реализации товаров и услуг</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📋 Реализации</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Документы реализации товаров и услуг</p>
       </div>
 
       {loading && (
         <div className="space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-12 bg-[#1a1d23] border border-[#2d3139] rounded-lg animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-12 border rounded-lg animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }} />)}
         </div>
       )}
 
       {!loading && docs.length === 0 && (
-        <Card><CardContent className="py-8 text-center text-[#6b7280]">
+        <Card><CardContent className="py-8 text-center" style={{ color: 'var(--text-secondary)' }}>
           <div className="text-3xl mb-2">📋</div>
           <p>Нет документов за выбранный период</p>
         </CardContent></Card>
@@ -80,7 +80,7 @@ export default function DocumentsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[#6b7280] border-b border-[#2d3139]">
+                  <tr className="border-b" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
                     <th className="text-left py-2 px-2">№</th>
                     <th className="text-left py-2 px-2">Дата</th>
                     <th className="text-left py-2 px-2">Контрагент</th>
@@ -92,13 +92,16 @@ export default function DocumentsPage() {
                   {docs.map((d) => (
                     <tr
                       key={d.id}
-                      className="border-b border-[#2d3139] hover:bg-[#22262e] cursor-pointer transition-colors"
+                      className="border-b cursor-pointer transition-colors"
+                      style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
                       onClick={() => openDoc(d)}
                     >
-                      <td className="py-2 px-2 text-white font-mono text-xs">{d.number || '-'}</td>
-                      <td className="py-2 px-2 text-[#9ca3af] whitespace-nowrap">{d.date ? d.date.slice(0, 10) : '-'}</td>
-                      <td className="py-2 px-2 text-white">{d.counterparty || '-'}</td>
-                      <td className="py-2 px-2 text-right text-white whitespace-nowrap">{(d.sum || 0).toLocaleString()} ₽</td>
+                      <td className="py-2 px-2 font-mono text-xs" style={{ color: 'var(--text-primary)' }}>{d.number || '-'}</td>
+                      <td className="py-2 px-2 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{d.date ? d.date.slice(0, 10) : '-'}</td>
+                      <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>{d.counterparty || '-'}</td>
+                      <td className="py-2 px-2 text-right whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{(d.sum || 0).toLocaleString()} ₽</td>
                       <td className="py-2 px-2">
                         <Badge variant={d.posted ? 'success' : 'secondary'}>
                           {d.posted ? 'Проведён' : 'Черновик'}
@@ -118,25 +121,25 @@ export default function DocumentsPage() {
         {selectedDoc && (
           <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             {/* Шапка документа */}
-            <div className="grid grid-cols-2 gap-3 pb-3 border-b border-[#2d3139]">
+            <div className="grid grid-cols-2 gap-3 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
               <div>
-                <label className="text-xs text-[#6b7280]">Номер</label>
-                <div className="text-white font-mono text-sm">{selectedDoc.number || '-'}</div>
+                <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Номер</label>
+                <div className="font-mono text-sm" style={{ color: 'var(--text-primary)' }}>{selectedDoc.number || '-'}</div>
               </div>
               <div>
-                <label className="text-xs text-[#6b7280]">Дата</label>
-                <div className="text-white text-sm">{selectedDoc.date ? selectedDoc.date.slice(0, 10) : '-'}</div>
+                <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Дата</label>
+                <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedDoc.date ? selectedDoc.date.slice(0, 10) : '-'}</div>
               </div>
               <div className="col-span-2">
-                <label className="text-xs text-[#6b7280]">Контрагент</label>
-                <div className="text-white text-sm">{selectedDoc.counterparty || '-'}</div>
+                <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Контрагент</label>
+                <div className="text-sm" style={{ color: 'var(--text-primary)' }}>{selectedDoc.counterparty || '-'}</div>
               </div>
               <div>
-                <label className="text-xs text-[#6b7280]">Сумма</label>
-                <div className="text-white font-bold text-lg">{(selectedDoc.sum || 0).toLocaleString()} ₽</div>
+                <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Сумма</label>
+                <div className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>{(selectedDoc.sum || 0).toLocaleString()} ₽</div>
               </div>
               <div>
-                <label className="text-xs text-[#6b7280]">Статус</label>
+                <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Статус</label>
                 <div><Badge variant={selectedDoc.posted ? 'success' : 'secondary'}>
                   {selectedDoc.posted ? 'Проведён' : 'Черновик'}
                 </Badge></div>
@@ -145,20 +148,20 @@ export default function DocumentsPage() {
 
             {/* Таблица товаров */}
             <div>
-              <h4 className="text-sm font-medium text-white mb-2">Товары ({lines.length})</h4>
+              <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Товары ({lines.length})</h4>
               {linesLoading && (
                 <div className="space-y-1">
-                  {[1,2,3].map(i => <div key={i} className="h-8 bg-[#2d3139] rounded animate-pulse" />)}
+                  {[1,2,3].map(i => <div key={i} className="h-8 rounded animate-pulse" style={{ backgroundColor: 'var(--skeleton)' }} />)}
                 </div>
               )}
               {!linesLoading && lines.length === 0 && (
-                <p className="text-sm text-[#6b7280] py-4 text-center">Нет данных о товарах</p>
+                <p className="text-sm py-4 text-center" style={{ color: 'var(--text-secondary)' }}>Нет данных о товарах</p>
               )}
               {!linesLoading && lines.length > 0 && (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-[#6b7280] border-b border-[#2d3139]">
+                      <tr className="border-b" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
                         <th className="text-left py-1.5 px-1">Товар</th>
                         <th className="text-right py-1.5 px-1">Кол-во</th>
                         <th className="text-right py-1.5 px-1">Цена</th>
@@ -171,19 +174,19 @@ export default function DocumentsPage() {
                         const total = line.sum || 0;
                         const price = qty > 0 ? Math.round(total / qty) : (line.price || 0);
                         return (
-                          <tr key={i} className="border-b border-[#2d3139]">
-                            <td className="py-1.5 px-1 text-white">{line.nomenclature || '-'}</td>
-                            <td className="py-1.5 px-1 text-right text-[#9ca3af]">{qty}</td>
-                            <td className="py-1.5 px-1 text-right text-[#9ca3af]">
+                          <tr key={i} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                            <td className="py-1.5 px-1" style={{ color: 'var(--text-primary)' }}>{line.nomenclature || '-'}</td>
+                            <td className="py-1.5 px-1 text-right" style={{ color: 'var(--text-secondary)' }}>{qty}</td>
+                            <td className="py-1.5 px-1 text-right" style={{ color: 'var(--text-secondary)' }}>
                               {price ? price.toLocaleString() + ' ₽' : '-'}
                             </td>
-                            <td className="py-1.5 px-1 text-right text-white">{total.toLocaleString()} ₽</td>
+                            <td className="py-1.5 px-1 text-right" style={{ color: 'var(--text-primary)' }}>{total.toLocaleString()} ₽</td>
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot>
-                      <tr className="font-bold text-white">
+                      <tr className="font-bold" style={{ color: 'var(--text-primary)' }}>
                         <td className="py-2 px-1">Итого</td>
                         <td className="py-2 px-1 text-right">{lines.reduce((s, l) => s + (l.quantity || 0), 0)}</td>
                         <td className="py-2 px-1" />

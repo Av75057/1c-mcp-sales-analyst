@@ -47,7 +47,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`rounded-lg p-3 max-w-[80%] ${isUser ? 'bg-brand-600 text-white' : 'bg-[#1a1d23] border border-[#2d3139]'}`}>
+      <div className={`rounded-lg p-3 max-w-[80%] ${isUser ? 'bg-brand-600 text-white' : 'border'}`} style={!isUser ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' } : undefined}>
         {message.content && (
           <div className="text-sm markdown-content">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
@@ -79,14 +79,14 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               </div>
             )}
             {tc.name !== 'create_chart' && (
-              <div className="text-xs text-[#6b7280] mt-1">
+              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 🔧 {tc.name}
               </div>
             )}
           </div>
         ))}
 
-        <div className={`text-xs mt-1 ${isUser ? 'text-white/60' : 'text-[#4b5563]'}`}>
+        <div className={`text-xs mt-1 ${isUser ? 'text-white/60' : ''}`} style={!isUser ? { color: 'var(--text-muted)' } : undefined}>
           {new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>

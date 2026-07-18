@@ -2,8 +2,11 @@ import { forwardRef, type HTMLAttributes } from 'react';
 import { cn } from '@/shared/lib/utils';
 
 export const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('rounded-lg border border-[#2d3139] bg-[#1a1d23] p-4', className)} {...props} />
+  ({ className, style, ...props }, ref) => (
+    <div ref={ref}
+      className={cn('rounded-lg border p-4', className)}
+      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', ...style }}
+      {...props} />
   )
 );
 Card.displayName = 'Card';
@@ -16,8 +19,11 @@ export const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivEleme
 CardHeader.displayName = 'CardHeader';
 
 export const CardTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('font-semibold text-white leading-none tracking-tight', className)} {...props} />
+  ({ className, style, ...props }, ref) => (
+    <h3 ref={ref}
+      className={cn('font-semibold leading-none tracking-tight', className)}
+      style={{ color: 'var(--text-primary)', ...style }}
+      {...props} />
   )
 );
 CardTitle.displayName = 'CardTitle';

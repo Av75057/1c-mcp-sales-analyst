@@ -28,8 +28,8 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
           <div className="text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl text-white font-semibold mb-2">Что-то пошло не так</h2>
-          <p className="text-sm text-[#ef4444] mb-4 max-w-md break-all">
+          <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Что-то пошло не так</h2>
+          <p className="text-sm mb-4 max-w-md break-all" style={{ color: 'var(--error)' }}>
             {this.state.error?.message || 'Неизвестная ошибка'}
           </p>
           <button

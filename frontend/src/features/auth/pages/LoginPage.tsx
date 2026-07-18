@@ -23,8 +23,8 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-md p-8">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white">📊 1C Аналитик</h1>
-        <p className="text-[#6b7280] mt-2">Войдите в систему</p>
+        <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>📊 1C Аналитик</h1>
+        <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>Войдите в систему</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -35,24 +35,26 @@ export default function LoginPage() {
         )}
 
         <div>
-          <label className="block text-sm text-[#9ca3af] mb-1">Имя пользователя</label>
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Имя пользователя</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-lg p-2.5 text-white outline-none focus:border-brand-500 transition-colors"
+            className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500 transition-colors"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
             placeholder="admin"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm text-[#9ca3af] mb-1">Пароль</label>
+          <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Пароль</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-lg p-2.5 text-white outline-none focus:border-brand-500 transition-colors"
+            className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500 transition-colors"
+            style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
             placeholder="••••••"
             required
           />

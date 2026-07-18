@@ -333,7 +333,7 @@ async def library_view_page(doc_id: str, request: Request):
 
 @app.get("/dashboards")
 async def dashboards_v2_page():
-    return render("dashboards_v2.html", {"page": "dashboards_v2"})
+    return render_spa()
 
 @app.get("/chart-test")
 async def chart_test_page():

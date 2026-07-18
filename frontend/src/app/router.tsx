@@ -16,6 +16,7 @@ const WhatIfPage = lazy(() => import('@/features/whatif/pages/WhatIfPage'));
 const AbcXyzPage = lazy(() => import('@/features/analysis/pages/AbcXyzPage'));
 const OverviewPage = lazy(() => import('@/features/dashboard/pages/OverviewPage'));
 const ExecutiveDashboardPage = lazy(() => import('@/features/dashboard/pages/ExecutiveDashboardPage'));
+const DashboardConstructorPage = lazy(() => import('@/features/dashboard/pages/DashboardConstructorPage'));
 const LegacyDashboardPage = lazy(() => import('@/features/dashboard/pages/LegacyDashboardPage'));
 const DocumentsPage = lazy(() => import('@/features/documents/pages/DocumentsPage'));
 const SalesPage = lazy(() => import('@/features/documents/pages/SalesPage'));
@@ -50,10 +51,10 @@ export const router = createBrowserRouter([
   },
   {
     element: <RootLayout />,
-    errorElement: <div className="flex flex-col items-center justify-center h-screen p-8 text-center bg-[#0f1117]">
+    errorElement: <div className="flex flex-col items-center justify-center h-screen p-8 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
       <div className="text-4xl mb-4">⚠️</div>
-      <h2 className="text-xl text-white font-semibold mb-2">Ошибка загрузки страницы</h2>
-      <p className="text-sm text-[#6b7280] mb-4">Попробуйте обновить страницу</p>
+      <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Ошибка загрузки страницы</h2>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Попробуйте обновить страницу</p>
       <button onClick={() => window.location.href = '/'}
         className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors">
         🔄 На главную
@@ -68,7 +69,8 @@ export const router = createBrowserRouter([
       { path: '/search', element: <LazyPage Component={SearchPage} /> },
       { path: '/whatif', element: <LazyPage Component={WhatIfPage} /> },
       { path: '/analysis/abc-xyz', element: <LazyPage Component={AbcXyzPage} /> },
-      { path: '/dashboards', element: <LazyPage Component={LegacyDashboardPage} /> },
+      { path: '/dashboards', element: <LazyPage Component={DashboardConstructorPage} /> },
+      { path: '/dashboards/new', element: <LazyPage Component={DashboardConstructorPage} /> },
       { path: '/insights', element: <LazyPage Component={InsightsPage} /> },
       { path: '/documents/sales', element: <LazyPage Component={DocumentsPage} /> },
       { path: '/documents', element: <LazyPage Component={LegacyRedirectPage} /> },

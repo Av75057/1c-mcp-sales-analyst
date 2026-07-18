@@ -7,7 +7,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default: 'bg-brand-500/20 text-brand-500',
-        secondary: 'bg-[#2d3139] text-[#9ca3af]',
+        secondary: '',
         success: 'bg-success/20 text-success',
         warning: 'bg-warning/20 text-warning',
         error: 'bg-error/20 text-error',
@@ -19,6 +19,16 @@ const badgeVariants = cva(
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+const variantStyles: Record<string, React.CSSProperties> = {
+  secondary: { backgroundColor: 'var(--border)', color: 'var(--text-secondary)' },
+};
+
+export function Badge({ className, variant, style, ...props }: BadgeProps) {
+  return (
+    <span
+      className={cn(badgeVariants({ variant }), className)}
+      style={{ ...(variant && variantStyles[variant]), ...style } as React.CSSProperties}
+      {...props}
+    />
+  );
 }

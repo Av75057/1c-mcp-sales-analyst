@@ -28,8 +28,9 @@ export function Dialog({ open, onClose, title, children, className }: DialogProp
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className={cn('bg-[#1a1d23] border border-[#2d3139] rounded-xl p-6 w-full max-w-md mx-4 shadow-elevated', className)}>
-        {title && <h2 className="text-lg font-semibold text-white mb-4">{title}</h2>}
+      <div className={cn('border rounded-xl p-6 w-full max-w-md mx-4 shadow-elevated', className)}
+        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+        {title && <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{title}</h2>}
         {children}
       </div>
     </div>

@@ -28,9 +28,9 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 mb-3 p-3 border border-[#2d3139] rounded-lg bg-[#0f1117]" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+      <div className="flex-1 overflow-y-auto space-y-3 mb-3 p-3 border rounded-lg" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--border)', maxHeight: 'calc(100vh - 280px)' }}>
         {messages.length === 0 && !isTyping && (
-          <div className="text-center py-10 text-[#6b7280]">
+          <div className="text-center py-10" style={{ color: 'var(--text-secondary)' }}>
             <div className="text-3xl mb-2">💬</div>
             <p className="text-lg mb-1">AI Аналитик 1С</p>
             <p className="text-sm">Задайте вопрос о продажах, остатках или клиентах</p>
@@ -39,7 +39,10 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
                 <button
                   key={q}
                   onClick={() => { onSendMessage(q); }}
-                  className="px-3 py-1.5 bg-[#1a1d23] border border-[#2d3139] rounded-lg text-sm text-[#9ca3af] hover:text-white hover:border-brand-500 transition-colors"
+                  className="px-3 py-1.5 border rounded-lg text-sm hover:border-brand-500 transition-colors"
+                  style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
                 >
                   {q}
                 </button>
@@ -55,12 +58,12 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
         {/* Streaming message */}
         {isTyping && (streamingContent || currentToolCalls.length > 0) && (
           <div className="flex justify-start">
-            <div className="bg-[#1a1d23] border border-[#2d3139] rounded-lg p-3 max-w-[80%]">
+            <div className="border rounded-lg p-3 max-w-[80%]" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               {streamingContent && (
-                <p className="text-sm text-[#e5e7eb] whitespace-pre-wrap">{streamingContent}</p>
+                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{streamingContent}</p>
               )}
               {currentToolCalls.map((tc, i) => (
-                <div key={i} className="text-xs text-[#6b7280] mt-1">
+                <div key={i} className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                   🔧 {tc.name}({JSON.stringify(tc.args, null, 1).slice(0, 100)})
                   {tc.result?.image_base64 && (
                     <img src={`data:image/png;base64,${tc.result.image_base64}`} alt="Chart" className="mt-2 rounded-lg max-w-full" style={{ maxHeight: 300 }} />
@@ -87,7 +90,8 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
           ref={inputRef}
           type="text"
           placeholder="Задайте вопрос о данных..."
-          className="flex-1 bg-[#1a1d23] border border-[#2d3139] rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-brand-500 transition-colors"
+          className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-brand-500 transition-colors"
+          style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
           disabled={isTyping}
         />
         <Button type="submit" disabled={isTyping} size="lg">

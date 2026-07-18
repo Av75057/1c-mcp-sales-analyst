@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 
 export function AuthLayout() {
   return (
-    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>
       <Outlet />
     </div>
   );

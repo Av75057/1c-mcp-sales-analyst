@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { forwardRef, useState, type ButtonHTMLAttributes } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/lib/utils';
 
@@ -9,9 +9,9 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-brand-600 text-white hover:bg-brand-700',
         destructive: 'bg-error text-white hover:bg-error/90',
-        outline: 'border border-[#2d3139] bg-[#1a1d23] hover:bg-[#22262e] text-white',
-        secondary: 'bg-[#2d3139] text-white hover:bg-[#3a3f4a]',
-        ghost: 'hover:bg-[#22262e] text-[#9ca3af] hover:text-white',
+        outline: 'border text-white',
+        secondary: 'text-white',
+        ghost: 'hover:text-white',
         link: 'text-brand-500 underline-offset-4 hover:underline',
       },
       size: {
@@ -28,8 +28,30 @@ const buttonVariants = cva(
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
-  )
+  ({ className, variant, size, style, ...props }, ref) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    const baseStyle: React.CSSProperties = {};
+    if (variant === 'outline') {
+      baseStyle.borderColor = 'var(--border)';
+      baseStyle.backgroundColor = isHovered ? 'var(--bg-card-hover)' : 'var(--bg-card)';
+    } else if (variant === 'secondary') {
+      baseStyle.backgroundColor = isHovered ? 'var(--bg-card-hover)' : 'var(--border)';
+    } else if (variant === 'ghost') {
+      baseStyle.color = isHovered ? undefined : 'var(--text-secondary)';
+      baseStyle.backgroundColor = isHovered ? 'var(--bg-card-hover)' : undefined;
+    }
+
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size }), className)}
+        style={{ ...baseStyle, ...style } as React.CSSProperties}
+        onMouseEnter={(e) => { setIsHovered(true); props.onMouseEnter?.(e); }}
+        onMouseLeave={(e) => { setIsHovered(false); props.onMouseLeave?.(e); }}
+        ref={ref}
+        {...props}
+      />
+    );
+  }
 );
 Button.displayName = 'Button';

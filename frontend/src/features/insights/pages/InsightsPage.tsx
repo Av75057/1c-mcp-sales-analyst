@@ -50,8 +50,8 @@ export default function InsightsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">💡 Инсайты</h1>
-          <p className="text-sm text-[#6b7280] mt-1">Автоматические аналитические заметки</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>💡 Инсайты</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Автоматические аналитические заметки</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchInsights}>
           🔄 Обновить
@@ -60,13 +60,13 @@ export default function InsightsPage() {
 
       {loading && (
         <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-24 bg-[#1a1d23] border border-[#2d3139] rounded-lg animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-24 border rounded-lg animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }} />)}
         </div>
       )}
 
       {!loading && insights.length === 0 && (
         <Card>
-          <CardContent className="py-8 text-center text-[#6b7280]">
+          <CardContent className="py-8 text-center" style={{ color: 'var(--text-secondary)' }}>
             <div className="text-3xl mb-2">💡</div>
             <p>Нет инсайтов. Они появятся после анализа данных.</p>
           </CardContent>
@@ -79,21 +79,21 @@ export default function InsightsPage() {
             <Card key={i} className={`border-l-4 ${insight.type === 'critical' ? 'border-l-error' : insight.type === 'warning' ? 'border-l-warning' : 'border-l-info'}`}>
               <CardContent className="pt-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-white font-medium">{insight.title}</h3>
+                  <h3 className="font-medium" style={{ color: 'var(--text-primary)' }}>{insight.title}</h3>
                   <div className="flex gap-2">
                     {insight.type && <Badge variant={typeVariant(insight.type)}>{insight.type}</Badge>}
                     {insight.created_at && (
-                      <span className="text-xs text-[#6b7280]">{formatDateTime(insight.created_at)}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{formatDateTime(insight.created_at)}</span>
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-[#e5e7eb]">{insight.text}</p>
+                <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{insight.text}</p>
                 {insight.recommendation && (
                   <p className="text-sm text-brand-500 mt-1">💡 {insight.recommendation}</p>
                 )}
                 {insight.metric && insight.value && (
-                  <div className="flex gap-4 mt-2 text-sm text-[#6b7280]">
-                    <span>{insight.metric}: <strong className="text-white">{insight.value}</strong></span>
+                  <div className="flex gap-4 mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    <span>{insight.metric}: <strong style={{ color: 'var(--text-primary)' }}>{insight.value}</strong></span>
                   </div>
                 )}
               </CardContent>

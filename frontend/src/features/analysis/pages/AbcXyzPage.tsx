@@ -36,8 +36,8 @@ export default function AbcXyzPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">📊 ABC/XYZ анализ</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Классификация товаров/клиентов по выручке и стабильности</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📊 ABC/XYZ анализ</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Классификация товаров/клиентов по выручке и стабильности</p>
       </div>
 
       <div className="grid grid-cols-3 gap-6">
@@ -45,9 +45,10 @@ export default function AbcXyzPage() {
           <CardHeader><CardTitle>Параметры</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm text-[#9ca3af] mb-1">Группировка</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Группировка</label>
               <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}
-                className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-lg p-2.5 text-white outline-none focus:border-brand-500">
+                className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                 <option value="nomenclature">Товары</option>
                 <option value="client">Клиенты</option>
                 <option value="manager">Менеджеры</option>
@@ -60,10 +61,10 @@ export default function AbcXyzPage() {
         </Card>
 
         <div className="col-span-2">
-          {isLoading && <Card><CardContent className="py-8 text-center text-[#6b7280] animate-pulse">Выполняется анализ...</CardContent></Card>}
+          {isLoading && <Card><CardContent className="py-8 text-center animate-pulse" style={{ color: 'var(--text-secondary)' }}>Выполняется анализ...</CardContent></Card>}
 
           {!result && !isLoading && (
-            <Card><CardContent className="py-8 text-center text-[#6b7280]">
+            <Card><CardContent className="py-8 text-center" style={{ color: 'var(--text-secondary)' }}>
               <div className="text-3xl mb-2">📊</div>
               <p>Настройте параметры и запустите анализ</p>
             </CardContent></Card>
@@ -79,20 +80,20 @@ export default function AbcXyzPage() {
                   <CardHeader><CardTitle>Сводка</CardTitle></CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-4 gap-3">
-                      <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                        <div className="text-xs text-[#6b7280]">Всего</div>
-                        <div className="text-lg font-bold text-white">{formatNumber(result.summary.total_items || 0)}</div>
+                      <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Всего</div>
+                        <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{formatNumber(result.summary.total_items || 0)}</div>
                       </div>
-                      <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                        <div className="text-xs text-[#6b7280]">Выручка</div>
-                        <div className="text-lg font-bold text-white">{formatNumber(result.summary.total_revenue || 0)} ₽</div>
+                      <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Выручка</div>
+                        <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{formatNumber(result.summary.total_revenue || 0)} ₽</div>
                       </div>
-                      <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                        <div className="text-xs text-[#6b7280]">Период</div>
-                        <div className="text-sm font-bold text-white">{result.summary.period_from?.slice(0, 10)} — {result.summary.period_to?.slice(0, 10)}</div>
+                      <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Период</div>
+                        <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{result.summary.period_from?.slice(0, 10)} — {result.summary.period_to?.slice(0, 10)}</div>
                       </div>
-                      <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                        <div className="text-xs text-[#6b7280]">Тип</div>
+                      <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                        <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Тип</div>
                         <Badge variant="default">{result.summary.analysis_type === 'nomenclature' ? 'Товары' : result.summary.analysis_type === 'client' ? 'Клиенты' : 'Менеджеры'}</Badge>
                       </div>
                     </div>
@@ -109,11 +110,12 @@ export default function AbcXyzPage() {
                       {matrixKeys.map((key) => {
                         const cell = result.matrix[key] || {};
                         return (
-                          <div key={key} className={`bg-[#0f1117] rounded-lg p-3 text-center border ${(cell.count || 0) > 0 ? 'border-[#2d3139]' : 'border-transparent opacity-30'}`}>
-                            <div className="text-lg font-bold text-white">{key}</div>
-                            <div className="text-xs text-[#6b7280]">{cell.count || 0} шт.</div>
-                            <div className="text-xs text-white">{formatNumber(cell.revenue || 0)} ₽</div>
-                            <div className="text-xs text-[#6b7280]">{((cell.share || 0) * 100).toFixed(1)}%</div>
+                          <div key={key} className={`rounded-lg p-3 text-center border ${(cell.count || 0) > 0 ? '' : 'border-transparent opacity-30'}`}
+                            style={(cell.count || 0) > 0 ? { backgroundColor: 'var(--bg-page)', borderColor: 'var(--border)' } : { backgroundColor: 'var(--bg-page)' }}>
+                            <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{key}</div>
+                            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{cell.count || 0} шт.</div>
+                            <div className="text-xs" style={{ color: 'var(--text-primary)' }}>{formatNumber(cell.revenue || 0)} ₽</div>
+                            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{((cell.share || 0) * 100).toFixed(1)}%</div>
                           </div>
                         );
                       })}
@@ -129,7 +131,7 @@ export default function AbcXyzPage() {
                   <CardContent>
                     <ul className="space-y-1">
                       {recommendations.map((r: any, i: number) => (
-                        <li key={i} className="text-sm text-[#e5e7eb] bg-[#0f1117] rounded p-2">
+                        <li key={i} className="text-sm rounded p-2" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-page)' }}>
                           • {typeof r === 'string' ? r : r.description || r.action || r.recommendation || JSON.stringify(r)}
                         </li>
                       ))}

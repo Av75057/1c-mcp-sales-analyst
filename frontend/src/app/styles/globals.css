@@ -23,15 +23,47 @@
   --shadow-elevated: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/* ===== Theme variables ===== */
+:root, [data-theme="dark"] {
+  --bg-page: #0f1117;
+  --bg-sidebar: #1a1d23;
+  --bg-card: #1a1d23;
+  --bg-card-hover: #22262e;
+  --bg-input: #0f1117;
+  --bg-active: #2563eb22;
+  --border: #2d3139;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --brand: #3b82f6;
+  --brand-hover: #2563eb;
+  --skeleton: #1a1d23;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+}
+
+[data-theme="light"] {
+  --bg-page: #f3f4f6;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9fafb;
+  --bg-input: #ffffff;
+  --bg-active: #3b82f622;
+  --border: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --skeleton: #e5e7eb;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-.dark body {
-  background-color: #0f1117;
-  color: #e5e7eb;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 
 /* Markdown styling for chat messages */
@@ -42,33 +74,33 @@ body {
   font-size: 12px;
 }
 .markdown-content th {
-  background: #2563eb22;
-  color: #e5e7eb;
+  background: var(--bg-active);
+  color: var(--text-primary);
   font-weight: 600;
   padding: 6px 10px;
-  border: 1px solid #2d3139;
+  border: 1px solid var(--border);
   text-align: left;
 }
 .markdown-content td {
   padding: 4px 10px;
-  border: 1px solid #2d3139;
-  color: #d1d5db;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
 }
 .markdown-content tr:nth-child(even) {
-  background: #0f1117;
+  background: var(--bg-page);
 }
 .markdown-content tr:hover {
-  background: #22262e;
+  background: var(--bg-card-hover);
 }
 .markdown-content p {
   margin: 4px 0;
   line-height: 1.5;
 }
 .markdown-content strong {
-  color: #e5e7eb;
+  color: var(--text-primary);
 }
 .markdown-content code {
-  background: #0f1117;
+  background: var(--bg-page);
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 12px;

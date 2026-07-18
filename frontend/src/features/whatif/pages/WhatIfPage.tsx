@@ -43,8 +43,8 @@ export default function WhatIfPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">🔮 What-If анализ</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Симуляция бизнес-сценариев «Что если?»</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🔮 What-If анализ</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Симуляция бизнес-сценариев «Что если?»</p>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -52,11 +52,12 @@ export default function WhatIfPage() {
           <CardHeader><CardTitle>Параметры сценария</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm text-[#9ca3af] mb-1">Тип сценария</label>
+              <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Тип сценария</label>
               <select
                 value={scenarioType}
                 onChange={(e) => setScenarioType(e.target.value)}
-                className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-lg p-2.5 text-white outline-none focus:border-brand-500"
+                className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
               >
                 {SCENARIO_TYPES.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
@@ -65,7 +66,7 @@ export default function WhatIfPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-[#9ca3af] mb-1">
+              <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
                 {scenarioType === 'price_change' ? 'Товар' :
                  scenarioType === 'promotion' ? 'Товар/категория' :
                  scenarioType === 'purchase_change' ? 'Поставщик' : 'Сотрудник'}
@@ -75,12 +76,13 @@ export default function WhatIfPage() {
                 value={entityName}
                 onChange={(e) => setEntityName(e.target.value)}
                 placeholder="Название..."
-                className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-lg p-2.5 text-white outline-none focus:border-brand-500"
+                className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-[#9ca3af] mb-1">
+              <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
                 {scenarioType === 'price_change' ? 'Изменение цены (%)' :
                  scenarioType === 'promotion' ? 'Скидка (%)' :
                  scenarioType === 'purchase_change' ? 'Изменение заказа (%)' : ''} {changePercent}%
@@ -93,7 +95,7 @@ export default function WhatIfPage() {
                 onChange={(e) => setChangePercent(Number(e.target.value))}
                 className="w-full accent-brand-500"
               />
-              <div className="flex justify-between text-xs text-[#6b7280]">
+              <div className="flex justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
                 <span>-50%</span>
                 <span>0%</span>
                 <span>+50%</span>
@@ -109,9 +111,9 @@ export default function WhatIfPage() {
         <Card>
           <CardHeader><CardTitle>Результат</CardTitle></CardHeader>
           <CardContent>
-            {isLoading && <div className="text-[#6b7280] animate-pulse">Симуляция выполняется...</div>}
+            {isLoading && <div className="animate-pulse" style={{ color: 'var(--text-secondary)' }}>Симуляция выполняется...</div>}
             {!result && !isLoading && (
-              <div className="text-center py-8 text-[#6b7280]">
+              <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
                 <div className="text-3xl mb-2">🔮</div>
                 <p className="text-sm">Настройте параметры и запустите симуляцию</p>
               </div>
@@ -123,29 +125,29 @@ export default function WhatIfPage() {
               <div className="space-y-3">
                 {/* Baseline vs Projected */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-[#0f1117] rounded-lg p-3 text-center border border-[#2d3139]">
-                    <div className="text-xs text-[#6b7280]">Текущая выручка</div>
-                    <div className="text-lg font-bold text-white">{(result.baseline?.revenue || 0).toLocaleString()} ₽</div>
-                    <div className="text-xs text-[#6b7280]">Маржа: {(result.baseline?.margin || 0).toLocaleString()} ₽</div>
+                  <div className="border rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--border)' }}>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Текущая выручка</div>
+                    <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{(result.baseline?.revenue || 0).toLocaleString()} ₽</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Маржа: {(result.baseline?.margin || 0).toLocaleString()} ₽</div>
                   </div>
-                  <div className="bg-[#0f1117] rounded-lg p-3 text-center border border-[#2d3139]">
-                    <div className="text-xs text-[#6b7280]">Прогноз</div>
+                  <div className="border rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--border)' }}>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Прогноз</div>
                     <div className="text-lg font-bold text-brand-500">{(result.projected?.revenue || 0).toLocaleString()} ₽</div>
-                    <div className="text-xs text-[#6b7280]">Маржа: {(result.projected?.margin || 0).toLocaleString()} ₽</div>
+                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Маржа: {(result.projected?.margin || 0).toLocaleString()} ₽</div>
                   </div>
                 </div>
 
                 {/* Delta */}
                 {result.delta && (
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                      <div className="text-xs text-[#6b7280]">Изменение выручки</div>
+                    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Изменение выручки</div>
                       <div className={`text-sm font-bold ${(result.delta.revenue_percent || 0) >= 0 ? 'text-success' : 'text-error'}`}>
                         {result.delta.revenue_percent >= 0 ? '+' : ''}{result.delta.revenue_percent?.toFixed(1)}%
                       </div>
                     </div>
-                    <div className="bg-[#0f1117] rounded-lg p-2 text-center">
-                      <div className="text-xs text-[#6b7280]">Изменение маржи</div>
+                    <div className="rounded-lg p-2 text-center" style={{ backgroundColor: 'var(--bg-page)' }}>
+                      <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>Изменение маржи</div>
                       <div className={`text-sm font-bold ${(result.delta.margin_percent || 0) >= 0 ? 'text-success' : 'text-error'}`}>
                         {result.delta.margin_percent >= 0 ? '+' : ''}{result.delta.margin_percent?.toFixed(1)}%
                       </div>
@@ -156,10 +158,10 @@ export default function WhatIfPage() {
                 {/* Recommendations */}
                 {result.recommendations && result.recommendations.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-white mb-1">💡 Рекомендации</h4>
+                    <h4 className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>💡 Рекомендации</h4>
                     <ul className="space-y-1">
                       {result.recommendations.map((r: string, i: number) => (
-                        <li key={i} className="text-sm text-[#e5e7eb] bg-[#0f1117] rounded p-2">• {r}</li>
+                        <li key={i} className="text-sm rounded p-2" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-page)' }}>• {r}</li>
                       ))}
                     </ul>
                   </div>
@@ -172,7 +174,7 @@ export default function WhatIfPage() {
 
                 {/* Confidence */}
                 {result.confidence !== undefined && (
-                  <div className="text-xs text-[#6b7280] text-center">
+                  <div className="text-xs text-center" style={{ color: 'var(--text-secondary)' }}>
                     Уверенность прогноза: {Math.round(result.confidence * 100)}%
                   </div>
                 )}

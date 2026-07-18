@@ -26,8 +26,8 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">👤 Профиль</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Настройки пользователя</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>👤 Профиль</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Настройки пользователя</p>
       </div>
 
       <div className="space-y-4">
@@ -40,8 +40,8 @@ export default function ProfilePage() {
                 {user?.username?.charAt(0).toUpperCase() || '?'}
               </div>
               <div>
-                <div className="text-white font-medium">{user?.username || 'Неизвестно'}</div>
-                <div className="text-sm text-[#6b7280]">{user?.email || 'Нет email'}</div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{user?.username || 'Неизвестно'}</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{user?.email || 'Нет email'}</div>
               </div>
               <div className="ml-auto">
                 <Badge variant={user?.role === 'admin' ? 'success' : 'default'}>{user?.role || 'user'}</Badge>
@@ -54,13 +54,13 @@ export default function ProfilePage() {
         <Card>
           <CardHeader><CardTitle>API Ключ</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-[#6b7280]">Ключ для доступа к API 1С Аналитика из внешних систем</p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Ключ для доступа к API 1С Аналитика из внешних систем</p>
             {apiKey ? (
-              <div className="bg-[#0f1117] border border-[#2d3139] rounded-lg p-3 font-mono text-xs text-brand-500 break-all">
+              <div className="border rounded-lg p-3 font-mono text-xs text-brand-500 break-all" style={{ backgroundColor: 'var(--bg-page)', borderColor: 'var(--border)' }}>
                 {apiKey}
               </div>
             ) : (
-              <div className="text-sm text-[#6b7280]">Нажмите «Сгенерировать» для создания нового ключа</div>
+              <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Нажмите «Сгенерировать» для создания нового ключа</div>
             )}
             <Button onClick={generateApiKey} size="sm">
               🔑 Сгенерировать

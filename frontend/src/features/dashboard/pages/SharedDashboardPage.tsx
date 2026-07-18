@@ -28,7 +28,7 @@ export default function SharedDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-page)' }}>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500" />
       </div>
     );
@@ -36,23 +36,23 @@ export default function SharedDashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0f1117] flex items-center justify-center text-center p-8">
+      <div className="min-h-screen flex items-center justify-center text-center p-8" style={{ backgroundColor: 'var(--bg-page)' }}>
         <div>
           <div className="text-4xl mb-4">🔗</div>
-          <h1 className="text-xl text-white mb-2">{error}</h1>
-          <p className="text-sm text-[#6b7280]">Свяжитесь с владельцем дашборда для получения новой ссылки</p>
+          <h1 className="text-xl" style={{ color: 'var(--text-primary)' }}>{error}</h1>
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Свяжитесь с владельцем дашборда для получения новой ссылки</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117] text-[#e5e7eb] p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-page)', color: 'var(--text-primary)' }}>
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 border-b border-[#2d3139] pb-6">
+        <div className="text-center mb-8 border-b pb-6" style={{ borderColor: 'var(--border)' }}>
           <h1 className="text-2xl font-bold">📊 {data?.title || 'Дашборд'}</h1>
-          {data?.description && <p className="text-[#6b7280] mt-1">{data.description}</p>}
-          <div className="flex justify-center gap-4 mt-2 text-sm text-[#6b7280]">
+          {data?.description && <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>{data.description}</p>}
+          <div className="flex justify-center gap-4 mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>👤 {data?.owner || 'Пользователь'}</span>
             {data?.created_at && <span>📅 {new Date(data.created_at).toLocaleDateString()}</span>}
             <Badge variant="secondary">Публичный доступ</Badge>
@@ -61,17 +61,17 @@ export default function SharedDashboardPage() {
 
         <div className="grid grid-cols-12 gap-4">
           {(data?.charts || []).map((chart: any) => (
-            <div key={chart.id} className={`col-span-${chart.position?.w || 6} bg-[#1a1d23] border border-[#2d3139] rounded-lg p-4`}>
-              <h3 className="text-white font-medium mb-2">{chart.title || 'График'}</h3>
-              <div style={{ height: Math.max(200, (chart.position?.h || 4) * 60) }}
-                   className="bg-[#0f1117] rounded-lg flex items-center justify-center text-[#6b7280]">
+            <div key={chart.id} className={`col-span-${chart.position?.w || 6} border rounded-lg p-4`} style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+              <h3 className="font-medium mb-2" style={{ color: 'var(--text-primary)' }}>{chart.title || 'График'}</h3>
+              <div style={{ height: Math.max(200, (chart.position?.h || 4) * 60), backgroundColor: 'var(--bg-page)', color: 'var(--text-secondary)' }}
+                   className="rounded-lg flex items-center justify-center">
                 📊 Данные дашборда
               </div>
             </div>
           ))}
         </div>
 
-        <div className="text-center text-xs text-[#4b5563] mt-8 border-t border-[#2d3139] pt-4">
+        <div className="text-center text-xs mt-8 border-t pt-4" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
           Сгенерировано 1С Аналитиком · Данные из 1С:УНФ
         </div>
       </div>

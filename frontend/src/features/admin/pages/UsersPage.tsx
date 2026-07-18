@@ -12,22 +12,22 @@ export default function UsersPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">👥 Пользователи</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Управление пользователями системы</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>👥 Пользователи</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Управление пользователями системы</p>
       </div>
 
       <Card>
         <CardHeader><CardTitle>Список пользователей</CardTitle></CardHeader>
         <CardContent>
-          {isLoading && <div className="text-[#6b7280]">Загрузка...</div>}
+          {isLoading && <div style={{ color: 'var(--text-secondary)' }}>Загрузка...</div>}
           {users && users.length === 0 && (
-            <div className="text-[#6b7280]">Нет пользователей</div>
+            <div style={{ color: 'var(--text-secondary)' }}>Нет пользователей</div>
           )}
           {users && users.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[#6b7280] border-b border-[#2d3139]">
+                  <tr className="border-b" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
                     <th className="text-left py-2 px-2">Имя</th>
                     <th className="text-left py-2 px-2">Email</th>
                     <th className="text-left py-2 px-2">Роль</th>
@@ -37,9 +37,11 @@ export default function UsersPage() {
                 </thead>
                 <tbody>
                   {users.map((u: any) => (
-                    <tr key={u.id} className="border-b border-[#2d3139] hover:bg-[#22262e]">
-                      <td className="py-2 px-2 text-white">{u.username}</td>
-                      <td className="py-2 px-2 text-[#9ca3af]">{u.email || '-'}</td>
+                    <tr key={u.id} className="border-b" style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}>
+                      <td className="py-2 px-2" style={{ color: 'var(--text-primary)' }}>{u.username}</td>
+                      <td className="py-2 px-2" style={{ color: 'var(--text-secondary)' }}>{u.email || '-'}</td>
                       <td className="py-2 px-2">
                         <Badge variant={u.role === 'admin' ? 'success' : 'secondary'}>{u.role}</Badge>
                       </td>
@@ -48,7 +50,7 @@ export default function UsersPage() {
                           {u.is_active ? 'Активен' : 'Заблокирован'}
                         </span>
                       </td>
-                      <td className="py-2 px-2 text-[#6b7280]">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
+                      <td className="py-2 px-2" style={{ color: 'var(--text-secondary)' }}>{u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -27,14 +27,14 @@ export default function SalesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">📊 Продажи</h1>
-        <p className="text-sm text-[#6b7280] mt-1">Данные о продажах по товарам</p>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📊 Продажи</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Данные о продажах по товарам</p>
       </div>
 
-      {loading && <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-10 bg-[#1a1d23] border border-[#2d3139] rounded-lg animate-pulse" />)}</div>}
+      {loading && <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-10 border rounded-lg animate-pulse" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }} />)}</div>}
 
       {!loading && sales.length === 0 && (
-        <Card><CardContent className="py-8 text-center text-[#6b7280]"><div className="text-3xl mb-2">📊</div><p>Нет данных о продажах</p></CardContent></Card>
+        <Card><CardContent className="py-8 text-center" style={{ color: 'var(--text-secondary)' }}><div className="text-3xl mb-2">📊</div><p>Нет данных о продажах</p></CardContent></Card>
       )}
 
       {sales.length > 0 && (
@@ -44,7 +44,7 @@ export default function SalesPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[#6b7280] border-b border-[#2d3139]">
+                  <tr className="border-b" style={{ color: 'var(--text-secondary)', borderColor: 'var(--border)' }}>
                     <th className="text-left py-2 px-2">Дата</th>
                     <th className="text-left py-2 px-2">Товар</th>
                     <th className="text-right py-2 px-2">Кол-во</th>
@@ -55,13 +55,15 @@ export default function SalesPage() {
                 </thead>
                 <tbody>
                   {sales.map((s, i) => (
-                    <tr key={i} className="border-b border-[#2d3139] hover:bg-[#22262e]">
-                      <td className="py-2 px-2 text-[#9ca3af] whitespace-nowrap">{s.date || '-'}</td>
-                      <td className="py-2 px-2 text-white max-w-[200px] truncate">{s.nomenclature || '-'}</td>
-                      <td className="py-2 px-2 text-right text-white">{s.quantity || 0}</td>
-                      <td className="py-2 px-2 text-right text-white whitespace-nowrap">{(s.sum || 0).toLocaleString()} ₽</td>
-                      <td className="py-2 px-2 text-[#9ca3af] whitespace-nowrap">{s.manager || '-'}</td>
-                      <td className="py-2 px-2 text-white max-w-[150px] truncate">{s.client || '-'}</td>
+                    <tr key={i} className="border-b" style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}>
+                      <td className="py-2 px-2 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{s.date || '-'}</td>
+                      <td className="py-2 px-2 max-w-[200px] truncate" style={{ color: 'var(--text-primary)' }}>{s.nomenclature || '-'}</td>
+                      <td className="py-2 px-2 text-right" style={{ color: 'var(--text-primary)' }}>{s.quantity || 0}</td>
+                      <td className="py-2 px-2 text-right whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{(s.sum || 0).toLocaleString()} ₽</td>
+                      <td className="py-2 px-2 whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{s.manager || '-'}</td>
+                      <td className="py-2 px-2 max-w-[150px] truncate" style={{ color: 'var(--text-primary)' }}>{s.client || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -57,8 +57,8 @@ export default function SearchPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">🔍 Поиск</h1>
-          <p className="text-sm text-[#6b7280] mt-1">Поиск по дашбордам и номенклатуре 1С</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>🔍 Поиск</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Поиск по дашбордам и номенклатуре 1С</p>
         </div>
       </div>
 
@@ -69,10 +69,11 @@ export default function SearchPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Поиск..."
-          className="w-full bg-[#1a1d23] border border-[#2d3139] rounded-xl px-5 py-3.5 text-base text-white outline-none focus:border-brand-500 transition-colors pl-12"
+          className="w-full rounded-xl px-5 py-3.5 text-base outline-none focus:border-brand-500 transition-colors pl-12"
+          style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
           autoFocus
         />
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7280] text-lg">🔍</span>
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg" style={{ color: 'var(--text-secondary)' }}>🔍</span>
         {isLoading && (
           <span className="absolute right-4 top-1/2 -translate-y-1/2">
             <span className="animate-spin inline-block w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full" />
@@ -84,22 +85,31 @@ export default function SearchPage() {
       <div className="flex gap-1 mb-4">
         <button
           onClick={() => setTab('dashboards')}
-          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${tab === 'dashboards' ? 'bg-brand-600 text-white' : 'bg-[#1a1d23] text-[#9ca3af] hover:text-white'}`}
+          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${tab === 'dashboards' ? 'bg-brand-600 text-white' : ''}`}
+          style={tab !== 'dashboards' ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)' } : undefined}
+          onMouseEnter={(e) => { if (tab !== 'dashboards') e.currentTarget.style.color = 'var(--text-primary)'; }}
+          onMouseLeave={(e) => { if (tab !== 'dashboards') e.currentTarget.style.color = 'var(--text-secondary)'; }}
         >📚 Дашборды</button>
         <button
           onClick={() => setTab('nomenclature')}
-          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${tab === 'nomenclature' ? 'bg-brand-600 text-white' : 'bg-[#1a1d23] text-[#9ca3af] hover:text-white'}`}
+          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${tab === 'nomenclature' ? 'bg-brand-600 text-white' : ''}`}
+          style={tab !== 'nomenclature' ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)' } : undefined}
+          onMouseEnter={(e) => { if (tab !== 'nomenclature') e.currentTarget.style.color = 'var(--text-primary)'; }}
+          onMouseLeave={(e) => { if (tab !== 'nomenclature') e.currentTarget.style.color = 'var(--text-secondary)'; }}
         >📦 Номенклатура</button>
       </div>
 
       {/* Suggestions */}
       {!hasSearched && !query && (
         <div>
-          <p className="text-sm text-[#6b7280] mb-3">Популярные запросы:</p>
+          <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>Популярные запросы:</p>
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map((s) => (
               <button key={s.query} onClick={() => setQuery(s.query)}
-                className="px-4 py-2 bg-[#1a1d23] border border-[#2d3139] rounded-lg text-sm text-[#9ca3af] hover:text-white hover:border-brand-500 transition-colors">
+                className="px-4 py-2 border rounded-lg text-sm hover:border-brand-500 transition-colors"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}>
                 {s.label}
               </button>
             ))}
@@ -109,7 +119,7 @@ export default function SearchPage() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="flex items-center gap-3 py-4 text-sm text-[#6b7280]">
+        <div className="flex items-center gap-3 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
           <span className="animate-spin inline-block w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full" />
           Поиск...
         </div>
@@ -121,14 +131,14 @@ export default function SearchPage() {
           {!isLoading && results.length === 0 && (
             <div className="text-center py-16">
               <div className="text-4xl mb-3">🔍</div>
-              <h2 className="text-lg text-white mb-1">Ничего не найдено</h2>
-              <p className="text-sm text-[#6b7280]">Попробуйте изменить поисковый запрос</p>
+              <h2 className="text-lg mb-1" style={{ color: 'var(--text-primary)' }}>Ничего не найдено</h2>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Попробуйте изменить поисковый запрос</p>
             </div>
           )}
 
           {results.length > 0 && (
             <div>
-              <p className="text-sm text-[#6b7280] mb-3">Найдено: {results.length}</p>
+              <p className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>Найдено: {results.length}</p>
               <div className="space-y-2">
                 {results.map((r: any, i: number) => {
                   const id = r.dashboard_id || r.id || r.nomenclature_id || i;
@@ -139,9 +149,9 @@ export default function SearchPage() {
                   const content = (
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-white font-medium">{title}</h3>
-                        {desc && <p className="text-sm text-[#6b7280] mt-1">{desc}</p>}
-                        {r.article && <p className="text-xs text-[#4b5563] mt-0.5">Арт: {r.article}</p>}
+                        <h3 style={{ color: 'var(--text-primary)' }} className="font-medium">{title}</h3>
+                        {desc && <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{desc}</p>}
+                        {r.article && <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Арт: {r.article}</p>}
                       </div>
                       <div className="flex gap-1 ml-3 flex-wrap shrink-0">
                         {tags && <Badge variant="secondary">{tags}</Badge>}
@@ -151,12 +161,14 @@ export default function SearchPage() {
                   );
                   return link ? (
                     <Link key={id} to={link}
-                      className="block bg-[#1a1d23] border border-[#2d3139] rounded-lg p-4 hover:border-brand-500 transition-colors">
+                      className="block border rounded-lg p-4 hover:border-brand-500 transition-colors"
+                      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                       {content}
                     </Link>
                   ) : (
                     <div key={id}
-                      className="bg-[#1a1d23] border border-[#2d3139] rounded-lg p-4">
+                      className="border rounded-lg p-4"
+                      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
                       {content}
                     </div>
                   );

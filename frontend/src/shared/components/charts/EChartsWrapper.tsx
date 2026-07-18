@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 
@@ -9,14 +9,30 @@ interface EChartsWrapperProps {
   onEvents?: Record<string, (params: any) => void>;
 }
 
+function getTheme() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+}
+
 export function EChartsWrapper({ option, height = 400, loading = false, onEvents }: EChartsWrapperProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<echarts.ECharts>();
+  const [theme, setTheme] = useState(getTheme);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const t = getTheme();
+      if (t !== theme) {
+        setTheme(t);
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, [theme]);
 
   useEffect(() => {
     if (!chartRef.current) return;
-
-    instanceRef.current = echarts.init(chartRef.current, 'dark');
+    instanceRef.current?.dispose();
+    instanceRef.current = echarts.init(chartRef.current, theme);
 
     const resizeObserver = new ResizeObserver(() => {
       instanceRef.current?.resize();
@@ -33,7 +49,7 @@ export function EChartsWrapper({ option, height = 400, loading = false, onEvents
       resizeObserver.disconnect();
       instanceRef.current?.dispose();
     };
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     if (!instanceRef.current) return;

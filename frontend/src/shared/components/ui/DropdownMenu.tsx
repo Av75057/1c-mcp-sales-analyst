@@ -25,9 +25,10 @@ export function DropdownMenu({ trigger, children, align = 'end' }: DropdownMenuP
       {open && (
         <div
           className={cn(
-            'absolute top-full mt-1 z-50 min-w-[180px] bg-[#1a1d23] border border-[#2d3139] rounded-lg shadow-elevated py-1',
+            'absolute top-full mt-1 z-50 min-w-[180px] border rounded-lg shadow-elevated py-1',
             align === 'end' ? 'right-0' : 'left-0'
           )}
+          style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
           onClick={() => setOpen(false)}
         >
           {children}
@@ -46,13 +47,21 @@ export function DropdownMenuItem({
   onClick?: () => void;
   danger?: boolean;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left px-3 py-2 text-sm transition-colors hover:bg-[#22262e]',
-        danger ? 'text-error hover:text-error' : 'text-[#e5e7eb]'
+        'w-full text-left px-3 py-2 text-sm transition-colors',
+        danger ? 'text-error' : ''
       )}
+      style={{
+        color: danger ? undefined : 'var(--text-primary)',
+        backgroundColor: isHovered ? 'var(--bg-card-hover)' : undefined,
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {children}
     </button>
