@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardFilterStore } from '../stores/dashboardFilterStore';
 
@@ -16,8 +17,18 @@ export function useFilteredQuery<T>({
   enabled = true,
   staleTime = 60 * 1000,
 }: UseFilteredQueryOptions<T>) {
-  const getFilterForWidget = useDashboardFilterStore((s) => s.getFilterForWidget);
-  const filters = getFilterForWidget(widgetId);
+  const globalFilters = useDashboardFilterStore((s) => s.globalFilters);
+  const crossFilters = useDashboardFilterStore((s) => s.crossFilters);
+
+  const filters = useMemo(() => {
+    const result: Record<string, any> = { ...globalFilters };
+    for (const cf of crossFilters) {
+      if (cf.widgetId !== widgetId) {
+        result[cf.field] = cf.value;
+      }
+    }
+    return Object.fromEntries(Object.entries(result).filter(([_, v]) => v !== undefined));
+  }, [globalFilters, crossFilters, widgetId]);
 
   return useQuery({
     queryKey: [...baseQueryKey, filters],
