@@ -239,8 +239,8 @@ async def _fetch_from_1c(
     pd_to = prev_end[:10]
 
     cur_sales, prev_sales, cur_managers = await asyncio.gather(
-        client.get_sales(date_from=d_from, date_to=d_to, warehouse=organization),
-        client.get_sales(date_from=pd_from, date_to=pd_to, warehouse=organization),
+        client.get_sales(date_from=d_from, date_to=d_to, warehouse=organization, limit=50000),
+        client.get_sales(date_from=pd_from, date_to=pd_to, warehouse=organization, limit=50000),
         client.get_sales_by_manager(date_from=d_from, date_to=d_to),
         return_exceptions=True,
     )
@@ -277,17 +277,26 @@ async def _fetch_from_1c(
         best = max(cur_managers, key=lambda m: m.get("total_sum", 0))
         top_mgr = {"name": best.get("manager", ""), "revenue": best.get("total_sum", 0)}
 
-    # Спарклайны (группировка по дням, только sum > 0)
+    # Спарклайны (группировка по дням, с заполнением пропусков)
     sparklines = {}
     if include_sparklines and billed_c:
         daily: dict[str, float] = {}
         for s in billed_c:
             day = s.get("date", "")[:10]
-            daily[day] = daily.get(day, 0) + s.get("sum", 0)
-        sparklines["revenue"] = [
-            {"date": d, "value": round(v, 2)}
-            for d, v in sorted(daily.items())
-        ]
+            if day:
+                daily[day] = daily.get(day, 0) + s.get("sum", 0)
+
+        # Заполняем все дни периода нулями, где нет данных
+        start_date = datetime.strptime(cur_start[:10], "%Y-%m-%d")
+        end_date = datetime.strptime(cur_end[:10], "%Y-%m-%d")
+        filled = []
+        cur = start_date
+        while cur <= end_date:
+            ds = cur.strftime("%Y-%m-%d")
+            filled.append({"date": ds, "value": round(daily.get(ds, 0), 2)})
+            cur += timedelta(days=1)
+
+        sparklines["revenue"] = filled
 
     return ExecutiveKPIResponse(
         period_label=period_label,

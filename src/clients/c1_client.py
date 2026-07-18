@@ -279,8 +279,9 @@ class C1Client:
         date_to: str | None = None,
         manager: str | None = None,
         warehouse: str | None = None,
+        limit: int = 1000,
     ) -> list[dict[str, Any]]:
-        params: dict[str, str] = {"limit": "1000"}
+        params: dict[str, str] = {"limit": str(limit)}
         if date_from:
             params["date_from"] = date_from
         if date_to:
