@@ -244,22 +244,35 @@ export default function DashboardConstructorPage() {
     if (!title.trim()) return;
     setSaving(true);
     const dates = periodDates(period);
+    const detectFields = (q: string) => {
+      const up = q.toUpperCase();
+      if (up.includes('ОТВЕТСТВЕННЫЙ')) return { fields: ['Менеджер', 'Сумма'], cat: 'Менеджер' };
+      if (up.includes('КОНТРАГЕНТ')) return { fields: ['Контрагент', 'Сумма'], cat: 'Контрагент' };
+      if (up.includes('НОМЕНКЛАТУРА')) return { fields: ['Номенклатура', 'Сумма'], cat: 'Номенклатура' };
+      if (up.includes('ДАТА') || up.includes('ПЕРИОД')) return { fields: ['Период', 'Сумма'], cat: 'Период' };
+      if (up.includes('ЗАПАСЫ') || up.includes('ОСТАТОК')) return { fields: ['Номенклатура', 'Количество'], cat: 'Номенклатура' };
+      return { fields: ['Номенклатура', 'Сумма'], cat: 'Номенклатура' };
+    };
+
     const payload = {
       title: title.trim(),
       description: desc.trim(),
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-      charts: charts.map(c => ({
-        id: c.id, title: c.title,
-        chart_config: {
-          chart_type: c.chart_type, title: c.title,
-          x_axis: { field: c.catField || 'Номенклатура', label: '', type: 'category' },
-          y_axis: { field: c.valField || 'Сумма', label: '', type: 'value' },
-          series: [{ name: c.title, field: 'Сумма', color: '#3b82f6' }],
-          onec_query: { entity: c.query, fields: c.fields || ['Номенклатура', 'Сумма'], period: period, date_from: dates.date_from, date_to: dates.date_to, aggregation: 'sum' },
-          group_by: c.catField ? [c.catField] : [],
-        },
-        data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
-      })),
+      charts: charts.map(c => {
+        const detected = detectFields(c.query);
+        return {
+          id: c.id, title: c.title,
+          chart_config: {
+            chart_type: c.chart_type, title: c.title,
+            x_axis: { field: c.catField || detected.cat, label: '', type: 'category' },
+            y_axis: { field: c.valField || 'Сумма', label: '', type: 'value' },
+            series: [{ name: c.title, field: 'Сумма', color: '#3b82f6' }],
+            onec_query: { entity: c.query, fields: c.fields || detected.fields, period: period, date_from: dates.date_from, date_to: dates.date_to, aggregation: 'sum' },
+            group_by: [c.catField || detected.cat],
+          },
+          data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
+        };
+      }),
     };
     try {
       if (isEdit) {
