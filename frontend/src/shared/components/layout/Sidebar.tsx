@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { path: '/whatif', icon: '🔮', label: 'What-If' },
   { path: '/insights', icon: '💡', label: 'Инсайты' },
   { path: '/sales', icon: '📊', label: 'Продажи' },
-  { path: '/documents', icon: '📄', label: 'Документы (OCR)', target: '_blank' },
+  { path: '/documents', icon: '📄', label: 'Документы (OCR)' },
   { path: '/documents/sales', icon: '📋', label: 'Реализации' },
   { path: '/status', icon: '🔧', label: 'Статус' },
   { path: '/admin', icon: '⚙️', label: 'Админка' },

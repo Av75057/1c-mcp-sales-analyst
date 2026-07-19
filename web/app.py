@@ -351,7 +351,7 @@ async def insights_page():
 
 @app.get("/documents")
 async def documents_page():
-    return render("documents.html", {"page": "documents"})
+    return render_spa()
 
 # /documents/sales handled by React SPA
 
