@@ -125,37 +125,42 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                         tool_calls_list = result.get("tool_calls", [])
 
                         # Send tool calls
-                        for tc in tool_calls_list:
-                            await websocket.send_json({
-                                "type": "tool_call",
-                                "name": tc.get("name", ""),
-                                "args": tc.get("args", {}),
-                            })
+                        try:
+                            for tc in tool_calls_list:
+                                await websocket.send_json({
+                                    "type": "tool_call",
+                                    "name": tc.get("name", ""),
+                                    "args": tc.get("args", {}),
+                                })
 
-                            # If chart, send interactive chart data
-                            if tc.get("name") == "create_chart":
-                                args = tc.get("args", {})
-                                result_data = tc.get("result", {})
-                                table = result_data.get("table_data", [])
-                                if table and len(table) > 0:
-                                    await websocket.send_json({
-                                        "type": "chart_data",
-                                        "config": args,
-                                        "data": table,
-                                        "image_base64": result_data.get("image_base64", ""),
-                                    })
+                                if tc.get("name") == "create_chart":
+                                    args = tc.get("args", {})
+                                    result_data = tc.get("result", {})
+                                    table = result_data.get("table_data", [])
+                                    if table and len(table) > 0:
+                                        await websocket.send_json({
+                                            "type": "chart_data",
+                                            "config": args,
+                                            "data": table,
+                                            "image_base64": result_data.get("image_base64", ""),
+                                        })
+                        except Exception:
+                            logger.warning("[WS] Client disconnected during tool calls")
+                            break
 
                         # Stream the answer word by word
-                        words = answer.split(" ")
-                        for i, word in enumerate(words):
-                            await websocket.send_json({
-                                "type": "token",
-                                "content": word + (" " if i < len(words) - 1 else ""),
-                            })
-                            await asyncio.sleep(0.02)
-
-                        # Signal completion
-                        await websocket.send_json({"type": "done"})
+                        try:
+                            words = answer.split(" ")
+                            for i, word in enumerate(words):
+                                await websocket.send_json({
+                                    "type": "token",
+                                    "content": word + (" " if i < len(words) - 1 else ""),
+                                })
+                                await asyncio.sleep(0.02)
+                            await websocket.send_json({"type": "done"})
+                        except Exception:
+                            logger.warning("[WS] Client disconnected during streaming")
+                            break
 
                         # Save assistant message
                         try:
