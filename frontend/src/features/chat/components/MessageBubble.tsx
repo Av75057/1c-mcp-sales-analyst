@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message } from '../stores/chatStore';
+import { ChatChartWidget } from './ChatChartWidget';
 import { Badge } from '@/shared/components/ui/Badge';
 
 interface MessageBubbleProps {
@@ -54,9 +55,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
 
+        {message.chart && (
+          <ChatChartWidget chart={message.chart} messageId={message.id} />
+        )}
+
         {message.tool_calls?.map((tc, i) => (
           <div key={i} className="mt-2">
-            {tc.name === 'create_chart' && (
+            {tc.name === 'create_chart' && !message.chart && (
               <div>
                 {tc.result?.image_base64 && (
                   <img
@@ -71,7 +76,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   <Badge variant="secondary">{tc.args?.chart_type as string || 'chart'}</Badge>
                   <button
                     onClick={handleSave}
-                    className="text-xs text-brand-500 hover:text-brand-400 transition-colors"
+                    className="text-xs transition-colors"
+                    style={{ color: 'var(--brand)' }}
                   >
                     💾 Сохранить
                   </button>

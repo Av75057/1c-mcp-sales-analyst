@@ -48,6 +48,10 @@ def create_chart_tool(
             color_scheme=color_scheme,
             format="png",
         )
+        result["table_data"] = [
+            {"label": str(x), "value": float(y) if y is not None else 0}
+            for x, y in zip(x_data, y_data)
+        ]
         return result
     except Exception as e:
         logger.error("Ошибка создания графика: {}", e)

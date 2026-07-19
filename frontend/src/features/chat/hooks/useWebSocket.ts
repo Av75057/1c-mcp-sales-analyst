@@ -64,6 +64,15 @@ export function useChatWebSocket() {
             });
             break;
 
+          case 'chart_data':
+            setCurrentChart({
+              config: data.config || {},
+              data: data.data || [],
+              image_base64: data.image_base64 || '',
+              status: 'ready',
+            });
+            break;
+
           case 'tool_call':
             addToolCall({
               name: data.name || '',
@@ -79,21 +88,28 @@ export function useChatWebSocket() {
             break;
 
           case 'done':
-            if (useChatStore.getState().streamingContent || useChatStore.getState().currentToolCalls.length > 0) {
+            if (useChatStore.getState().streamingContent || useChatStore.getState().currentToolCalls.length > 0 || useChatStore.getState().currentChart) {
               const finalContent = useChatStore.getState().streamingContent;
               const finalTools = [...useChatStore.getState().currentToolCalls];
+              const finalChart = useChatStore.getState().currentChart;
               addMessage({
                 id: Date.now().toString(),
                 role: 'assistant',
                 content: finalContent,
                 tool_calls: finalTools,
-                chart_image: finalTools.find(t => t.name === 'create_chart')?.result?.image_base64 || undefined,
+                chart: finalChart || undefined,
+                chart_image: finalChart?.image_base64 || finalTools.find(t => t.name === 'create_chart')?.result?.image_base64 || undefined,
                 timestamp: new Date().toISOString(),
               });
             }
             clearStream();
             clearToolCalls();
+            setCurrentChart(null);
             setTyping(false);
+            break;
+
+          case 'session_created':
+            ws.current?.send(JSON.stringify({ type: 'get_sessions' }));
             break;
 
           case 'error':

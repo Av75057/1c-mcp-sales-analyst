@@ -132,12 +132,16 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                                 "args": tc.get("args", {}),
                             })
 
-                            # If chart, send chart data
-                            if tc.get("name") == "create_chart" and tc.get("result", {}).get("image_base64"):
+                            # If chart, send chart data (interactive + fallback image)
+                            if tc.get("name") == "create_chart":
+                                args = tc.get("args", {})
+                                result_data = tc.get("result", {})
+                                # Interactive chart data
                                 await websocket.send_json({
-                                    "type": "chart",
-                                    "image_base64": tc["result"]["image_base64"],
-                                    "config": tc.get("args", {}),
+                                    "type": "chart_data",
+                                    "config": args,
+                                    "data": result_data.get("table_data", []),
+                                    "image_base64": result_data.get("image_base64", ""),
                                 })
 
                         # Stream the answer word by word

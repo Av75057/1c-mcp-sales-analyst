@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 
+export interface ChartBlock {
+  config: Record<string, any>;
+  data: { label: string; value: number }[];
+  image_base64?: string;
+  status: 'loading' | 'ready' | 'error';
+  error?: string;
+}
+
 export interface ToolCall {
   name: string;
   args: Record<string, unknown>;
@@ -11,7 +19,8 @@ export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   tool_calls?: ToolCall[];
-  chart_image?: string;
+  chart?: ChartBlock;
+  suggestions?: string[];
   timestamp: string;
 }
 
@@ -30,6 +39,7 @@ interface ChatState {
   isTyping: boolean;
   streamingContent: string;
   currentToolCalls: ToolCall[];
+  currentChart: ChartBlock | null;
   error: string | null;
 
   setSessions: (sessions: Session[]) => void;
@@ -42,6 +52,7 @@ interface ChatState {
   setStreamingContent: (content: string) => void;
   addToolCall: (tc: ToolCall) => void;
   clearToolCalls: () => void;
+  setCurrentChart: (chart: ChartBlock | null) => void;
   setError: (err: string | null) => void;
 }
 
@@ -52,6 +63,7 @@ export const useChatStore = create<ChatState>((set) => ({
   isTyping: false,
   streamingContent: '',
   currentToolCalls: [],
+  currentChart: null,
   error: null,
 
   setSessions: (sessions) => set({ sessions }),
@@ -64,5 +76,6 @@ export const useChatStore = create<ChatState>((set) => ({
   setStreamingContent: (content) => set({ streamingContent: content }),
   addToolCall: (tc) => set((s) => ({ currentToolCalls: [...s.currentToolCalls, tc] })),
   clearToolCalls: () => set({ currentToolCalls: [] }),
+  setCurrentChart: (chart) => set({ currentChart: chart }),
   setError: (err) => set({ error: err }),
 }));
