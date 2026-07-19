@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/documents/sales', icon: '📋', label: 'Реализации' },
   { path: '/status', icon: '🔧', label: 'Статус' },
   { path: '/admin', icon: '⚙️', label: 'Админка' },
+  { path: '/admin/tenants', icon: '🏢', label: 'Организации' },
 ];
 
 export function Sidebar() {

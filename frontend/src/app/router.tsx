@@ -9,6 +9,7 @@ const DashboardViewPage = lazy(() => import('@/features/dashboard/pages/Dashboar
 const ChatPage = lazy(() => import('@/features/chat/pages/ChatPage'));
 const SearchPage = lazy(() => import('@/features/search/pages/SearchPage'));
 const AdminDashboardPage = lazy(() => import('@/features/admin/pages/AdminDashboardPage'));
+const AdminTenantsPage = lazy(() => import('@/features/admin/pages/TenantsPage'));
 const AdminUsersPage = lazy(() => import('@/features/admin/pages/UsersPage'));
 const AdminAuditPage = lazy(() => import('@/features/admin/pages/AuditPage'));
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
       { path: '/status', element: <LazyPage Component={StatusPage} /> },
       { path: '/profile', element: <LazyPage Component={ProfilePage} /> },
       { path: '/admin', element: <LazyPage Component={AdminDashboardPage} /> },
+      { path: '/admin/tenants', element: <LazyPage Component={AdminTenantsPage} /> },
       { path: '/admin/users', element: <LazyPage Component={AdminUsersPage} /> },
       { path: '/admin/audit', element: <LazyPage Component={AdminAuditPage} /> },
       { path: '*', element: <LazyPage Component={NotFoundPage} /> },
