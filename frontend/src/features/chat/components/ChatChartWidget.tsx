@@ -78,7 +78,8 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
     if (!chart.data?.length) return {};
     const labels = chart.data.map(d => d.label);
     const values = chart.data.map(d => d.value);
-    const chartType = chart.config?.chart_type || 'bar';
+    const rawType = chart.config?.chart_type || 'bar';
+    const chartType = rawType === 'hbar' ? 'bar' : rawType;
 
     if (chartType === 'pie') {
       return {

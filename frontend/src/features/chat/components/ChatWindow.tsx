@@ -92,10 +92,11 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
           placeholder="Задайте вопрос о данных..."
           className="flex-1 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-brand-500 transition-colors"
           style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-          disabled={isTyping}
         />
-        <Button type="submit" disabled={isTyping} size="lg">
-          {isTyping ? '...' : '→'}
+        <Button type="submit" size="lg">
+          {isTyping || streamingContent || currentToolCalls.length > 0
+            ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : '→'}
         </Button>
       </form>
     </div>

@@ -56,6 +56,7 @@ from src.admin.routes.integrations import router as admin_integrations_router
 from src.admin.routes.tools_route import router as admin_tools_router
 from src.admin.routes.api_keys import router as admin_api_keys_router
 from src.admin.routes.ip_block import router as admin_ip_blocks_router
+from src.admin.routes.multitenant import router as multitenant_router
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -99,6 +100,14 @@ async def on_startup():
     async with async_session() as db:
         svc = SettingsService(db)
         await svc.seed_defaults()
+    # Init multi-tenant tables
+    try:
+        from src.admin.multitenant.models import init_multitenant_db
+        from src.admin.database import engine as admin_engine
+        await init_multitenant_db(admin_engine)
+    except Exception as e:
+        logger.warning("Multi-tenant DB init failed: {}", e)
+
     # Init chat tables in same admin DB
     from src.admin.database import engine as admin_engine
     from sqlalchemy import text as _text
@@ -168,6 +177,7 @@ app.include_router(admin_api_keys_router)
 app.include_router(admin_ip_blocks_router)
 app.include_router(admin_tools_router)
 app.include_router(admin_system_router)
+app.include_router(multitenant_router)
 
 # Data Quality routes
 app.include_router(data_quality_router)
