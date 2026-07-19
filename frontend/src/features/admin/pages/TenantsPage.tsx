@@ -42,12 +42,24 @@ export default function TenantsPage() {
       }
       if (tab === 'connections') {
         if (formMode === 'create') await api.post('/api/v1/admin/connections', form);
+        else if (formMode === 'edit') {
+          await api.patch(`/api/v1/admin/connections/${form.id}`, form);
+        }
       }
       if (tab === 'users') {
         if (formMode === 'create') await api.post('/api/v1/admin/users', form);
         else await api.patch(`/api/v1/admin/users/${form.id}`, form);
       }
       setShowForm(false); setForm({}); load();
+    } catch (e: any) { alert(e?.response?.data?.detail || 'Ошибка'); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Удалить? Это действие необратимо.')) return;
+    try {
+      if (tab === 'connections') await api.delete(`/api/v1/admin/connections/${id}`);
+      if (tab === 'users') await api.patch(`/api/v1/admin/users/${id}`, { is_active: false });
+      load();
     } catch (e: any) { alert(e?.response?.data?.detail || 'Ошибка'); }
   };
 
@@ -80,17 +92,19 @@ export default function TenantsPage() {
       {tab === 'tenants' && (
         <div className="grid gap-3">
           {tenants.map(t => (
-            <div key={t.id} className="rounded-xl border p-4 cursor-pointer hover:brightness-110 transition-all"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
-              onClick={() => openEdit(t)}>
+            <div key={t.id} className="rounded-xl border p-4 transition-all"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1 cursor-pointer" onClick={() => openEdit(t)}>
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{t.name}</div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>slug: {t.slug}</div>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {t.is_active ? 'Активен' : 'Неактивен'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {t.is_active ? 'Активен' : 'Неактивен'}
+                  </span>
+                  <button onClick={() => openEdit(t)} className="text-xs px-2 py-1 rounded transition-colors hover:brightness-110" style={{ color: 'var(--brand)' }}>✏️</button>
+                </div>
               </div>
             </div>
           ))}
@@ -102,17 +116,18 @@ export default function TenantsPage() {
       {tab === 'connections' && (
         <div className="grid gap-3">
           {connections.map(c => (
-            <div key={c.id} className="rounded-xl border p-4 cursor-pointer hover:brightness-110 transition-all"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
-              onClick={() => openEdit(c)}>
+            <div key={c.id} className="rounded-xl border p-4 transition-all"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <div className="flex items-center justify-between">
-                <div className="flex-1">
+                <div className="flex-1 cursor-pointer" onClick={() => openEdit(c)}>
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{c.name}</div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.base_url}</div>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${c.health_status === 'ok' ? 'bg-emerald-100 text-emerald-700' : c.health_status === 'error' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {c.health_status === 'ok' ? '✅' : c.health_status === 'error' ? '❌' : '❓'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block w-2 h-2 rounded-full ${c.health_status === 'ok' ? 'bg-emerald-500' : c.health_status === 'error' ? 'bg-red-500' : 'bg-gray-400'}`} />
+                  <button onClick={() => openEdit(c)} className="text-xs px-2 py-1 rounded transition-colors hover:brightness-110" style={{ color: 'var(--brand)' }}>✏️</button>
+                  <button onClick={() => handleDelete(c.id)} className="text-xs px-2 py-1 rounded transition-colors hover:text-red-500" style={{ color: 'var(--text-muted)' }}>🗑️</button>
+                </div>
               </div>
             </div>
           ))}
@@ -124,17 +139,20 @@ export default function TenantsPage() {
       {tab === 'users' && (
         <div className="grid gap-3">
           {users.map(u => (
-            <div key={u.id} className="rounded-xl border p-4 cursor-pointer hover:brightness-110 transition-all"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
-              onClick={() => openEdit(u)}>
+            <div key={u.id} className="rounded-xl border p-4 transition-all"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1 cursor-pointer" onClick={() => openEdit(u)}>
                   <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{u.full_name || u.email}</div>
                   <div className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{u.email} · {u.tenants?.map(t => t.tenant_name).join(', ') || 'нет организаций'}</div>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {u.is_active ? 'Активен' : 'Заблокирован'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {u.is_active ? 'Активен' : '❌'}
+                  </span>
+                  <button onClick={() => openEdit(u)} className="text-xs px-2 py-1 rounded transition-colors hover:brightness-110" style={{ color: 'var(--brand)' }}>✏️</button>
+                  <button onClick={() => handleDelete(u.id)} className="text-xs px-2 py-1 rounded transition-colors hover:text-red-500" style={{ color: 'var(--text-muted)' }}>🔒</button>
+                </div>
               </div>
             </div>
           ))}

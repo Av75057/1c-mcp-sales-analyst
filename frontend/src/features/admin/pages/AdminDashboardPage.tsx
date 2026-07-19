@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '../api/adminApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
@@ -15,6 +16,22 @@ export default function AdminDashboardPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>⚙️ Админ-панель</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Статистика использования дашбордов</p>
+      </div>
+
+      {/* Admin Navigation */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { to: '/admin', label: '📊 Статистика' },
+          { to: '/admin/tenants', label: '🏢 Организации' },
+          { to: '/admin/users', label: '👥 Пользователи' },
+          { to: '/admin/audit', label: '📋 Аудит' },
+        ].map(item => (
+          <Link key={item.to} to={item.to}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={window.location.pathname === item.to ? { backgroundColor: 'var(--brand)', color: '#fff' } : { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)' }}>
+            {item.label}
+          </Link>
+        ))}
       </div>
 
       {isLoading && (

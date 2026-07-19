@@ -98,6 +98,18 @@ async def test_connection(conn_id: str, db: AsyncSession = Depends(get_db)):
         return {"status": "error", "error": str(e)}
 
 
+@router.patch("/connections/{conn_id}")
+async def update_connection(conn_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+    repo = TenantRepository(db)
+    conn = await repo.get_connection(conn_id)
+    if not conn:
+        raise HTTPException(404, "Connection not found")
+    updates = {k: v for k, v in body.items() if k in ("name", "base_url", "username", "password", "is_default", "timeout_seconds")}
+    await repo.update_connection(conn_id, **updates)
+    await repo.log(actor_user_id=_get_user_id(request), action="connection.update", resource_type="connection", resource_id=conn_id, ip=_get_ip(request))
+    return {"status": "ok"}
+
+
 @router.delete("/connections/{conn_id}")
 async def delete_connection(conn_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     repo = TenantRepository(db)
