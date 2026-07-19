@@ -52,7 +52,7 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
         )}
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble key={msg.id} message={msg} onSuggestionClick={onSendMessage} />
         ))}
 
         {/* Streaming message */}

@@ -3,13 +3,15 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Message } from '../stores/chatStore';
 import { ChatChartWidget } from './ChatChartWidget';
+import { SuggestionChips } from './SuggestionChips';
 import { Badge } from '@/shared/components/ui/Badge';
 
 interface MessageBubbleProps {
   message: Message;
+  onSuggestionClick?: (s: string) => void;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, onSuggestionClick }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   const handleSave = useCallback(async () => {
@@ -56,7 +58,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
 
         {message.chart && (
-          <ChatChartWidget chart={message.chart} messageId={message.id} />
+          <ChatChartWidget chart={message.chart} messageId={message.id} onSuggestionClick={onSuggestionClick} />
         )}
 
         {message.tool_calls?.map((tc, i) => (
@@ -91,6 +93,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             )}
           </div>
         ))}
+
+        {!isUser && message.suggestions && message.suggestions.length > 0 && (
+          <SuggestionChips suggestions={message.suggestions} onClick={onSuggestionClick || (() => {})} />
+        )}
 
         <div className={`text-xs mt-1 ${isUser ? 'text-white/60' : ''}`} style={!isUser ? { color: 'var(--text-muted)' } : undefined}>
           {new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}

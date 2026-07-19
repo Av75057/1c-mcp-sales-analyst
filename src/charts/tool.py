@@ -36,8 +36,20 @@ def create_chart_tool(
     if chart_type not in ("line", "bar", "hbar", "pie", "area"):
         return {"error": f"Неизвестный тип графика: {chart_type}. Допустимые: line, bar, hbar, pie, area"}
 
+    table_data = [
+        {"label": str(x), "value": float(y) if y is not None else 0}
+        for x, y in zip(x_data, y_data)
+    ]
+    result = {
+        "table_data": table_data,
+        "chart_type": chart_type,
+        "title": title,
+        "x_label": x_label,
+        "y_label": y_label,
+        "chart_id": "",
+    }
     try:
-        result = render_chart(
+        img = render_chart(
             chart_type=chart_type,
             title=title,
             x_data=x_data,
@@ -48,11 +60,10 @@ def create_chart_tool(
             color_scheme=color_scheme,
             format="png",
         )
-        result["table_data"] = [
-            {"label": str(x), "value": float(y) if y is not None else 0}
-            for x, y in zip(x_data, y_data)
-        ]
-        return result
+        if isinstance(img, dict) and "image_base64" in img:
+            result["image_base64"] = img["image_base64"]
+        if isinstance(img, dict) and "metadata" in img:
+            result["metadata"] = img["metadata"]
     except Exception as e:
-        logger.error("Ошибка создания графика: {}", e)
-        return {"error": f"Ошибка при создании графика: {e}"}
+        logger.warning("Chart image export failed (interactive data available): {}", e)
+    return result

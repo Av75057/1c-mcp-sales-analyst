@@ -556,8 +556,14 @@ class DeepSeekClient:
                             logger.error("Ошибка tool {}: {}", func_name, e)
 
                     tool_entry: dict[str, Any] = {"name": func_name, "args": args}
-                    if func_name == "create_chart" and result and "image_base64" in result:
-                        tool_entry["result"] = {"chart_id": result.get("chart_id"), "image_base64": result["image_base64"], "image_url": result.get("image_url"), "chart_type": result.get("metadata", {}).get("chart_type")}
+                    if func_name == "create_chart" and result:
+                        tool_entry["result"] = {
+                            "chart_id": result.get("chart_id"),
+                            "image_base64": result.get("image_base64", ""),
+                            "image_url": result.get("image_url"),
+                            "chart_type": result.get("metadata", {}).get("chart_type") if isinstance(result.get("metadata"), dict) else result.get("chart_type"),
+                            "table_data": result.get("table_data", []),
+                        }
                     all_tool_calls.append(tool_entry)
 
                     logger.debug("Результат tool {}: {}", func_name, result_text[:200])
