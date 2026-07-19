@@ -147,7 +147,7 @@ async def list_users(db: AsyncSession = Depends(get_db)):
 @router.post("/users")
 async def create_user(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
     repo = TenantRepository(db)
-    existing = await repo.get_user_by_email(body["email"])
+    existing = await repo.get_user_by_email(body.get("email", ""))
     if existing:
         raise HTTPException(400, "User with this email already exists")
     password_hash = bcrypt.hash(body["password"])

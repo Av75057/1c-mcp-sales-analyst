@@ -36,6 +36,10 @@ export default function TenantsPage() {
 
   const save = async () => {
     try {
+      if (tab === 'connections' && formMode === 'create' && !form.tenant_id) {
+        alert('Укажите Tenant ID');
+        return;
+      }
       if (tab === 'tenants') {
         if (formMode === 'create') await api.post('/api/v1/admin/tenants', form);
         else await api.patch(`/api/v1/admin/tenants/${form.id}`, form);
@@ -51,7 +55,10 @@ export default function TenantsPage() {
         else await api.patch(`/api/v1/admin/users/${form.id}`, form);
       }
       setShowForm(false); setForm({}); load();
-    } catch (e: any) { alert(e?.response?.data?.detail || 'Ошибка'); }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.response?.data?.message || e?.message || 'Ошибка';
+      alert(msg);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -188,9 +195,12 @@ export default function TenantsPage() {
               <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Пароль</label>
                 <input type="password" value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })}
                   className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Тенант ID</label>
-                <input value={form.tenant_id || ''} onChange={e => setForm({ ...form, tenant_id: e.target.value })}
-                  className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Организация</label>
+                <select value={form.tenant_id || ''} onChange={e => setForm({ ...form, tenant_id: e.target.value })}
+                  className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                  <option value="">Выберите организацию</option>
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select></div>
               {formMode === 'edit' && (
                 <button onClick={testConn} disabled={testing}
                   className="w-full py-2 rounded-lg text-sm font-medium text-white transition-colors"
@@ -217,9 +227,12 @@ export default function TenantsPage() {
               <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Пароль</label>
                 <input type="password" value={form.password || ''} onChange={e => setForm({ ...form, password: e.target.value })}
                   className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Тенант ID</label>
-                <input value={form.tenant_id || ''} onChange={e => setForm({ ...form, tenant_id: e.target.value })}
-                  className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Организация</label>
+                <select value={form.tenant_id || ''} onChange={e => setForm({ ...form, tenant_id: e.target.value })}
+                  className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                  <option value="">Выберите организацию</option>
+                  {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select></div>
               <div><label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Роль</label>
                 <select value={form.role || 'viewer'} onChange={e => setForm({ ...form, role: e.target.value })}
                   className="w-full p-2 rounded-lg border text-sm mt-0.5" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
