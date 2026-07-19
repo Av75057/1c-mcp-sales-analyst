@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/shared/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
@@ -8,27 +8,36 @@ import { formatNumber } from '@/shared/lib/utils';
 const ABC_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { A: 'success', B: 'warning', C: 'error' };
 const XYZ_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { X: 'success', Y: 'warning', Z: 'error' };
 
+const PERIOD_PRESETS = [
+  { label: '30 дней', days: 30 }, { label: '90 дней', days: 90 },
+  { label: 'Этот год', days: 0 }, { label: 'Всё время', days: 9999 },
+];
+
 export default function AbcXyzPage() {
   const [groupBy, setGroupBy] = useState('nomenclature');
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [periodDays, setPeriodDays] = useState(30);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
-  const handleRun = async () => {
+  const run = (days: number, from?: string, to?: string) => {
     setIsLoading(true);
     setResult(null);
-    try {
-      const to = new Date().toISOString().slice(0, 10);
-      const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-      const { data } = await api.get('/api/analysis/abc-xyz', {
-        params: { date_from: from, date_to: to, group_by: groupBy },
-      });
-      setResult(data);
-    } catch (err: any) {
-      setResult({ error: err?.response?.data?.detail || 'Ошибка анализа' });
-    } finally {
-      setIsLoading(false);
-    }
+    const now = new Date();
+    const toDate = to || now.toISOString().slice(0, 10);
+    const fromDate = from || (
+      days === 0 ? `${now.getFullYear()}-01-01` :
+      days > 0 && days < 9000 ? new Date(now.getTime() - days * 86400000).toISOString().slice(0, 10) :
+      '2020-01-01'
+    );
+    api.get('/api/analysis/abc-xyz', { params: { date_from: fromDate, date_to: toDate, group_by: groupBy } })
+      .then(r => setResult(r.data))
+      .catch(err => setResult({ error: err?.response?.data?.detail || 'Ошибка анализа' }))
+      .finally(() => setIsLoading(false));
   };
+
+  useEffect(() => { if (!customFrom || !customTo) run(periodDays); }, [periodDays, groupBy]);
 
   const matrixKeys = result?.matrix ? Object.keys(result.matrix) : [];
   const recommendations = result?.recommendations || [];
@@ -45,6 +54,30 @@ export default function AbcXyzPage() {
           <CardHeader><CardTitle>Параметры</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
+              <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Период</label>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {PERIOD_PRESETS.map(p => (
+                  <button key={p.days} onClick={() => { setPeriodDays(p.days); setCustomFrom(''); setCustomTo(''); }}
+                    className="px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+                    style={periodDays === p.days && !customFrom ? { backgroundColor: 'var(--bg-active)', color: 'var(--text-primary)' } : { backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-secondary)' }}>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPeriodDays(0); }}
+                  className="flex-1 px-2 py-1.5 rounded border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                <span style={{ color: 'var(--text-muted)' }}>—</span>
+                <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPeriodDays(0); }}
+                  className="flex-1 px-2 py-1.5 rounded border" style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                {customFrom && customTo && (
+                  <button onClick={() => run(0, customFrom, customTo)}
+                    className="px-2 py-1.5 rounded text-xs font-medium text-white"
+                    style={{ backgroundColor: 'var(--brand)' }}>OK</button>
+                )}
+              </div>
+            </div>
+            <div>
               <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Группировка</label>
               <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)}
                 className="w-full rounded-lg p-2.5 outline-none focus:border-brand-500"
@@ -54,7 +87,7 @@ export default function AbcXyzPage() {
                 <option value="manager">Менеджеры</option>
               </select>
             </div>
-            <Button onClick={handleRun} disabled={isLoading} className="w-full">
+            <Button onClick={() => run(periodDays)} disabled={isLoading} className="w-full">
               {isLoading ? 'Анализ...' : '🚀 Запустить анализ'}
             </Button>
           </CardContent>
@@ -115,7 +148,7 @@ export default function AbcXyzPage() {
                             <div className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>{key}</div>
                             <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{cell.count || 0} шт.</div>
                             <div className="text-xs" style={{ color: 'var(--text-primary)' }}>{formatNumber(cell.revenue || 0)} ₽</div>
-                            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{((cell.share || 0) * 100).toFixed(1)}%</div>
+                            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{(cell.share || 0).toFixed(1)}%</div>
                           </div>
                         );
                       })}

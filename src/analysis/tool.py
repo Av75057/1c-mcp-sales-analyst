@@ -17,7 +17,7 @@ async def abc_xyz_analysis_tool(
 
     from src.tools import get_client
     client = get_client()
-    sales = await client.get_sales(date_from=date_from or None, date_to=date_to or None)
+    sales = await client.get_sales(date_from=date_from or None, date_to=date_to or None, limit=100000)
     if not sales:
         return {"error": "Нет данных о продажах за указанный период"}
 

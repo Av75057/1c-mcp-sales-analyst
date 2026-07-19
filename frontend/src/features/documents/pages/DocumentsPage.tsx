@@ -20,24 +20,39 @@ interface DocLine {
   price?: number;
 }
 
+const PERIOD_PRESETS = [
+  { label: 'Сегодня', days: 0 },
+  { label: 'Вчера', days: 1 },
+  { label: '7 дней', days: 7 },
+  { label: '30 дней', days: 30 },
+  { label: '90 дней', days: 90 },
+  { label: 'Год', days: 365 },
+];
+
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
   const [lines, setLines] = useState<DocLine[]>([]);
   const [linesLoading, setLinesLoading] = useState(false);
+  const [periodDays, setPeriodDays] = useState(30);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
-  useEffect(() => {
-    const to = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    api.get('/api/documents/sales', { params: { date_from: from, date_to: to, page_size: 50 } })
+  const fetchDocs = (days: number, from?: string, to?: string) => {
+    setLoading(true);
+    const toDate = to || new Date().toISOString().slice(0, 10);
+    const fromDate = from || (days > 0 ? new Date(Date.now() - days * 86400000).toISOString().slice(0, 10) : toDate);
+    api.get('/api/documents/sales', { params: { date_from: fromDate, date_to: toDate, page_size: 50 } })
       .then((r) => {
         const data = r.data?.documents || r.data || [];
         setDocs(Array.isArray(data) ? data : []);
       })
       .catch(() => setDocs([]))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { if (!customFrom || !customTo) fetchDocs(periodDays); }, [periodDays, customFrom, customTo]);
 
   const openDoc = async (doc: Doc) => {
     setSelectedDoc(doc);
@@ -56,8 +71,37 @@ export default function DocumentsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📋 Реализации</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Документы реализации товаров и услуг</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>📋 Реализации</h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Документы реализации товаров и услуг</p>
+          </div>
+          <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex rounded-lg p-0.5" style={{ backgroundColor: 'var(--bg-card-hover)' }}>
+              {PERIOD_PRESETS.map(p => (
+                <button key={p.days} onClick={() => { setPeriodDays(p.days); setCustomFrom(''); setCustomTo(''); }}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+                  style={periodDays === p.days && !customFrom ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' } : { color: 'var(--text-secondary)' }}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <input type="date" value={customFrom} onChange={e => { setCustomFrom(e.target.value); setPeriodDays(0); }}
+              className="px-2 py-1.5 text-xs rounded-lg border"
+              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
+            <input type="date" value={customTo} onChange={e => { setCustomTo(e.target.value); setPeriodDays(0); }}
+              className="px-2 py-1.5 text-xs rounded-lg border"
+              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+            {customFrom && customTo && (
+              <button onClick={() => fetchDocs(0, customFrom, customTo)}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-white"
+                style={{ backgroundColor: 'var(--brand)' }}>
+                Применить
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {loading && (

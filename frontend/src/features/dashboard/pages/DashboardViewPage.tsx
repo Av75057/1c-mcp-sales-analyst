@@ -6,6 +6,24 @@ import { ChartRenderer } from '@/shared/components/charts/ChartRenderer';
 import { formatDate } from '@/shared/lib/utils';
 import { Dialog } from '@/shared/components/ui/Dialog';
 
+function FeedbackWidget({ dashboardId }: { dashboardId: string }) {
+  const [sent, setSent] = useState(false);
+  const send = async (rating: 'positive' | 'negative') => {
+    try { await api.post(`/api/v1/dashboard/dashboards/${dashboardId}/feedback`, { rating }); setSent(true); } catch {}
+  };
+  return (
+    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+      {sent ? <span>💬 Спасибо за отзыв!</span> : (
+        <>
+          <span>Оцените дашборд:</span>
+          <button onClick={() => send('positive')} className="hover:scale-110 transition-transform">👍</button>
+          <button onClick={() => send('negative')} className="hover:scale-110 transition-transform">👎</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardViewPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -69,6 +87,7 @@ export default function DashboardViewPage() {
             <span>👁 {dashboard.view_count} просмотров</span>
             {dashboard.is_public && <span className="text-success">🌐 Публичный</span>}
           </div>
+          <div className="mt-2"><FeedbackWidget dashboardId={id!} /></div>
         </div>
         <div className="flex gap-2">
           <Link to={`/dashboards/edit/${id}`}
