@@ -52,10 +52,15 @@ async def update_tenant(tenant_id: str, body: dict, request: Request, db: AsyncS
 @router.get("/connections")
 async def list_connections(tenant_id: str = "", db: AsyncSession = Depends(get_db)):
     repo = TenantRepository(db)
-    if tenant_id:
+    if tenant_id and tenant_id != "all":
         return {"connections": await repo.list_connections(tenant_id)}
-    # Return all connections (superadmin)
-    return {"connections": []}
+    # Return connections from all tenants
+    tenants = await repo.list_tenants()
+    all_conns = []
+    for t in tenants:
+        conns = await repo.list_connections(t["id"])
+        all_conns.extend(conns)
+    return {"connections": all_conns}
 
 
 @router.post("/connections")
