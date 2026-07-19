@@ -115,6 +115,12 @@ async def on_startup():
         await conn.run_sync(ChatBase.metadata.create_all)
         await conn.execute(_text("UPDATE chat_sessions SET is_archived = 0 WHERE is_archived IS NULL"))
 
+    # Start health check background task
+    try:
+        asyncio.create_task(_health_check_loop())
+    except Exception as e:
+        logger.warning("Health check task failed: {}", e)
+
     # Init data lineage DB
     try:
         from src.data_quality.lineage.tracker import lineage_tracker
@@ -231,6 +237,14 @@ def render_spa() -> HTMLResponse:
 c1: Any | None = None
 ds: DeepSeekClient | None = None
 simulator: WhatIfSimulator | None = None
+
+
+async def _health_check_loop():
+    try:
+        from src.admin.multitenant.health_check import health_check_loop
+        await health_check_loop(interval=300)
+    except Exception:
+        pass
 
 
 async def get_c1() -> C1Client:
