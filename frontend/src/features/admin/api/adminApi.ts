@@ -1,49 +1,29 @@
 import { api } from '@/shared/lib/api';
 
-export interface AdminDashboardStats {
-  period: { from: string; to: string };
-  total_dashboards: number;
-  active_dashboards: number;
-  total_views: number;
-  total_shares: number;
-  total_exports: number;
-  top_dashboards: { id: string; title: string; views: number }[];
-  top_tags: { tag: string; count: number }[];
-  chart_types: { type: string; count: number }[];
-  feedback_summary: { positive: number; negative: number; total: number; satisfaction_rate: number };
-}
-
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface AuditEntry {
-  id: string;
-  action: string;
-  user_id: string;
-  resource_id: string;
-  details: string;
-  created_at: string;
-}
-
 export const adminApi = {
-  getStats: async (days = 30): Promise<AdminDashboardStats> => {
+  getStats: async (days = 30) => {
     const { data } = await api.get('/api/v3/analytics', { params: { days } });
     return data;
   },
-
-  getUsers: async (): Promise<User[]> => {
-    const { data } = await api.get('/admin/users/');
-    return data.users || data;
-  },
-
-  getAuditLog: async (limit = 50): Promise<AuditEntry[]> => {
-    const { data } = await api.get('/admin/audit/', { params: { limit } });
+  getAuditLog: async (limit = 100) => {
+    const { data } = await api.get('/api/v1/admin/audit', { params: { limit } });
     return data.entries || data;
   },
+};
+
+export const multitenantApi = {
+  listTenants: () => api.get('/api/v1/admin/tenants').then(r => r.data?.tenants || []),
+  createTenant: (body: any) => api.post('/api/v1/admin/tenants', body),
+  updateTenant: (id: string, body: any) => api.patch(`/api/v1/admin/tenants/${id}`, body),
+
+  listConnections: (tenantId?: string) =>
+    api.get('/api/v1/admin/connections', { params: tenantId ? { tenant_id: tenantId } : {} }).then(r => r.data?.connections || []),
+  createConnection: (body: any) => api.post('/api/v1/admin/connections', body),
+  updateConnection: (id: string, body: any) => api.patch(`/api/v1/admin/connections/${id}`, body),
+  deleteConnection: (id: string) => api.delete(`/api/v1/admin/connections/${id}`),
+  testConnection: (id: string) => api.post(`/api/v1/admin/connections/${id}/test`),
+
+  listUsers: () => api.get('/api/v1/admin/users').then(r => r.data?.users || []),
+  createUser: (body: any) => api.post('/api/v1/admin/users', body),
+  updateUser: (id: string, body: any) => api.patch(`/api/v1/admin/users/${id}`, body),
 };
