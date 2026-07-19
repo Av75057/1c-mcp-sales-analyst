@@ -72,6 +72,7 @@ export const router = createBrowserRouter([
       { path: '/analysis/abc-xyz', element: <LazyPage Component={AbcXyzPage} /> },
       { path: '/dashboards', element: <LazyPage Component={DashboardConstructorPage} /> },
       { path: '/dashboards/new', element: <LazyPage Component={DashboardConstructorPage} /> },
+      { path: '/dashboards/edit/:id', element: <LazyPage Component={DashboardConstructorPage} /> },
       { path: '/insights', element: <LazyPage Component={InsightsPage} /> },
       { path: '/documents', element: <LazyPage Component={OCRPage} /> },
       { path: '/documents/sales', element: <LazyPage Component={DocumentsPage} /> },

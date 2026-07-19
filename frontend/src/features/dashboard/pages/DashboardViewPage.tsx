@@ -70,11 +70,18 @@ export default function DashboardViewPage() {
             {dashboard.is_public && <span className="text-success">🌐 Публичный</span>}
           </div>
         </div>
-        <button onClick={() => setShowDelete(true)}
-          className="p-2 rounded-lg border text-sm transition-colors hover:bg-red-500/20 hover:text-red-500"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-          🗑️
-        </button>
+        <div className="flex gap-2">
+          <Link to={`/dashboards/edit/${id}`}
+            className="px-3 py-2 rounded-lg border text-sm transition-colors"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+            ✏️ Редактировать
+          </Link>
+          <button onClick={() => setShowDelete(true)}
+            className="p-2 rounded-lg border text-sm transition-colors hover:bg-red-500/20 hover:text-red-500"
+            style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+            🗑️
+          </button>
+        </div>
       </div>
 
       {dashboard.tags?.length > 0 && (

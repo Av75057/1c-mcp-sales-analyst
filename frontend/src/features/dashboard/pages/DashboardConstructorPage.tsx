@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '@/shared/lib/api';
 import { EChartsWrapper } from '@/shared/components/charts/EChartsWrapper';
 import { formatCurrency } from '@/shared/lib/utils';
@@ -52,13 +52,27 @@ function injectDateFilter(query: string, date_from: string, date_to: string): st
   return query + ` ГДЕ Продажи.Период МЕЖДУ ДАТАВРЕМЯ(${date_from.slice(0,4)}, ${parseInt(date_from.slice(5,7))}, ${parseInt(date_from.slice(8,10))}) И ДАТАВРЕМЯ(${date_to.slice(0,4)}, ${parseInt(date_to.slice(5,7))}, ${parseInt(date_to.slice(8,10))} + 1)`;
 }
 
-const QUERY_TEMPLATES = [
-  { name: 'Продажи по товарам', query: 'ВЫБРАТЬ Продажи.Номенклатура КАК Товар, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Номенклатура УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
-  { name: 'Продажи по менеджерам', query: 'ВЫБРАТЬ Продажи.Ответственный КАК Менеджер, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Ответственный УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
-  { name: 'Продажи по дням', query: 'ВЫБРАТЬ ВЫРАЗИТЬ(Продажи.Период КАК ДАТА) КАК Дата, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО ВЫРАЗИТЬ(Продажи.Период КАК ДАТА) УПОРЯДОЧИТЬ ПО Дата' },
-  { name: 'Продажи по клиентам', query: 'ВЫБРАТЬ Продажи.Контрагент КАК Клиент, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Контрагент УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
-  { name: 'Остатки на складах', query: 'ВЫБРАТЬ Запасы.Номенклатура КАК Товар, Запасы.КоличествоОстаток КАК Остаток, Запасы.СуммаОстаток КАК Сумма ИЗ РегистрНакопления.ЗапасыНаСкладах.Остатки КАК Запасы ГДЕ Запасы.КоличествоОстаток > 0' },
-  { name: 'Задолженность клиентов', query: 'ВЫБРАТЬ Взаиморасчеты.Контрагент КАК Клиент, -Взаиморасчеты.СуммаОстаток КАК Долг ИЗ РегистрНакопления.Взаиморасчеты.Остатки КАК Взаиморасчеты ГДЕ Взаиморасчеты.СуммаОстаток < 0 УПОРЯДОЧИТЬ ПО Долг УБЫВ' },
+interface QueryTemplate {
+  name: string;
+  query: string;
+  catField: string;
+  valField: string;
+  fields: string[];
+}
+
+const QUERY_TEMPLATES: QueryTemplate[] = [
+  { name: 'Продажи по товарам', catField: 'Номенклатура', valField: 'Продажи', fields: ['Номенклатура', 'Сумма'],
+    query: 'ВЫБРАТЬ Продажи.Номенклатура КАК Товар, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Номенклатура УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
+  { name: 'Продажи по менеджерам', catField: 'Менеджер', valField: 'Продажи', fields: ['Менеджер', 'Сумма'],
+    query: 'ВЫБРАТЬ Продажи.Ответственный КАК Менеджер, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Ответственный УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
+  { name: 'Продажи по дням', catField: 'Период', valField: 'Продажи', fields: ['Период', 'Сумма'],
+    query: 'ВЫБРАТЬ ВЫРАЗИТЬ(Продажи.Период КАК ДАТА) КАК Дата, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО ВЫРАЗИТЬ(Продажи.Период КАК ДАТА) УПОРЯДОЧИТЬ ПО Дата' },
+  { name: 'Продажи по клиентам', catField: 'Контрагент', valField: 'Продажи', fields: ['Контрагент', 'Сумма'],
+    query: 'ВЫБРАТЬ Продажи.Контрагент КАК Клиент, СУММА(Продажи.Сумма) КАК Продажи ИЗ РегистрНакопления.Продажи КАК Продажи ГДЕ Продажи.Период МЕЖДУ {DATE_FROM} И {DATE_TO} СГРУППИРОВАТЬ ПО Продажи.Контрагент УПОРЯДОЧИТЬ ПО Продажи УБЫВ' },
+  { name: 'Остатки на складах', catField: 'Номенклатура', valField: 'Остаток', fields: ['Номенклатура', 'Количество'],
+    query: 'ВЫБРАТЬ Запасы.Номенклатура КАК Товар, Запасы.КоличествоОстаток КАК Остаток, Запасы.СуммаОстаток КАК Сумма ИЗ РегистрНакопления.ЗапасыНаСкладах.Остатки КАК Запасы ГДЕ Запасы.КоличествоОстаток > 0' },
+  { name: 'Задолженность клиентов', catField: 'Контрагент', valField: 'Долг', fields: ['Контрагент', 'Сумма'],
+    query: 'ВЫБРАТЬ Взаиморасчеты.Контрагент КАК Клиент, -Взаиморасчеты.СуммаОстаток КАК Долг ИЗ РегистрНакопления.Взаиморасчеты.Остатки КАК Взаиморасчеты ГДЕ Взаиморасчеты.СуммаОстаток < 0 УПОРЯДОЧИТЬ ПО Долг УБЫВ' },
 ];
 
 interface ChartDraft {
@@ -66,6 +80,9 @@ interface ChartDraft {
   title: string;
   chart_type: string;
   query: string;
+  catField?: string;
+  valField?: string;
+  fields?: string[];
 }
 
 let chartCounter = 0;
@@ -131,7 +148,7 @@ function ChartsTab({ charts, setCharts, dateRange }: { charts: ChartDraft[]; set
             <label className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>Запрос 1С</label>
             <div className="flex flex-wrap gap-1 mt-1 mb-2">
               {QUERY_TEMPLATES.map(t => (
-                <button key={t.name} onClick={() => update({ query: injectDateFilter(t.query, dateRange.date_from, dateRange.date_to), title: t.name })}
+                <button key={t.name} onClick={() => update({ query: injectDateFilter(t.query, dateRange.date_from, dateRange.date_to), title: t.name, catField: t.catField, valField: t.valField, fields: t.fields })}
                   className="text-xs px-2 py-1 rounded border transition-colors"
                   style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
                   {t.name}
@@ -147,7 +164,7 @@ function ChartsTab({ charts, setCharts, dateRange }: { charts: ChartDraft[]; set
           <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
             <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Предпросмотр</div>
             <div className="h-64">
-              <ChartPreview chart_type={cur.chart_type} title={cur.title} />
+              <ChartPreview chart_type={cur.chart_type} title={cur.title} catField={cur.catField} />
             </div>
           </div>
         </div>
@@ -156,8 +173,8 @@ function ChartsTab({ charts, setCharts, dateRange }: { charts: ChartDraft[]; set
   );
 }
 
-function ChartPreview({ chart_type, title }: { chart_type: string; title: string }) {
-  const labels = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'];
+function ChartPreview({ chart_type, title, catField }: { chart_type: string; title: string; catField?: string }) {
+  const labels = catField ? [catField + ' A', catField + ' B', catField + ' C', catField + ' D', catField + ' E'] : ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'];
   const values = [120, 200, 150, 80, 70, 110];
 
   if (chart_type === 'pie') {
@@ -191,6 +208,9 @@ function ChartPreview({ chart_type, title }: { chart_type: string; title: string
 
 export default function DashboardConstructorPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
+  const [loading, setLoading] = useState(isEdit);
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [tags, setTags] = useState('');
@@ -199,33 +219,56 @@ export default function DashboardConstructorPage() {
   const [charts, setCharts] = useState<ChartDraft[]>([{ id: genId(), title: 'График 1', chart_type: 'bar', query: '' }]);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!id) return;
+    api.get(`/api/v2/dashboards/${id}`).then(r => {
+      const d = r.data?.dashboard || r.data;
+      if (!d) return;
+      setTitle(d.title || '');
+      setDesc(d.description || '');
+      setTags(Array.isArray(d.tags) ? d.tags.join(', ') : '');
+      if (d.charts?.length) {
+        setCharts(d.charts.map((c: any) => ({
+          id: c.id || genId(),
+          title: c.title || 'График',
+          chart_type: c.chart_config?.chart_type || 'bar',
+          query: c.chart_config?.onec_query?.entity || '',
+        })));
+        const q = d.charts[0]?.chart_config?.onec_query;
+        if (q?.period) setPeriod(q.period);
+      }
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [id]);
+
   const handleSave = async () => {
     if (!title.trim()) return;
     setSaving(true);
     const dates = periodDates(period);
+    const payload = {
+      title: title.trim(),
+      description: desc.trim(),
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      charts: charts.map(c => ({
+        id: c.id, title: c.title,
+        chart_config: {
+          chart_type: c.chart_type, title: c.title,
+          x_axis: { field: c.catField || 'Номенклатура', label: '', type: 'category' },
+          y_axis: { field: c.valField || 'Сумма', label: '', type: 'value' },
+          series: [{ name: c.title, field: 'Сумма', color: '#3b82f6' }],
+          onec_query: { entity: c.query, fields: c.fields || ['Номенклатура', 'Сумма'], period: period, date_from: dates.date_from, date_to: dates.date_to, aggregation: 'sum' },
+          group_by: c.catField ? [c.catField] : [],
+        },
+        data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
+      })),
+    };
     try {
-      const res = await api.post('/api/v2/dashboards', {
-        title: title.trim(),
-        description: desc.trim(),
-        tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        charts: charts.map(c => ({
-          id: c.id, title: c.title,
-          chart_config: {
-            chart_type: c.chart_type, title: c.title,
-            x_axis: { field: 'Номенклатура', label: '', type: 'category' },
-            y_axis: { field: 'Сумма', label: '', type: 'value' },
-            series: [{ name: c.title, field: 'Сумма', color: '#3b82f6' }],
-            onec_query: { entity: c.query, fields: ['Номенклатура', 'Сумма'], period: period, date_from: dates.date_from, date_to: dates.date_to, aggregation: 'sum' },
-          },
-          data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
-        })),
-      });
-      const newId = res.data?.dashboard?.id;
-      if (newId) {
-        await api.post(`/api/v2/dashboards/${newId}/refresh`).catch(() => {});
-        navigate(`/library/${newId}`);
+      if (isEdit) {
+        await api.patch(`/api/v2/dashboards/${id}`, payload);
+        navigate(`/library/${id}`);
       } else {
-        navigate('/library');
+        const res = await api.post('/api/v2/dashboards', payload);
+        const newId = res.data?.dashboard?.id;
+        navigate(newId ? `/library/${newId}` : '/library');
       }
     } catch (e) {
       alert('Ошибка сохранения');
@@ -234,12 +277,23 @@ export default function DashboardConstructorPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 rounded w-1/3" style={{ backgroundColor: 'var(--skeleton)' }} />
+          <div className="h-96 rounded" style={{ backgroundColor: 'var(--skeleton)' }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)' }} className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Новый дашборд</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Создайте дашборд с графиками</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{isEdit ? 'Редактирование дашборда' : 'Новый дашборд'}</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{isEdit ? 'Измените настройки дашборда' : 'Создайте дашборд с графиками'}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/library')}
