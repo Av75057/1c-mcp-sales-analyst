@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDashboards, useDeleteDashboard } from '../hooks/useDashboards';
 import type { ListFilters } from '@/shared/types/dashboard';
 import { formatDate, formatNumber } from '@/shared/lib/utils';
 import { Dialog } from '@/shared/components/ui/Dialog';
 
 export default function LibraryPage() {
-  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [favoriteOnly, setFavoriteOnly] = useState(false);
