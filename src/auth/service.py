@@ -30,7 +30,7 @@ class AuthService:
         return pwd_context.hash(password)
 
     @staticmethod
-    def create_access_token(username: str, role: str) -> Token:
+    def create_access_token(username: str, role: str, extra: dict | None = None) -> Token:
         expire = datetime.utcnow() + timedelta(minutes=480)
         payload = {
             "sub": username,
@@ -38,6 +38,8 @@ class AuthService:
             "exp": int(expire.timestamp()),
             "iat": int(datetime.utcnow().timestamp()),
         }
+        if extra:
+            payload.update(extra)
         token = jwt.encode(payload, settings.jwt_secret_key, algorithm="HS256")
         return Token(access_token=token, expires_in=28800)
 
