@@ -567,6 +567,9 @@ class DeepSeekClient:
                     all_tool_calls.append(tool_entry)
 
                     logger.debug("Результат tool {}: {}", func_name, result_text[:200])
+                    # Truncate tool results to prevent context overflow
+                    if len(result_text) > 15000:
+                        result_text = result_text[:15000] + "\n\n[данные обрезаны]"
                     messages.append({"role": "tool", "tool_call_id": tc.id, "content": result_text})
                 continue
 
