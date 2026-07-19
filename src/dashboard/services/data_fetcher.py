@@ -59,6 +59,8 @@ async def fetch_chart_data(chart_config: dict[str, Any]) -> list[dict[str, Any]]
     date_from = onec.get("date_from", (date.today() - timedelta(days=days)).isoformat())
     date_to = onec.get("date_to", date.today().isoformat())
     fields = onec.get("fields", [])
+    if not fields:
+        fields = ["Номенклатура", "Сумма"]
     aggregation = onec.get("aggregation", "sum")
     chart_type = cfg.get("chart_type", "bar")
 

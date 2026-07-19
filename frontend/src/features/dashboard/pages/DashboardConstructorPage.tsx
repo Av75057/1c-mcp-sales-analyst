@@ -204,7 +204,7 @@ export default function DashboardConstructorPage() {
     setSaving(true);
     const dates = periodDates(period);
     try {
-      await api.post('/api/v2/dashboards', {
+      const res = await api.post('/api/v2/dashboards', {
         title: title.trim(),
         description: desc.trim(),
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
@@ -212,14 +212,21 @@ export default function DashboardConstructorPage() {
           id: c.id, title: c.title,
           chart_config: {
             chart_type: c.chart_type, title: c.title,
-            x_axis: { field: '', label: '', type: '' }, y_axis: { field: '', label: '', type: '' },
-            series: [], onec_query: { entity: c.query, fields: [], period: period },
-            filters: [{ date_from: dates.date_from, date_to: dates.date_to }],
+            x_axis: { field: 'Номенклатура', label: '', type: 'category' },
+            y_axis: { field: 'Сумма', label: '', type: 'value' },
+            series: [{ name: c.title, field: 'Сумма', color: '#3b82f6' }],
+            onec_query: { entity: c.query, fields: ['Номенклатура', 'Сумма'], period: period, date_from: dates.date_from, date_to: dates.date_to, aggregation: 'sum' },
           },
           data: [], position: { x: 0, y: 0, w: 6, h: 4 }, filter_bindings: [],
         })),
       });
-      navigate('/library');
+      const newId = res.data?.dashboard?.id;
+      if (newId) {
+        await api.post(`/api/v2/dashboards/${newId}/refresh`).catch(() => {});
+        navigate(`/library/${newId}`);
+      } else {
+        navigate('/library');
+      }
     } catch (e) {
       alert('Ошибка сохранения');
     } finally {
