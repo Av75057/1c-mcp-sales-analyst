@@ -19,6 +19,7 @@ const ExecutiveDashboardPage = lazy(() => import('@/features/dashboard/pages/Exe
 const DashboardConstructorPage = lazy(() => import('@/features/dashboard/pages/DashboardConstructorPage'));
 const LegacyDashboardPage = lazy(() => import('@/features/dashboard/pages/LegacyDashboardPage'));
 const DocumentsPage = lazy(() => import('@/features/documents/pages/DocumentsPage'));
+const OCRPage = lazy(() => import('@/features/documents/pages/OCRPage'));
 const SalesPage = lazy(() => import('@/features/documents/pages/SalesPage'));
 const InsightsPage = lazy(() => import('@/features/insights/pages/InsightsPage'));
 const StatusPage = lazy(() => import('@/features/status/pages/StatusPage'));
@@ -72,7 +73,7 @@ export const router = createBrowserRouter([
       { path: '/dashboards', element: <LazyPage Component={DashboardConstructorPage} /> },
       { path: '/dashboards/new', element: <LazyPage Component={DashboardConstructorPage} /> },
       { path: '/insights', element: <LazyPage Component={InsightsPage} /> },
-      { path: '/documents', element: <LazyPage Component={DocumentsPage} /> },
+      { path: '/documents', element: <LazyPage Component={OCRPage} /> },
       { path: '/documents/sales', element: <LazyPage Component={DocumentsPage} /> },
       { path: '/documents', element: <LazyPage Component={LegacyRedirectPage} /> },
       { path: '/sales', element: <LazyPage Component={SalesPage} /> },
