@@ -61,9 +61,12 @@ async def list_connections(tenant_id: str = "", db: AsyncSession = Depends(get_d
 @router.post("/connections")
 async def create_connection(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
     repo = TenantRepository(db)
+    tenant_id = body.get("tenant_id", "")
+    if not tenant_id:
+        raise HTTPException(400, "tenant_id is required")
     conn = await repo.create_connection(
-        tenant_id=body["tenant_id"], name=body["name"],
-        base_url=body["base_url"], username=body.get("username", ""),
+        tenant_id=tenant_id, name=body.get("name", "New Connection"),
+        base_url=body.get("base_url", ""), username=body.get("username", ""),
         password=body.get("password", ""), is_default=body.get("is_default", False),
         timeout=body.get("timeout_seconds", 30),
     )
@@ -143,7 +146,7 @@ async def create_user(body: dict, request: Request, db: AsyncSession = Depends(g
     if existing:
         raise HTTPException(400, "User with this email already exists")
     password_hash = bcrypt.hash(body["password"])
-    user = await repo.create_user(email=body["email"], password_hash=password_hash, full_name=body.get("full_name", ""), is_superadmin=body.get("is_superadmin", False))
+    user = await repo.create_user(email=body.get("email", ""), password_hash=password_hash, full_name=body.get("full_name", ""), is_superadmin=body.get("is_superadmin", False))
     if body.get("tenant_id"):
         await repo.add_tenant_user(tenant_id=body["tenant_id"], user_id=user.id, role=body.get("role", "viewer"), allowed_connections=body.get("allowed_connection_ids"))
     await repo.log(actor_user_id=_get_user_id(request), action="user.create", resource_type="user", resource_id=user.id, ip=_get_ip(request))
