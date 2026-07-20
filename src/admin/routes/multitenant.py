@@ -7,7 +7,8 @@ from passlib.hash import bcrypt
 from src.admin.database import get_db
 from src.admin.multitenant.repository import TenantRepository
 from src.admin.multitenant.encryption import encryptor
-from src.auth.dependencies import get_token_payload
+from src.auth.dependencies import get_token_payload, require_role
+from src.auth.models import Role
 
 router = APIRouter(prefix="/api/v1/admin", tags=["multitenant"])
 
@@ -27,13 +28,21 @@ def _get_ip(request: Request) -> str:
 # === Tenants ===
 
 @router.get("/tenants")
-async def list_tenants(db: AsyncSession = Depends(get_db)):
+async def list_tenants(db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
+    if payload.tenants:
+        user_tenant_ids = [t["tenant_id"] if isinstance(t, dict) else t.tenant_id for t in payload.tenants]
+        tenants = []
+        for tid in user_tenant_ids:
+            t = await repo.get_tenant(tid)
+            if t:
+                tenants.append(t)
+        return {"tenants": tenants}
     return {"tenants": await repo.list_tenants()}
 
 
 @router.post("/tenants")
-async def create_tenant(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def create_tenant(body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     tenant = await repo.create_tenant(name=body["name"], slug=body.get("slug", body["name"].lower().replace(" ", "-")))
     await repo.log(actor_user_id=_get_user_id(request), action="tenant.create", resource_type="tenant", resource_id=tenant.id, tenant_id=tenant.id, ip=_get_ip(request))
@@ -41,7 +50,7 @@ async def create_tenant(body: dict, request: Request, db: AsyncSession = Depends
 
 
 @router.patch("/tenants/{tenant_id}")
-async def update_tenant(tenant_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def update_tenant(tenant_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     await repo.update_tenant(tenant_id, **{k: v for k, v in body.items() if k in ("name", "slug", "is_active", "settings")})
     await repo.log(actor_user_id=_get_user_id(request), action="tenant.update", resource_type="tenant", resource_id=tenant_id, tenant_id=tenant_id, ip=_get_ip(request))
@@ -77,7 +86,7 @@ async def list_connections(tenant_id: str = "", db: AsyncSession = Depends(get_d
 
 
 @router.post("/connections")
-async def create_connection(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def create_connection(body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     tenant_id = body.get("tenant_id", "")
     if not tenant_id:
@@ -93,7 +102,7 @@ async def create_connection(body: dict, request: Request, db: AsyncSession = Dep
 
 
 @router.post("/connections/{conn_id}/test")
-async def test_connection(conn_id: str, db: AsyncSession = Depends(get_db)):
+async def test_connection(conn_id: str, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     conn = await repo.get_connection(conn_id)
     if not conn:
@@ -120,7 +129,7 @@ async def test_connection(conn_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/connections/{conn_id}")
-async def update_connection(conn_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def update_connection(conn_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     conn = await repo.get_connection(conn_id)
     if not conn:
@@ -132,7 +141,7 @@ async def update_connection(conn_id: str, body: dict, request: Request, db: Asyn
 
 
 @router.delete("/connections/{conn_id}")
-async def delete_connection(conn_id: str, request: Request, db: AsyncSession = Depends(get_db)):
+async def delete_connection(conn_id: str, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     conn = await repo.get_connection(conn_id)
     if not conn:
@@ -145,20 +154,24 @@ async def delete_connection(conn_id: str, request: Request, db: AsyncSession = D
 # === Users ===
 
 @router.get("/users")
-async def list_users(db: AsyncSession = Depends(get_db)):
+async def list_users(db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
-    users = await repo.list_users()
-    # Enrich with tenant info
+    all_users = await repo.list_users()
     result = []
-    for u in users:
+    for u in all_users:
         tenants_info = await repo.get_user_tenants(u["id"])
         u["tenants"] = tenants_info
+        # Filter by user's tenant if platform user
+        if payload.tenants:
+            user_tenant_ids = [t["tenant_id"] if isinstance(t, dict) else t.tenant_id for t in payload.tenants]
+            if not any(t["tenant_id"] in user_tenant_ids for t in tenants_info):
+                continue
         result.append(u)
     return {"users": result}
 
 
 @router.post("/users")
-async def create_user(body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def create_user(body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     existing = await repo.get_user_by_email(body.get("email", ""))
     if existing:
@@ -172,7 +185,7 @@ async def create_user(body: dict, request: Request, db: AsyncSession = Depends(g
 
 
 @router.patch("/users/{user_id}")
-async def update_user(user_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def update_user(user_id: str, body: dict, request: Request, db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     updates = {k: v for k, v in body.items() if k in ("full_name", "is_active", "is_superadmin")}
     if "password" in body:
@@ -194,6 +207,6 @@ async def update_user(user_id: str, body: dict, request: Request, db: AsyncSessi
 # === Audit ===
 
 @router.get("/audit")
-async def list_audit(db: AsyncSession = Depends(get_db)):
+async def list_audit(db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
     return {"entries": await repo.list_audit(limit=100)}
