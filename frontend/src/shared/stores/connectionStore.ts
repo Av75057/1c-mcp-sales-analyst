@@ -12,7 +12,7 @@ interface ConnectionState {
   connections: Connection[];
   activeConnectionId: string | null;
   loading: boolean;
-  loadConnections: () => Promise<void>;
+  loadConnections: (tenantId?: string) => Promise<void>;
   setActiveConnection: (id: string) => void;
   getActiveConnection: () => Connection | null;
 }
@@ -22,10 +22,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   activeConnectionId: localStorage.getItem('active_connection_id'),
   loading: false,
 
-  loadConnections: async () => {
+  loadConnections: async (tenantId?: string) => {
     set({ loading: true });
     try {
-      const r = await api.get('/api/v1/admin/connections', { params: { tenant_id: 'all' } });
+      const params = tenantId ? { tenant_id: tenantId } : { tenant_id: 'all' };
+      const r = await api.get('/api/v1/admin/connections', { params });
       const conns = r.data?.connections || [];
       set({ connections: conns, loading: false });
       // Auto-select first if none selected

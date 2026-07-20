@@ -44,3 +44,6 @@ class TokenPayload(BaseModel):
     role: str
     exp: int
     iat: int
+    user_id: str | None = None
+    is_platform: bool | None = None
+    tenants: list[dict] | None = None

@@ -7,6 +7,7 @@ from passlib.hash import bcrypt
 from src.admin.database import get_db
 from src.admin.multitenant.repository import TenantRepository
 from src.admin.multitenant.encryption import encryptor
+from src.auth.dependencies import get_token_payload
 
 router = APIRouter(prefix="/api/v1/admin", tags=["multitenant"])
 
@@ -50,11 +51,23 @@ async def update_tenant(tenant_id: str, body: dict, request: Request, db: AsyncS
 # === Connections ===
 
 @router.get("/connections")
-async def list_connections(tenant_id: str = "", db: AsyncSession = Depends(get_db)):
+async def list_connections(tenant_id: str = "", db: AsyncSession = Depends(get_db), payload=Depends(get_token_payload)):
     repo = TenantRepository(db)
+    # If user is a platform user, restrict to their tenant
+    if payload.tenants:
+        user_tenant_ids = [t["tenant_id"] if isinstance(t, dict) else t.tenant_id for t in payload.tenants]
+        if tenant_id and tenant_id != "all":
+            if tenant_id in user_tenant_ids:
+                return {"connections": await repo.list_connections(tenant_id)}
+            return {"connections": []}
+        all_conns = []
+        for tid in user_tenant_ids:
+            conns = await repo.list_connections(tid)
+            all_conns.extend(conns)
+        return {"connections": all_conns}
     if tenant_id and tenant_id != "all":
         return {"connections": await repo.list_connections(tenant_id)}
-    # Return connections from all tenants
+    # Superadmin fallback: return connections from all tenants
     tenants = await repo.list_tenants()
     all_conns = []
     for t in tenants:

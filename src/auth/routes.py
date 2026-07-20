@@ -81,13 +81,29 @@ async def me(payload=Depends(get_token_payload), db: AsyncSession = Depends(get_
     role = payload.role
     email = username
     full_name = username
+    tenant_id = None
+    connection_ids: list[str] = []
 
     # Try platform user first
-    from src.admin.multitenant.repository import TenantRepository
     repo = TenantRepository(db)
     pu = await repo.get_user_by_email(username)
     if pu:
         full_name = pu.full_name or pu.email
         email = pu.email
+        tenants_info = payload.tenants or await repo.get_user_tenants(pu.id)
+        if tenants_info:
+            tenant_id = tenants_info[0].get("tenant_id") if isinstance(tenants_info[0], dict) else str(tenants_info[0].tenant_id)
+            for t in tenants_info:
+                ac = t.get("allowed_connections", []) if isinstance(t, dict) else getattr(t, "allowed_connections", [])
+                if ac:
+                    connection_ids = ac if isinstance(ac, list) else [ac]
+                    break
 
-    return {"username": username, "role": role, "email": email, "full_name": full_name}
+    return {
+        "username": username,
+        "role": role,
+        "email": email,
+        "full_name": full_name,
+        "tenant_id": tenant_id,
+        "connection_ids": connection_ids,
+    }

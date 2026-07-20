@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { useConnectionStore } from '@/shared/stores/connectionStore';
+import { api } from '@/shared/lib/api';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login, isLoading } = useAuthStore();
+  const loadConnections = useConnectionStore(s => s.loadConnections);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -14,6 +17,21 @@ export default function LoginPage() {
     setError('');
     try {
       await login({ username, password });
+      // Fetch user's tenant + connections after login
+      try {
+        const me = await api.get('/api/auth/me');
+        const d = me.data;
+        if (d.tenant_id) {
+          await loadConnections(d.tenant_id);
+        } else {
+          await loadConnections();
+        }
+        // If user has specific connections allowed, auto-select first
+        if (d.connection_ids?.length > 0) {
+          localStorage.setItem('active_connection_id', d.connection_ids[0]);
+          useConnectionStore.getState().setActiveConnection(d.connection_ids[0]);
+        }
+      } catch {}
       navigate('/');
     } catch (err: any) {
       setError(err?.response?.data?.detail || 'Ошибка входа');
