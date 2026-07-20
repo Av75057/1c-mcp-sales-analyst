@@ -389,10 +389,32 @@ async def status_page():
 
 @measure_time("api_status")
 @app.get("/api/status")
-async def api_status():
+async def api_status(request: Request):
     import os
+    from src.tools import get_client
     insights_dir = Path(__file__).resolve().parent.parent / "data" / "sent_insights"
     insights_count = len(list(insights_dir.glob("*.json"))) if insights_dir.exists() else 0
+
+    # Get active connection info from request
+    conn_id = request.headers.get("X-Connection-ID", "")
+    conn_name = ""
+    conn_url = ""
+    if conn_id:
+        from src.admin.database import async_session
+        from src.admin.multitenant.repository import TenantRepository
+        from src.admin.multitenant.encryption import encryptor
+        async with async_session() as db:
+            repo = TenantRepository(db)
+            conn_data = await repo.get_connection(conn_id)
+            if conn_data:
+                conn_name = conn_data.get("name", "")
+                conn_url = conn_data.get("base_url", "")
+
+    if not conn_name:
+        conn_name = os.getenv("C1_NAME", "1С:УНФ (по умолчанию)")
+    if not conn_url:
+        conn_url = os.getenv("C1_BASE_URL", "")
+
     status_data = {
         "stock_count": 0,
         "sales_count": 0,
@@ -401,14 +423,15 @@ async def api_status():
         "deepseek_key": bool(os.getenv("DEEPSEEK_API_KEY")),
         "telegram_token": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
         "mock_mode": bool(os.getenv("USE_MOCK_DATA", "false") == "true"),
-        "c1_url": os.getenv("C1_BASE_URL", "http://localhost/1c/api"),
+        "c1_url": conn_url,
+        "c1_name": conn_name,
         "llm_model": os.getenv("LLM_MODEL", "deepseek-chat"),
         "port": os.getenv("PORT", "8080"),
         "uptime": "работает",
         "c1_connected": False,
     }
     try:
-        client = await get_c1()
+        client = get_client()
         stock_coro = asyncio.wait_for(client.get_stock(), timeout=5.0)
         sales_coro = asyncio.wait_for(client.get_sales(), timeout=5.0)
         results = await asyncio.gather(stock_coro, sales_coro, return_exceptions=True)

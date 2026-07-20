@@ -30,10 +30,10 @@ export default function StatusPage() {
       {status && (
         <div className="grid grid-cols-2 gap-4">
           <Card>
-            <CardHeader><CardTitle>1С:УНФ</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{status.c1_name || '1С'}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm"><span style={{ color: 'var(--text-secondary)' }}>Статус</span><Badge variant={status.c1_connected ? 'success' : 'error'}>{status.c1_connected ? 'Доступна' : 'Недоступна'}</Badge></div>
-              {(status as any).c1_url && <div className="flex justify-between text-sm"><span style={{ color: 'var(--text-secondary)' }}>URL</span><span className="text-xs" style={{ color: 'var(--text-primary)' }}>{(status as any).c1_url}</span></div>}
+              {status.c1_url && <div className="flex justify-between text-sm"><span style={{ color: 'var(--text-secondary)' }}>URL</span><span className="text-xs" style={{ color: 'var(--text-primary)' }}>{status.c1_url}</span></div>}
             </CardContent>
           </Card>
 
