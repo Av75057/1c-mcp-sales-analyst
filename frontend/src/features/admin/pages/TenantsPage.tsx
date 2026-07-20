@@ -147,6 +147,7 @@ export default function TenantsPage() {
           ))}
           {connections.length === 0 && <p className="text-sm py-8 text-center" style={{ color: 'var(--text-muted)' }}>Нет подключений</p>}
         </div>
+        </>
       )}
 
       {/* Users */}

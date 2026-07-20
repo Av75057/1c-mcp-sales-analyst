@@ -6,6 +6,8 @@ import { Badge } from '@/shared/components/ui/Badge';
 import { Dialog } from '@/shared/components/ui/Dialog';
 import { formatDate } from '@/shared/lib/utils';
 
+interface ConnectionOption { id: string; name: string; base_url: string; }
+
 interface PlatformUser {
   id: string; email: string; full_name: string; is_superadmin: boolean;
   is_active: boolean; last_login_at: string; created_at: string;
@@ -20,11 +22,17 @@ export default function UsersPage() {
   const [form, setForm] = useState<any>({});
   const [editId, setEditId] = useState<string | null>(null);
 
+  const [connections, setConnections] = useState<ConnectionOption[]>([]);
+
   const load = async () => {
     setLoading(true);
     try {
-      const r = await api.get('/api/v1/admin/users');
-      setUsers(r.data?.users || []);
+      const [u, c] = await Promise.all([
+        api.get('/api/v1/admin/users'),
+        api.get('/api/v1/admin/connections', { params: { tenant_id: 'all' } }),
+      ]);
+      setUsers(u.data?.users || []);
+      setConnections(c.data?.connections || []);
     } catch { setUsers([]); }
     finally { setLoading(false); }
   };
@@ -130,6 +138,30 @@ export default function UsersPage() {
               Superadmin (доступ ко всем тенантам)
             </label>
           </div>
+          {connections.length > 0 && (
+            <div>
+              <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Доступ к базам 1С</label>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {connections.map(c => {
+                  const checked = form.allowed_connection_ids?.includes(c.id);
+                  return (
+                    <label key={c.id} className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: 'var(--text-primary)' }}>
+                      <input type="checkbox" checked={checked || false}
+                        onChange={e => {
+                          const ids = form.allowed_connection_ids || [];
+                          setForm({ ...form, allowed_connection_ids: e.target.checked ? [...ids, c.id] : ids.filter((id: string) => id !== c.id) });
+                        }} />
+                      {c.name}
+                      <span className="opacity-50" style={{ color: 'var(--text-muted)' }}>({c.base_url.slice(0, 30)}…)</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {(!form.allowed_connection_ids || form.allowed_connection_ids.length === 0) && (
+                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Не выбрано — доступ ко всем базам</p>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={() => setShowForm(false)}
               className="px-4 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>Отмена</button>

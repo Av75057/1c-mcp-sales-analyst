@@ -166,6 +166,14 @@ async def update_user(user_id: str, body: dict, request: Request, db: AsyncSessi
         updates["password_hash"] = bcrypt.hash(body["password"])
     if updates:
         await repo.update_user(user_id, **updates)
+    # Update allowed connections in tenant_users
+    if "allowed_connection_ids" in body:
+        from sqlalchemy import update as sql_update, select
+        from src.admin.multitenant.models import TenantUser
+        await db.execute(
+            sql_update(TenantUser).where(TenantUser.user_id == user_id).values(allowed_connection_ids=body["allowed_connection_ids"])
+        )
+        await db.commit()
     await repo.log(actor_user_id=_get_user_id(request), action="user.update", resource_type="user", resource_id=user_id, ip=_get_ip(request))
     return {"status": "ok"}
 
