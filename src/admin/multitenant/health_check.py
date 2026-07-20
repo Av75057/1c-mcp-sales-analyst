@@ -24,9 +24,9 @@ async def check_connection(conn: dict) -> dict:
         async with httpx.AsyncClient(headers={"Authorization": auth}, timeout=10) as client:
             resp = await client.get(f"{conn['base_url'].rstrip('/')}/stock", params={"limit": "1"})
             result["latency_ms"] = int((time.time() - start) * 1000)
-            if resp.status_code >= 500:
+            if resp.status_code != 200:
                 result["status"] = "error"
-                result["error"] = f"HTTP {resp.status_code}"
+                result["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
     except Exception as e:
         result["status"] = "error"
         result["error"] = str(e)[:200]

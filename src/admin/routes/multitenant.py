@@ -117,12 +117,13 @@ async def test_connection(conn_id: str, db: AsyncSession = Depends(get_db), payl
         async with httpx.AsyncClient(headers={"Authorization": auth}, timeout=10) as client:
             resp = await client.get(f"{conn['base_url'].rstrip('/')}/stock", params={"limit": "1"})
             latency = int((__import__("time").time() - start) * 1000)
-            if resp.status_code < 500:
+            if resp.status_code == 200:
                 await repo.set_health(conn_id, "ok")
                 return {"status": "ok", "latency_ms": latency, "http_status": resp.status_code}
             else:
-                await repo.set_health(conn_id, "error", resp.text[:200])
-                return {"status": "error", "error": f"1C returned {resp.status_code}"}
+                err_text = resp.text[:200]
+                await repo.set_health(conn_id, "error", f"HTTP {resp.status_code}: {err_text}")
+                return {"status": "error", "error": f"1C returned {resp.status_code}: {err_text}"}
     except Exception as e:
         await repo.set_health(conn_id, "error", str(e))
         return {"status": "error", "error": str(e)}
