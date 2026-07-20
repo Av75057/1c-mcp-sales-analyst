@@ -12,6 +12,7 @@ interface ConnectionState {
   connections: Connection[];
   activeConnectionId: string | null;
   loading: boolean;
+  lastTenantId: string | null;
   loadConnections: (tenantId?: string) => Promise<void>;
   setActiveConnection: (id: string) => void;
   getActiveConnection: () => Connection | null;
@@ -21,11 +22,14 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   connections: [],
   activeConnectionId: localStorage.getItem('active_connection_id'),
   loading: false,
+  lastTenantId: null,
 
   loadConnections: async (tenantId?: string) => {
+    const effectiveTenant = tenantId || get().lastTenantId;
     set({ loading: true });
+    if (tenantId) set({ lastTenantId: tenantId });
     try {
-      const params = tenantId ? { tenant_id: tenantId } : { tenant_id: 'all' };
+      const params = effectiveTenant ? { tenant_id: effectiveTenant } : { tenant_id: 'all' };
       const r = await api.get('/api/v1/admin/connections', { params });
       const conns = r.data?.connections || [];
       set({ connections: conns, loading: false });

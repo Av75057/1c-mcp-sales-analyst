@@ -24,8 +24,8 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const location = useLocation();
   const { theme, toggle } = useTheme();
-  const loadConnections = useConnectionStore((s) => s.loadConnections);
-  useEffect(() => { loadConnections(); }, [loadConnections]);
+  const { loadConnections, lastTenantId } = useConnectionStore();
+  useEffect(() => { loadConnections(lastTenantId || undefined); }, [loadConnections, lastTenantId]);
 
   const user = useAuthStore((s) => s.user);
   const displayName = user?.full_name || user?.username || 'Профиль';
