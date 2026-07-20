@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '@/shared/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
 import { Dialog } from '@/shared/components/ui/Dialog';
+import ConnectionWizard from '@/features/admin/components/ConnectionWizard';
 
 interface Tenant { id: string; name: string; slug: string; is_active: boolean; created_at: string; }
 interface Connection { id: string; tenant_id: string; name: string; base_url: string; username: string; health_status: string; is_default: boolean; }
@@ -26,6 +27,7 @@ export default function TenantsPage() {
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [testResult, setTestResult] = useState<any>(null);
   const [testing, setTesting] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   const load = async () => {
     if (tab === 'tenants') api.get('/api/v1/admin/tenants').then(r => setTenants(r.data?.tenants || [])).catch(() => {});
@@ -121,7 +123,12 @@ export default function TenantsPage() {
 
       {/* Connections */}
       {tab === 'connections' && (
-        <div className="grid gap-3">
+        <>
+          <div className="flex gap-2 mb-3">
+            <button onClick={openCreate} className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)' }}>+ Быстрое</button>
+            <button onClick={() => setShowWizard(true)} className="px-3 py-1.5 rounded-lg text-xs font-medium text-white" style={{ backgroundColor: 'var(--brand)' }}>🧙 Мастер</button>
+          </div>
+          <div className="grid gap-3">
           {connections.map(c => (
             <div key={c.id} className="rounded-xl border p-4 transition-all"
               style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
@@ -250,6 +257,15 @@ export default function TenantsPage() {
               className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ backgroundColor: 'var(--brand)' }}>Сохранить</button>
           </div>
         </div>
+      </Dialog>
+
+      {/* Connection Wizard Dialog */}
+      <Dialog open={showWizard} onClose={() => setShowWizard(false)} title="Мастер подключения" className="max-w-2xl">
+        <ConnectionWizard
+          tenantId={tenants[0]?.id || ''}
+          onComplete={() => { setShowWizard(false); load(); }}
+          onCancel={() => setShowWizard(false)}
+        />
       </Dialog>
     </div>
   );
