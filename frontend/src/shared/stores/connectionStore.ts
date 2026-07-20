@@ -16,6 +16,7 @@ interface ConnectionState {
   loadConnections: (tenantId?: string) => Promise<void>;
   setActiveConnection: (id: string) => void;
   getActiveConnection: () => Connection | null;
+  resetConnectionState: () => void;
 }
 
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
@@ -50,5 +51,10 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   getActiveConnection: () => {
     const state = get();
     return state.connections.find(c => c.id === state.activeConnectionId) || null;
+  },
+
+  resetConnectionState: () => {
+    set({ connections: [], activeConnectionId: null, lastTenantId: null });
+    localStorage.removeItem('active_connection_id');
   },
 }));

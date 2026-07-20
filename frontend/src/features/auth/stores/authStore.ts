@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '@/shared/lib/api';
 import type { User, LoginCredentials, AuthResponse } from '@/shared/types/auth';
+import { useConnectionStore } from '@/shared/stores/connectionStore';
 
 interface AuthState {
   user: User | null;
@@ -21,6 +22,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (credentials) => {
     set({ isLoading: true });
+    // Clear stale connection state from previous session
+    localStorage.removeItem('active_connection_id');
+    useConnectionStore.getState().resetConnectionState();
     try {
       const params = new URLSearchParams();
       params.append('username', credentials.username);
