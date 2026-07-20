@@ -6,6 +6,7 @@ interface Connection {
   name: string;
   base_url: string;
   health_status: string;
+  last_error?: string;
 }
 
 interface ConnectionState {

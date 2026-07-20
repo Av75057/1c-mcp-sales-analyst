@@ -82,15 +82,22 @@ export function Sidebar() {
           if (connStore.connections.length === 0) return null;
           const active = connStore.connections.find(c => c.id === connStore.activeConnectionId);
           return (
-            <select value={connStore.activeConnectionId || ''} onChange={e => connStore.setActiveConnection(e.target.value)}
-              className="w-full text-xs px-2 py-1.5 rounded border"
-              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
-              {connStore.connections.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.health_status === 'ok' ? '✅' : c.health_status === 'error' ? '❌' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1">
+              <select value={connStore.activeConnectionId || ''} onChange={e => connStore.setActiveConnection(e.target.value)}
+                className="w-full text-xs px-2 py-1.5 rounded border"
+                style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                {connStore.connections.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.health_status === 'ok' ? '✅' : c.health_status === 'error' ? '❌' : '⏳'}
+                  </option>
+                ))}
+              </select>
+              {active?.health_status === 'error' && active?.last_error && (
+                <p className="text-[10px] leading-tight" style={{ color: 'var(--danger)' }} title={active.last_error}>
+                  {active.last_error.length > 60 ? active.last_error.slice(0, 60) + '…' : active.last_error}
+                </p>
+              )}
+            </div>
           );
         })()}
         <button onClick={toggle}
