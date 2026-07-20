@@ -8,10 +8,9 @@ from typing import Any
 import httpx
 from openai import AsyncOpenAI
 
-from src.clients.c1_client import C1Client
-from src.clients.mock_c1_client import MockC1Client
 from src.config import settings
 from src.logger import logger
+from src.tools import get_client
 
 ROOT_CAUSE_PROMPT = """Ты — аналитик, который объясняет причины аномалий в данных 1С.
 
@@ -66,7 +65,7 @@ async def analyze_root_cause(anomaly: dict[str, Any]) -> dict[str, Any]:
 async def _gather_context(anomaly: dict[str, Any]) -> dict[str, Any]:
     ctx: dict[str, Any] = {"anomaly_type": anomaly.get("detector", ""), "entity": anomaly.get("entity_id", ""), "detected_at": str(anomaly.get("detected_at", "")), "metric": anomaly.get("metric_name", ""), "delta": anomaly.get("metric_delta_percent", 0)}
 
-    client = C1Client() if not settings.use_mock_data else MockC1Client()
+    client = get_client()
 
     entity_name = anomaly.get("entity_id", anomaly.get("entity_name", ""))
     today = date.today()

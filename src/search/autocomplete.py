@@ -69,10 +69,10 @@ class AutocompleteService:
         if self._built:
             return
         # Try to build from stock data (lighter query)
-        from src.clients.c1_client import C1Client
-        c1 = C1Client()
+        from src.tools import get_client
+        client = get_client()
         try:
-            stock = await c1.get_stock()
+            stock = await client.get_stock()
             names = list({s.get("nomenclature", "") for s in stock if s.get("nomenclature")})
             self.build([{"name": n} for n in names])
             if self._trie.root.children:
@@ -80,22 +80,18 @@ class AutocompleteService:
                 return
         except Exception:
             pass
-        finally:
-            await c1.close()
 
         # Fallback: try nomenclature with a real query
         if not self._built:
-            from src.clients.c1_client import C1Client
-            c1 = C1Client()
+            from src.tools import get_client
+            client = get_client()
             try:
-                items = await c1.list_nomenclature(query="а", limit=500)
+                items = await client.list_nomenclature(query="а", limit=500)
                 self.build(items)
                 if self._trie.root.children:
                     self._built = True
             except Exception:
                 pass
-            finally:
-                await c1.close()
 
 
 autocomplete = AutocompleteService()

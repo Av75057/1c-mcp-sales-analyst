@@ -4,8 +4,8 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
-from src.clients.c1_client import C1Client
 from src.config import settings
+from src.tools import get_client
 from src.deepseek_client import DeepSeekClient
 
 
@@ -13,10 +13,10 @@ class HealthService:
     async def check_1c(self) -> dict[str, Any]:
         start = datetime.utcnow()
         try:
-            async with C1Client() as client:
-                data = await client.get_stock(warehouse=None, nomenclature=None, min_quantity=1)
-                elapsed = (datetime.utcnow() - start).total_seconds() * 1000
-                return {"status": "healthy", "response_time_ms": round(elapsed, 0), "items_count": len(data)}
+            client = get_client()
+            data = await client.get_stock(warehouse=None, nomenclature=None, min_quantity=1)
+            elapsed = (datetime.utcnow() - start).total_seconds() * 1000
+            return {"status": "healthy", "response_time_ms": round(elapsed, 0), "items_count": len(data)}
         except Exception as e:
             elapsed = (datetime.utcnow() - start).total_seconds() * 1000
             return {"status": "unhealthy", "error": str(e), "response_time_ms": round(elapsed, 0)}

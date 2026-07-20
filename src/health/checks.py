@@ -28,15 +28,12 @@ async def check_database() -> dict[str, Any]:
 async def check_c1() -> dict[str, Any]:
     start = time.time()
     try:
-        from src.clients.c1_client import C1Client
-        c1 = C1Client()
-        try:
-            await asyncio.wait_for(c1.get_stock(warehouse=None, nomenclature=None, min_quantity=1), timeout=5.0)
-            latency = (time.time() - start) * 1000
-            cb_state = c1_cb.state.value
-            return {"status": "degraded" if cb_state == "open" else "ok", "latency_ms": round(latency, 2), "details": {"endpoint": settings.c1_base_url, "circuit_breaker": cb_state}}
-        finally:
-            await c1.close()
+        from src.tools import get_client
+        client = get_client()
+        await asyncio.wait_for(client.get_stock(warehouse=None, nomenclature=None, min_quantity=1), timeout=5.0)
+        latency = (time.time() - start) * 1000
+        cb_state = c1_cb.state.value
+        return {"status": "degraded" if cb_state == "open" else "ok", "latency_ms": round(latency, 2), "details": {"endpoint": settings.c1_base_url, "circuit_breaker": cb_state}}
     except asyncio.TimeoutError:
         return {"status": "error", "error": "timeout"}
     except Exception as e:

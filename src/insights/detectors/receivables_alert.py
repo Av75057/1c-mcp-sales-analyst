@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from src.clients.c1_client import C1Client
-from src.clients.mock_c1_client import MockC1Client
-from src.config import settings
 from src.insights.detectors.base import BaseDetector
 from src.insights.models import Priority, RawInsight
 from src.logger import logger
@@ -13,7 +10,8 @@ from src.logger import logger
 class ReceivablesAlertDetector(BaseDetector):
     async def detect(self, tenant_id: str = "default") -> list[RawInsight]:
         logger.info("ReceivablesAlertDetector: запуск")
-        client = MockC1Client() if settings.use_mock_data else C1Client()
+        from src.tools import get_client
+        client = get_client()
 
         receivables = await client.get_receivables()
         if not receivables:

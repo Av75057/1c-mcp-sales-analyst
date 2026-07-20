@@ -22,13 +22,10 @@ async def _fetch_data(config: ChartConfig) -> list[dict]:
     date_to = date.today().isoformat()
 
     # Use batch client for flexible queries
-    from src.clients.c1_client import C1Client
+    from src.tools import get_client
 
-    c1 = C1Client()
-    try:
-        sales = await c1.get_sales(date_from=date_from, date_to=date_to)
-    finally:
-        await c1.close()
+    client = get_client()
+    sales = await client.get_sales(date_from=date_from, date_to=date_to)
 
     if not sales:
         return []

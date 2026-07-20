@@ -90,9 +90,9 @@ async def simulate_scenario_tool(
 
 async def _fetch_real_data(entity_name: str, days: int = 365) -> pd.DataFrame | None:
     try:
-        from src.clients.c1_client import C1Client
+        from src.tools import get_client
         from datetime import date, timedelta
-        c1 = C1Client()
+        c1 = get_client()
         end = date.today()
         start = end - timedelta(days=days)
         sales = await c1.get_sales(date_from=start.isoformat(), date_to=end.isoformat())

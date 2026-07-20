@@ -121,48 +121,45 @@ async def ensure_fresh(max_age: int = 3600) -> bool:
     if not needs_refresh(max_age):
         return True
     try:
-        from src.clients.c1_client import C1Client
+        from src.tools import get_client
 
-        c1 = C1Client()
+        client = get_client()
+        # Build nomenclature from stock + sales data (which we can always fetch)
+        items: list[dict[str, Any]] = []
+
+        # Get stock items for names
         try:
-            # Build nomenclature from stock + sales data (which we can always fetch)
-            items: list[dict[str, Any]] = []
+            stock_items = await client.get_stock()
+            seen = set()
+            for s in stock_items:
+                name = s.get("nomenclature", "")
+                qty = s.get("quantity", 0)
+                if name and name not in seen:
+                    seen.add(name)
+                    items.append({"name": name, "stock_qty": float(qty), "ref": name, "article": ""})
+        except Exception as e:
+            logger.warning("Stock fetch failed: {}", e)
 
-            # Get stock items for names
-            try:
-                stock_items = await c1.get_stock()
-                seen = set()
-                for s in stock_items:
-                    name = s.get("nomenclature", "")
-                    qty = s.get("quantity", 0)
-                    if name and name not in seen:
-                        seen.add(name)
-                        items.append({"name": name, "stock_qty": float(qty), "ref": name, "article": ""})
-            except Exception as e:
-                logger.warning("Stock fetch failed: {}", e)
-
-            # Enrich with price data from sales
-            try:
-                from datetime import date, timedelta
-                sales = await c1.get_sales(
-                    date_from=(date.today() - timedelta(days=90)).isoformat(),
-                    date_to=date.today().isoformat(),
-                )
-                price_by_name: dict[str, float] = {}
-                for s in sales:
-                    name = s.get("nomenclature", "")
-                    sprice = s.get("sum", 0)
-                    sqty = s.get("quantity", 0)
-                    if name and float(sqty) > 0:
-                        price_by_name[name] = float(sprice) / float(sqty)
-                for item in items:
-                    name = item.get("name", "")
-                    if name in price_by_name:
-                        item["price"] = round(price_by_name[name], 2)
-            except Exception as e:
-                logger.warning("Price enrichment failed: {}", e)
-        finally:
-            await c1.close()
+        # Enrich with price data from sales
+        try:
+            from datetime import date, timedelta
+            sales = await client.get_sales(
+                date_from=(date.today() - timedelta(days=90)).isoformat(),
+                date_to=date.today().isoformat(),
+            )
+            price_by_name: dict[str, float] = {}
+            for s in sales:
+                name = s.get("nomenclature", "")
+                sprice = s.get("sum", 0)
+                sqty = s.get("quantity", 0)
+                if name and float(sqty) > 0:
+                    price_by_name[name] = float(sprice) / float(sqty)
+            for item in items:
+                name = item.get("name", "")
+                if name in price_by_name:
+                    item["price"] = round(price_by_name[name], 2)
+        except Exception as e:
+            logger.warning("Price enrichment failed: {}", e)
 
         if items:
             refresh(items)

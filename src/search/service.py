@@ -122,13 +122,10 @@ async def _load_popularity() -> dict[str, float]:
         return _popularity_data
 
     try:
-        from src.clients.c1_client import C1Client
+        from src.tools import get_client
 
-        c1 = C1Client()
-        try:
-            sales = await c1.get_sales(date_from=(datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d"), date_to=datetime.utcnow().strftime("%Y-%m-%d"))
-        finally:
-            await c1.close()
+        client = get_client()
+        sales = await client.get_sales(date_from=(datetime.utcnow() - timedelta(days=90)).strftime("%Y-%m-%d"), date_to=datetime.utcnow().strftime("%Y-%m-%d"))
 
         counts: dict[str, float] = {}
         for s in sales:
@@ -200,12 +197,9 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
 
     # Fallback: direct 1С
     if items is None:
-        from src.clients.c1_client import C1Client
-        c1 = C1Client()
-        try:
-            raw = await c1.list_nomenclature(query=query, limit=500)
-        finally:
-            await c1.close()
+        from src.tools import get_client
+        client = get_client()
+        raw = await client.list_nomenclature(query=query, limit=500)
         items = raw
 
     scored = []
@@ -235,9 +229,9 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
 
     try:
         import asyncio
-        from src.clients.c1_client import C1Client
-        c1 = C1Client()
-        stock_items = await asyncio.wait_for(c1.get_stock(), timeout=8.0)
+        from src.tools import get_client
+        client = get_client()
+        stock_items = await asyncio.wait_for(client.get_stock(), timeout=8.0)
         stock_by_name: dict[str, float] = {}
         stock_by_lower: dict[str, float] = {}
         for s in stock_items:
@@ -282,8 +276,6 @@ async def search_nomenclature(request: SearchRequest, items: list[dict[str, Any]
             pass
         except Exception:
             pass
-        finally:
-            await c1.close()
     except Exception:
         pass
 

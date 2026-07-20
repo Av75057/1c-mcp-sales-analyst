@@ -36,9 +36,7 @@ class ClientFactory:
                         if not conn_data:
                             raise ValueError(f"Connection {connection_id} not found")
                         password = encryptor.decrypt(conn_data["password_encrypted"])
-                        client = C1Client()
-                        client.base_url = conn_data["base_url"].rstrip("/")
-                        client._auth_header = _make_basic(conn_data["username"], password)
+                        client = C1Client(base_url=conn_data["base_url"], username=conn_data["username"], password=password)
                         cls._pool[key] = client
                 else:
                     repo = TenantRepository(db)
@@ -46,9 +44,7 @@ class ClientFactory:
                     if not conn_data:
                         raise ValueError(f"Connection {connection_id} not found")
                     password = encryptor.decrypt(conn_data["password_encrypted"])
-                    client = C1Client()
-                    client.base_url = conn_data["base_url"].rstrip("/")
-                    client._auth_header = _make_basic(conn_data["username"], password)
+                    client = C1Client(base_url=conn_data["base_url"], username=conn_data["username"], password=password)
                     cls._pool[key] = client
             return cls._pool[key]
 
@@ -69,8 +65,7 @@ class ClientFactory:
                     password = encryptor.decrypt(conn_data["password_encrypted"])
                     batch = BatchC1Client()
                     import base64
-                    raw = f"{conn_data['username']}:{password}".encode("utf-8")
-                    batch._auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
+                    batch._auth_header = "Basic " + base64.b64encode(f"{conn_data['username']}:{password}".encode("utf-8")).decode("ascii")
                     batch.base_url = conn_data["base_url"].rstrip("/")
                     return batch
 

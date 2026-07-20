@@ -4,16 +4,12 @@ from collections import defaultdict
 from datetime import date, timedelta
 from typing import Any
 
-from src.config import settings
 from src.logger import logger
 
 
 def _get_client():
-    if settings.use_mock_data:
-        from src.clients.mock_c1_client import MockC1Client
-        return MockC1Client()
-    from src.clients.c1_client import C1Client
-    return C1Client()
+    from src.tools import get_client
+    return get_client()
 
 
 DELIM = "\x00"

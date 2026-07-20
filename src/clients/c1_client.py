@@ -37,9 +37,11 @@ class C1ConnectionError(C1ClientError):
 
 
 class C1Client:
-    def __init__(self) -> None:
-        self.base_url = settings.c1_base_url.rstrip("/")
-        raw = f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")
+    def __init__(self, base_url: str | None = None, username: str | None = None, password: str | None = None) -> None:
+        self.base_url = (base_url or settings.c1_base_url).rstrip("/")
+        user = username or settings.c1_username
+        pw = password or settings.c1_password
+        raw = f"{user}:{pw}".encode("utf-8")
         self._auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
         self._client: httpx.AsyncClient | None = None
         self._timeout = httpx.Timeout(

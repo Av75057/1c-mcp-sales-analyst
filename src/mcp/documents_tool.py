@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import base64
 from datetime import date
 from typing import Any
 
-import httpx
-
-from src.config import settings
 from src.logger import logger
 from src.perf import measure_time
 
@@ -38,8 +34,7 @@ async def get_sales_documents(
         except ValueError:
             return {"error": "invalid_date", "message": "Неверный формат даты. Используйте YYYY-MM-DD"}
 
-    base_url = settings.c1_base_url.rstrip("/")
-    api_url = base_url.replace("/hs/api", "/hs/api/v1")
+    from src.tools import get_client
 
     params: dict[str, Any] = {
         "date_from": date_from,
@@ -57,19 +52,21 @@ async def get_sales_documents(
     if sum_max is not None:
         params["sum_max"] = str(sum_max)
 
-    raw = f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")
-    auth_header = "Basic " + base64.b64encode(raw).decode("ascii")
-
     try:
-        async with httpx.AsyncClient(
-            headers={"Authorization": auth_header},
-            timeout=httpx.Timeout(30.0, connect=10.0),
-        ) as client:
-            resp = await client.get(f"{api_url}/documents/sales", params=params)
-            if resp.status_code == 200:
-                return resp.json()
-            logger.error("Ошибка 1С {}: {}", resp.status_code, resp.text[:500])
-            return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}, "error": resp.text[:500]}
+        client = get_client()
+        base = client.base_url.replace("/hs/api", "/hs/api/v1")
+        from src.clients.c1_client import C1Client
+        if isinstance(client, C1Client):
+            resp = await client._request("GET", f"{base}/documents/sales", params=params)
+            return resp.json()
+        sales = await client.get_sales(date_from=date_from, date_to=date_to)
+        return {"documents": [{
+            "date": s.get("date", ""),
+            "number": s.get("document_number", ""),
+            "amount": s.get("sum", 0),
+            "counterparty": s.get("client", ""),
+            "manager": s.get("manager", ""),
+        } for s in sales], "pagination": {"page": page, "page_size": page_size, "total_count": len(sales), "total_pages": 1}}
     except Exception as e:
         logger.error("Ошибка запроса к 1С: {}", e)
         return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}, "error": str(e)}
