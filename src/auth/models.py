@@ -36,6 +36,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int = 28800
+    user: dict | None = None
 
 
 class TokenPayload(BaseModel):

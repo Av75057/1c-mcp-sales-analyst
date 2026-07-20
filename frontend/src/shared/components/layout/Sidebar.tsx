@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/shared/lib/utils';
 import { useTheme } from '@/shared/lib/theme';
+import { useAuthStore } from '@/features/auth/stores/authStore';
 
 const NAV_ITEMS = [
   { path: '/', icon: '📊', label: 'Главная' },
@@ -21,6 +22,10 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const location = useLocation();
   const { theme, toggle } = useTheme();
+  const user = useAuthStore((s) => s.user);
+  const displayName = user?.full_name || user?.username || 'Профиль';
+  const userEmail = user?.email || '';
+  const initial = displayName[0]?.toUpperCase() || 'A';
 
   return (
     <aside style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
@@ -76,13 +81,16 @@ export function Sidebar() {
         </button>
 
         <Link to="/profile"
-          className="flex items-center gap-2 text-sm transition-colors"
+          className="flex items-center gap-2 text-sm px-2 transition-colors rounded-lg py-1"
           style={{ color: 'var(--text-secondary)' }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
             style={{ backgroundColor: 'var(--brand)' }}>
-            A
+            {initial}
           </div>
-          <span>Профиль</span>
+          <div className="flex flex-col min-w-0">
+            <span className="truncate font-medium" style={{ color: 'var(--text-primary)' }}>{displayName}</span>
+            {userEmail && <span className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{userEmail}</span>}
+          </div>
         </Link>
       </div>
     </aside>

@@ -37,11 +37,11 @@ export default function ProfilePage() {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-brand-600 flex items-center justify-center text-white text-lg font-bold">
-                {user?.username?.charAt(0).toUpperCase() || '?'}
+                {(user?.full_name || user?.username || '?').charAt(0).toUpperCase()}
               </div>
               <div>
-                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{user?.username || 'Неизвестно'}</div>
-                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{user?.email || 'Нет email'}</div>
+                <div className="font-medium" style={{ color: 'var(--text-primary)' }}>{user?.full_name || user?.username || 'Неизвестно'}</div>
+                <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>{user?.email || user?.username || 'Нет email'}</div>
               </div>
               <div className="ml-auto">
                 <Badge variant={user?.role === 'admin' ? 'success' : 'default'}>{user?.role || 'user'}</Badge>

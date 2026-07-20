@@ -40,6 +40,7 @@ async def login(
                 extra={"user_id": platform_user.id, "is_platform": True, "tenants": tenants},
             )
             await audit_logger.log_login(platform_user.email, success=True, ip=request.client.host if request else "", user_agent=request.headers.get("user-agent", "") if request else "")
+            token.user = {"username": platform_user.email, "role": "admin", "email": platform_user.email, "full_name": platform_user.full_name or platform_user.email}
             if response:
                 is_https = request.url.scheme == "https" if request else False
                 response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=is_https, samesite="lax", max_age=token.expires_in)
@@ -59,6 +60,7 @@ async def login(
         user_agent=request.headers.get("user-agent", "") if request else "",
     )
 
+    token.user = {"username": user.username, "role": user.role.value, "email": user.username, "full_name": user.username}
     if response:
         is_https = request.url.scheme == "https" if request else False
         response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=is_https, samesite="lax", max_age=token.expires_in)
@@ -74,5 +76,18 @@ async def logout(request: Request, response: Response):
 
 
 @router.get("/me")
-async def me(payload=Depends(get_token_payload)):
-    return {"username": payload.sub, "role": payload.role}
+async def me(payload=Depends(get_token_payload), db: AsyncSession = Depends(get_db)):
+    username = payload.sub
+    role = payload.role
+    email = username
+    full_name = username
+
+    # Try platform user first
+    from src.admin.multitenant.repository import TenantRepository
+    repo = TenantRepository(db)
+    pu = await repo.get_user_by_email(username)
+    if pu:
+        full_name = pu.full_name or pu.email
+        email = pu.email
+
+    return {"username": username, "role": role, "email": email, "full_name": full_name}

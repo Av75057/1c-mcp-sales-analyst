@@ -30,8 +30,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
+      const userData = data.user || { username: data.username || credentials.username, email: credentials.username, full_name: credentials.username, role: 'user' };
       set({
-        user: data.user,
+        user: userData,
         token: data.access_token,
         isAuthenticated: true,
         isLoading: false,
