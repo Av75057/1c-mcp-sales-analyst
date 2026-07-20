@@ -57,6 +57,7 @@ from src.admin.routes.tools_route import router as admin_tools_router
 from src.admin.routes.api_keys import router as admin_api_keys_router
 from src.admin.routes.ip_block import router as admin_ip_blocks_router
 from src.admin.routes.multitenant import router as multitenant_router
+from src.clients.connection_middleware import ConnectionMiddleware
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -158,6 +159,7 @@ class ErrorLogMiddleware(BaseHTTPMiddleware):
             import traceback; logger.error("Traceback:\n{}", traceback.format_exc())
             raise
 app.add_middleware(ErrorLogMiddleware)
+app.add_middleware(ConnectionMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

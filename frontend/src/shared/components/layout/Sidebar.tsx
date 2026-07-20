@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/shared/lib/utils';
 import { useTheme } from '@/shared/lib/theme';
 import { useAuthStore } from '@/features/auth/stores/authStore';
+import { useConnectionStore } from '@/shared/stores/connectionStore';
 
 const NAV_ITEMS = [
   { path: '/', icon: '📊', label: 'Главная' },
@@ -22,6 +24,9 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const location = useLocation();
   const { theme, toggle } = useTheme();
+  const loadConnections = useConnectionStore((s) => s.loadConnections);
+  useEffect(() => { loadConnections(); }, [loadConnections]);
+
   const user = useAuthStore((s) => s.user);
   const displayName = user?.full_name || user?.username || 'Профиль';
   const userEmail = user?.email || '';
@@ -71,6 +76,23 @@ export function Sidebar() {
       </nav>
 
       <div style={{ borderColor: 'var(--border)' }} className="p-3 border-t space-y-2">
+        {/* Connection selector */}
+        {(() => {
+          const connStore = useConnectionStore.getState();
+          if (connStore.connections.length === 0) return null;
+          const active = connStore.connections.find(c => c.id === connStore.activeConnectionId);
+          return (
+            <select value={connStore.activeConnectionId || ''} onChange={e => connStore.setActiveConnection(e.target.value)}
+              className="w-full text-xs px-2 py-1.5 rounded border"
+              style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+              {connStore.connections.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.health_status === 'ok' ? '✅' : c.health_status === 'error' ? '❌' : ''}
+                </option>
+              ))}
+            </select>
+          );
+        })()}
         <button onClick={toggle}
           className="flex items-center gap-3 w-full px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer"
           style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)' }}

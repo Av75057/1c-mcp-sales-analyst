@@ -32,11 +32,35 @@ def _get_client() -> C1ClientProtocol:
 _client_instance: C1ClientProtocol | None = None
 
 
-def get_client() -> C1ClientProtocol:
+def get_client():
     global _client_instance
+    # Check if we have a connection-specific client
+    try:
+        from src.clients.connection_aware import current_connection_id
+        conn_id = current_connection_id.get()
+        if conn_id and conn_id != getattr(_client_instance, "_conn_id", None):
+            # Connection changed - need to create a new client
+            _client_instance = None
+    except Exception:
+        pass
+    
     if _client_instance is None:
         _client_instance = _get_client()
     return _client_instance
+
+
+def set_connection_client(client: C1ClientProtocol, conn_id: str):
+    global _client_instance
+    _client_instance = client
+    if hasattr(_client_instance, "_conn_id"):
+        _client_instance._conn_id = conn_id
+    else:
+        _client_instance._conn_id = conn_id
+
+
+def reset_connection_client():
+    global _client_instance
+    _client_instance = None
 
 
 async def close_client() -> None:
