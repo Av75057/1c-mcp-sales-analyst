@@ -30,9 +30,16 @@ def _get_client() -> C1ClientProtocol:
 
 
 _client_pool: dict[str, C1ClientProtocol] = {}
+_ACTIVE_KEY = "__active__"
 
 
 def get_client():
+    # First check for active connection set by ConnectionMiddleware
+    active = _client_pool.get(_ACTIVE_KEY)
+    if active is not None:
+        return active
+
+    # Fallback: try ContextVar
     try:
         from src.clients.connection_aware import current_connection_id
         conn_id = current_connection_id.get()
@@ -48,9 +55,11 @@ def get_client():
 def set_connection_client(client: C1ClientProtocol, conn_id: str):
     client._conn_id = conn_id
     _client_pool[conn_id] = client
+    _client_pool[_ACTIVE_KEY] = client
 
 
 def reset_connection_client(conn_id: str | None = None):
+    _client_pool.pop(_ACTIVE_KEY, None)
     if conn_id:
         _client_pool.pop(conn_id, None)
     else:
