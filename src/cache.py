@@ -55,6 +55,18 @@ class CachedC1Client:
         self._client = client
         self._ttl = ttl
 
+    @property
+    def base_url(self) -> str:
+        return self._client.base_url
+
+    @property
+    def _conn_id(self) -> str | None:
+        return getattr(self._client, '_conn_id', None)
+    
+    @_conn_id.setter
+    def _conn_id(self, value: str) -> None:
+        self._client._conn_id = value
+
     async def get_stock(self, **kwargs: Any) -> Any:
         key = _make_key("stock", **kwargs)
         return await self._with_cache(key, self._client.get_stock, **kwargs)
