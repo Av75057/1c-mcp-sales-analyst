@@ -176,8 +176,9 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
         title: displayTitle || 'График из чата',
         description: 'Создан из AI-чата',
         tags: ['chat'],
+        is_public: false,
         charts: [{
-          id: `chat_${messageId}`,
+          id: `chat_${messageId}_${Date.now()}`,
           title: displayTitle || 'График',
           chart_config: { chart_type: displayChartType, title: displayTitle, x_axis: { field: 'label', label: '', type: 'category' }, y_axis: { field: 'value', label: '', type: 'value' }, series: [{ name: 'value', field: 'value', color: '#3b82f6' }] },
           data: displayData.map(d => ({ label: d.label, value: d.value })),
@@ -185,7 +186,10 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
           filter_bindings: [],
         }],
       });
-    } catch {}
+      alert('✅ График сохранён в библиотеку');
+    } catch (e: any) {
+      alert('❌ Ошибка сохранения: ' + (e?.response?.data?.detail || e?.message || 'неизвестная ошибка'));
+    }
   };
 
   const exportPng = () => {
