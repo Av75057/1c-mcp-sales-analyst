@@ -27,6 +27,7 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
   const chartRef = useRef<HTMLDivElement>(null);
   const [drillState, setDrillState] = useState<{
     loading: boolean;
+    error?: string;
     breadcrumbs: Breadcrumb[];
     currentData: { label: string; value: number }[];
     currentTitle: string;
@@ -77,7 +78,7 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
       const data = res.data;
 
       if (data.error) {
-        setDrillState(prev => prev ? { ...prev, loading: false } : null);
+        setDrillState(prev => prev ? { ...prev, loading: false, error: data.error } : null);
         return;
       }
 
@@ -98,8 +99,8 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
         date_from: drillState?.date_from,
         date_to: drillState?.date_to,
       });
-    } catch {
-      setDrillState(prev => prev ? { ...prev, loading: false } : null);
+    } catch (err: any) {
+      setDrillState(prev => prev ? { ...prev, loading: false, error: err?.message || 'Ошибка запроса детализации' } : null);
     }
   };
 
@@ -206,6 +207,13 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
 
   return (
     <div className="my-2 rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
+      {/* Error message */}
+      {drillState?.error && (
+        <div className="px-3 pt-2 pb-1 text-xs" style={{ color: 'var(--error)' }}>
+          ❌ {drillState.error}
+        </div>
+      )}
+
       {/* Breadcrumbs */}
       {drillState?.breadcrumbs && drillState.breadcrumbs.length > 0 && (
         <div className="flex items-center gap-1 px-3 pt-2 pb-1 flex-wrap text-xs" style={{ color: 'var(--text-secondary)' }}>
