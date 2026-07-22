@@ -23,6 +23,7 @@ from src.tools import (
     get_executive_kpi_tool,
     get_purchases_tool,
     get_receivables_tool,
+    get_sales_tool,
     get_sales_by_manager_tool,
     get_sales_documents_tool,
     get_stock_tool,
