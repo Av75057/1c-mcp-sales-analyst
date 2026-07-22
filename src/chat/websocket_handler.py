@@ -82,8 +82,11 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                                     result_data = chart_tc["result"]
                                     table = result_data.get("table_data", [])
                                     if table:
+                                        config = chart_tc.get("args", {})
+                                        if not config.get("chart_type") and result_data.get("chart_type"):
+                                            config["chart_type"] = result_data["chart_type"]
                                         msg_dict["chart"] = {
-                                            "config": chart_tc.get("args", {}),
+                                            "config": config,
                                             "data": table,
                                             "status": "ready",
                                         }
