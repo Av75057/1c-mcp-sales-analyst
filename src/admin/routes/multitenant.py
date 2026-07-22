@@ -205,6 +205,32 @@ async def update_user(user_id: str, body: dict, request: Request, db: AsyncSessi
     return {"status": "ok"}
 
 
+# === Organizations ===
+
+@router.get("/organizations")
+async def list_organizations(request: Request, payload=Depends(get_token_payload)):
+    import httpx
+    conn_id = request.headers.get("X-Connection-ID", "")
+    if conn_id:
+        from src.admin.database import async_session
+        from src.admin.multitenant.repository import TenantRepository
+        from src.admin.multitenant.encryption import encryptor
+        async with async_session() as db:
+            repo = TenantRepository(db)
+            conn_data = await repo.get_connection(conn_id)
+            if conn_data:
+                password = encryptor.decrypt(conn_data["password_encrypted"])
+                import base64
+                auth = "Basic " + base64.b64encode(f"{conn_data['username']}:{password}".encode()).decode()
+                url = f"{conn_data['base_url'].rstrip('/')}/organizations"
+                async with httpx.AsyncClient(headers={"Authorization": auth}, timeout=10) as cl:
+                    resp = await cl.get(url)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        return {"organizations": data if isinstance(data, list) else data.get("organizations", [])}
+    return {"organizations": []}
+
+
 # === Audit ===
 
 @router.get("/audit")

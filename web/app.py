@@ -166,7 +166,7 @@ app.add_middleware(
     allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type", "X-Connection-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Connection-ID", "X-Org-ID"],
 )
 if settings.auth_enabled:
     app.add_middleware(AuditMiddleware)

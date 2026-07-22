@@ -19,6 +19,11 @@ api.interceptors.request.use((config) => {
   if (connId) {
     config.headers['X-Connection-ID'] = connId;
   }
+  // Send active organization ID
+  const orgId = localStorage.getItem('active_org_id');
+  if (orgId) {
+    config.headers['X-Org-ID'] = orgId;
+  }
   return config;
 });
 

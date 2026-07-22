@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import { useTheme } from '@/shared/lib/theme';
 import { useAuthStore } from '@/features/auth/stores/authStore';
 import { useConnectionStore } from '@/shared/stores/connectionStore';
+import { useOrgStore } from '@/shared/stores/orgStore';
 
 const NAV_ITEMS = [
   { path: '/', icon: '📊', label: 'Главная' },
@@ -25,7 +26,9 @@ export function Sidebar() {
   const location = useLocation();
   const { theme, toggle } = useTheme();
   const { loadConnections, lastTenantId } = useConnectionStore();
+  const { organizations, activeOrgId, loadOrganizations, setActiveOrg } = useOrgStore();
   useEffect(() => { loadConnections(lastTenantId || undefined); }, [loadConnections, lastTenantId]);
+  useEffect(() => { loadOrganizations(); }, [loadOrganizations]);
 
   const user = useAuthStore((s) => s.user);
   const displayName = user?.full_name || user?.username || 'Профиль';
@@ -100,6 +103,16 @@ export function Sidebar() {
             </div>
           );
         })()}
+        {organizations.length > 1 && (
+          <select value={activeOrgId || ''} onChange={e => setActiveOrg(e.target.value)}
+            className="w-full text-xs px-2 py-1.5 rounded border"
+            style={{ backgroundColor: 'var(--bg-input)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+            <option value="">🏢 Все организации</option>
+            {organizations.map(o => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </select>
+        )}
         <button onClick={toggle}
           className="flex items-center gap-3 w-full px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer"
           style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-card)' }}
