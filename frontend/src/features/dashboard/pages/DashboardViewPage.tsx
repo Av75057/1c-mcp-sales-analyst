@@ -9,7 +9,7 @@ import { Dialog } from '@/shared/components/ui/Dialog';
 function FeedbackWidget({ dashboardId }: { dashboardId: string }) {
   const [sent, setSent] = useState(false);
   const send = async (rating: 'positive' | 'negative') => {
-    try { await api.post(`/api/v1/dashboard/dashboards/${dashboardId}/feedback`, { rating }); setSent(true); } catch {}
+    try { await api.post(`/api/v1/dashboards/${dashboardId}/feedback`, { rating }); setSent(true); } catch (e) { console.warn('Feedback error:', e); }
   };
   return (
     <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
