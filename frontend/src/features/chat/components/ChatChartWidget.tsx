@@ -240,10 +240,22 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
                 </tr>
               </thead>
               <tbody>
-                {displayData.map((d, i) => (
+                {displayData.map((d: any, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td className="py-1 pr-2 truncate max-w-40" style={{ color: 'var(--text-primary)' }}>{d.label}</td>
-                    <td className="text-right py-1 pl-2 font-medium" style={{ color: 'var(--text-primary)' }}>{(d.value).toLocaleString()} ₽</td>
+                    <td className="py-1 pr-2 truncate max-w-40" style={{ color: 'var(--text-primary)' }}>
+                      {d.date && <span className="text-xs opacity-60 mr-1">{d.date}</span>}
+                      {d.label}
+                    </td>
+                    <td className="text-right py-1 pl-2 font-medium whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+                      {d.deep_link ? (
+                        <a href={d.deep_link} target="_blank" rel="noopener noreferrer"
+                          className="hover:underline" style={{ color: 'var(--brand)' }}>
+                          {(d.value).toLocaleString()} ₽ ↗
+                        </a>
+                      ) : (
+                        <>{(d.value).toLocaleString()} ₽</>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

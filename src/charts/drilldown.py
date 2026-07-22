@@ -152,24 +152,45 @@ async def drill_down(
     child_field = group_fields.get(child_level, "nomenclature")
     parent_field = group_fields.get(parent_level)
 
-    if child_level in ("year", "quarter", "month", "week", "day"):
+    # Special handling for document level — return document rows with deep-links
+    if child_level == "document":
+        docs = []
+        from src.config import settings
+        base_deep = settings.c1_base_url.rstrip("/").replace("/hs/api", "")
+        for s in sales:
+            name = str(s.get("nomenclature", "") or s.get("item", ""))
+            if parent_value.lower() not in name.lower():
+                continue
+            ref = s.get("document_number", "") or s.get("ref", "")
+            doc_date = s.get("date", "")[:10]
+            amount = float(s.get("sum", 0) or 0)
+            deep_link = ""
+            if ref:
+                deep_link = f"{base_deep}/1c/ru_RU/e1cib/data/Документ.РеализацияТоваров?ref={ref}"
+            docs.append({
+                "label": f"{doc_date} №{ref}" if ref else doc_date,
+                "value": round(amount, 2),
+                "document_number": ref,
+                "date": doc_date,
+                "deep_link": deep_link,
+            })
+        table_data = docs[:100] if docs else []
+        chart_type = "table"
+    elif child_level in ("year", "quarter", "month", "week", "day"):
         grouped = _group_by_time_period(sales, child_level)
         table_data = [{"label": k, "value": round(v, 2)} for k, v in sorted(grouped.items())]
+        chart_type = "line"
     else:
         table_data = _group_by_field(sales, child_field, parent_value, parent_field)
+        if len(table_data) <= 8:
+            chart_type = "pie"
+        else:
+            chart_type = "bar"
 
     if not table_data:
         return {
             "error": f"По «{parent_value}» нет дочерних элементов за выбранный период",
         }
-
-    # Determine chart type based on level
-    if child_level in ("year", "quarter", "month", "week", "day"):
-        chart_type = "line"
-    elif len(table_data) <= 8:
-        chart_type = "pie"
-    else:
-        chart_type = "bar"
 
     x_data = [d["label"] for d in table_data]
     y_data = [d["value"] for d in table_data]
