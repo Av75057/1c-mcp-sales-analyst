@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/shared/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/Card';
 import { Dialog } from '@/shared/components/ui/Dialog';
 import ConnectionWizard from '@/features/admin/components/ConnectionWizard';
 

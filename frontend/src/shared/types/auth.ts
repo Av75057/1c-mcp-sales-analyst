@@ -11,6 +11,7 @@ export interface AuthResponse {
   refresh_token: string;
   token_type: string;
   user: User;
+  username?: string;
 }
 
 export interface LoginCredentials {

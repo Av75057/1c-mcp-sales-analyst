@@ -5,8 +5,8 @@ import { Button } from '@/shared/components/ui/Button';
 import { Badge } from '@/shared/components/ui/Badge';
 import { formatNumber } from '@/shared/lib/utils';
 
-const ABC_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { A: 'success', B: 'warning', C: 'error' };
-const XYZ_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { X: 'success', Y: 'warning', Z: 'error' };
+const _ABC_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { A: 'success', B: 'warning', C: 'error' };
+const _XYZ_VARIANTS: Record<string, 'success' | 'warning' | 'error'> = { X: 'success', Y: 'warning', Z: 'error' };
 
 const PERIOD_PRESETS = [
   { label: '30 дней', days: 30 }, { label: '90 дней', days: 90 },

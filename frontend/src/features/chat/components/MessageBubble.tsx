@@ -61,17 +61,19 @@ export function MessageBubble({ message, onSuggestionClick }: MessageBubbleProps
           <ChatChartWidget chart={message.chart} messageId={message.id} onSuggestionClick={onSuggestionClick} />
         )}
 
-        {message.tool_calls?.map((tc, i) => (
+        {message.tool_calls?.map((tc, i) => {
+          const imgB64 = tc.result?.image_base64 as string | undefined;
+          return (
           <div key={i} className="mt-2">
             {tc.name === 'create_chart' && !message.chart && (
               <div>
-                {tc.result?.image_base64 && (
+                {imgB64 && (
                   <img
-                    src={`data:image/png;base64,${tc.result.image_base64}`}
+                    src={`data:image/png;base64,${imgB64}`}
                     alt="Chart"
                     className="rounded-lg max-w-full cursor-pointer hover:opacity-90 transition-opacity"
                     style={{ maxHeight: 300 }}
-                    onClick={() => window.open(`data:image/png;base64,${tc.result.image_base64}`, '_blank')}
+                    onClick={() => window.open(`data:image/png;base64,${imgB64}`, '_blank')}
                   />
                 )}
                 <div className="flex gap-1 mt-1">
@@ -92,7 +94,8 @@ export function MessageBubble({ message, onSuggestionClick }: MessageBubbleProps
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
 
         {!isUser && message.suggestions && message.suggestions.length > 0 && (
           <SuggestionChips suggestions={message.suggestions} onClick={onSuggestionClick || (() => {})} />

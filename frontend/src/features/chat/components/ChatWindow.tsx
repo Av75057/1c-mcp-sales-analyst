@@ -62,14 +62,17 @@ export function ChatWindow({ onSendMessage }: ChatWindowProps) {
               {streamingContent && (
                 <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{streamingContent}</p>
               )}
-              {currentToolCalls.map((tc, i) => (
-                <div key={i} className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                  🔧 {tc.name}({JSON.stringify(tc.args, null, 1).slice(0, 100)})
-                  {tc.result?.image_base64 && (
-                    <img src={`data:image/png;base64,${tc.result.image_base64}`} alt="Chart" className="mt-2 rounded-lg max-w-full" style={{ maxHeight: 300 }} />
-                  )}
-                </div>
-              ))}
+              {currentToolCalls.map((tc, i) => {
+                const imgBase64 = tc.result?.image_base64 as string | undefined;
+                return (
+                  <div key={i} className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                    🔧 {tc.name}({JSON.stringify(tc.args, null, 1).slice(0, 100)})
+                    {imgBase64 && (
+                      <img src={`data:image/png;base64,${imgBase64}`} alt="Chart" className="mt-2 rounded-lg max-w-full" style={{ maxHeight: 300 }} />
+                    )}
+                  </div>
+                );
+              })}
               <span className="inline-block w-2 h-4 bg-brand-500 animate-pulse ml-1" />
             </div>
           </div>

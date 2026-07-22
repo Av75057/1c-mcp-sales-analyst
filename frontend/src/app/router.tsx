@@ -18,7 +18,7 @@ const AbcXyzPage = lazy(() => import('@/features/analysis/pages/AbcXyzPage'));
 const OverviewPage = lazy(() => import('@/features/dashboard/pages/OverviewPage'));
 const ExecutiveDashboardPage = lazy(() => import('@/features/dashboard/pages/ExecutiveDashboardPage'));
 const DashboardConstructorPage = lazy(() => import('@/features/dashboard/pages/DashboardConstructorPage'));
-const LegacyDashboardPage = lazy(() => import('@/features/dashboard/pages/LegacyDashboardPage'));
+const _LegacyDashboardPage = lazy(() => import('@/features/dashboard/pages/LegacyDashboardPage'));
 const DocumentsPage = lazy(() => import('@/features/documents/pages/DocumentsPage'));
 const OCRPage = lazy(() => import('@/features/documents/pages/OCRPage'));
 const SalesPage = lazy(() => import('@/features/documents/pages/SalesPage'));

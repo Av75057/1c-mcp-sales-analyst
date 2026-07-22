@@ -4,7 +4,7 @@ import { EChartsWrapper } from '@/shared/components/charts/EChartsWrapper';
 import { api } from '@/shared/lib/api';
 import { BarChart3, Download, Loader2, AlertCircle, ChevronRight, X } from 'lucide-react';
 import type { EChartsOption } from 'echarts';
-import type { ChartBlock, Message } from '../stores/chatStore';
+import type { ChartBlock } from '../stores/chatStore';
 
 interface DrillDownLevel {
   id: string;
@@ -23,7 +23,7 @@ interface ChatChartWidgetProps {
   onSuggestionClick?: (s: string) => void;
 }
 
-export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ chart, messageId, onSuggestionClick }) => {
+export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ chart, messageId, onSuggestionClick: _onSuggestionClick }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const [drillState, setDrillState] = useState<{
     loading: boolean;
