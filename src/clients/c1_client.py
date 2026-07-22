@@ -366,10 +366,11 @@ class C1Client:
                 return self._normalize_nomenclature(data)
             except Exception as e:
                 logger.debug("{} failed: {}", method, e)
-        # Fallback: extract unique nomenclature from sales documents
+        # Fallback: extract unique nomenclature from sales documents (wide date range)
         logger.warning("nomenclature/search failed, falling back to sales data")
         try:
-            sales = await self.get_sales(limit=2000)
+            from datetime import date, timedelta
+            sales = await self.get_sales(date_from=(date.today() - timedelta(days=730)).isoformat(), date_to=date.today().isoformat(), limit=5000)
             seen = set()
             items = []
             for s in sales:
