@@ -122,6 +122,28 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
   const displayChartType = drillState?.chartType || chart.config?.chart_type || 'bar';
   const showAsTable = drillState?.levels?.find(l => l.id === drillState?.currentLevel)?.has_children === false;
 
+  const option: EChartsOption = useMemo(() => {
+    if (!displayData?.length) return {};
+    const labels = displayData.map(d => d.label);
+    const values = displayData.map(d => d.value);
+    const rawType = displayChartType === 'hbar' ? 'bar' : displayChartType;
+    const baseOption: EChartsOption = {
+      backgroundColor: 'transparent',
+      title: { text: displayTitle, left: 'center', textStyle: { fontSize: 13 } },
+      tooltip: { trigger: rawType === 'pie' ? 'item' : 'axis' },
+      grid: { left: 50, right: 16, top: 36, bottom: 28 },
+    };
+    if (rawType === 'pie') {
+      return { ...baseOption, series: [{ type: 'pie', radius: '55%', data: displayData.map(d => ({ name: d.label, value: d.value })) }] };
+    }
+    return {
+      ...baseOption,
+      xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, color: '#9ca3af', rotate: labels.length > 8 ? 30 : 0 } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6' } } },
+      series: [{ type: rawType as any, data: values, smooth: rawType === 'area', areaStyle: rawType === 'area' ? {} : undefined, itemStyle: { color: '#3b82f6' } }],
+    };
+  }, [displayData, displayTitle, displayChartType]);
+
   if (chart.status === 'loading') {
     return (
       <div className="my-2 rounded-xl border p-6 animate-pulse" style={{ borderColor: 'var(--border)' }}>
@@ -145,34 +167,6 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
       </div>
     );
   }
-
-  const option: EChartsOption = useMemo(() => {
-    if (!displayData?.length) return {};
-    const labels = displayData.map(d => d.label);
-    const values = displayData.map(d => d.value);
-    const rawType = displayChartType === 'hbar' ? 'bar' : displayChartType;
-
-    const baseOption: EChartsOption = {
-      backgroundColor: 'transparent',
-      title: { text: displayTitle, left: 'center', textStyle: { fontSize: 13 } },
-      tooltip: { trigger: rawType === 'pie' ? 'item' : 'axis' },
-      grid: { left: 50, right: 16, top: 36, bottom: 28 },
-    };
-
-    if (rawType === 'pie') {
-      return {
-        ...baseOption,
-        series: [{ type: 'pie', radius: '55%', data: displayData.map(d => ({ name: d.label, value: d.value })) }],
-      };
-    }
-
-    return {
-      ...baseOption,
-      xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, color: '#9ca3af', rotate: labels.length > 8 ? 30 : 0 } },
-      yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#9ca3af' }, splitLine: { lineStyle: { color: '#f3f4f6' } } },
-      series: [{ type: rawType as any, data: values, smooth: rawType === 'area', areaStyle: rawType === 'area' ? {} : undefined, itemStyle: { color: '#3b82f6' } }],
-    };
-  }, [displayData, displayTitle, displayChartType, drillState]);
 
   if (!chart.data?.length && !drillState?.currentData?.length) return null;
 
