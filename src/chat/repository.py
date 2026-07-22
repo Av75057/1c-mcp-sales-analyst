@@ -184,7 +184,7 @@ class ChatRepository:
         call_id = str(uuid.uuid4())
         await self.db.execute(
             text("INSERT INTO tool_calls (id, message_id, tool_name, arguments, result, execution_time_ms, status, error_message) VALUES (:id, :mid, :name, :args, :res, :time, :status, :err)"),
-            {"id": call_id, "mid": message_id, "name": tool_name, "args": json.dumps(arguments) if arguments else None, "res": result[:500] if result else None, "time": execution_time_ms, "status": status, "err": error_message},
+            {"id": call_id, "mid": message_id, "name": tool_name, "args": json.dumps(arguments) if arguments else None, "res": result[:10000] if result else None, "time": execution_time_ms, "status": status, "err": error_message},
         )
         await self.db.commit()
         return ToolCall(id=call_id, message_id=message_id, tool_name=tool_name, arguments=arguments, result=result, execution_time_ms=execution_time_ms, status=status, error_message=error_message)

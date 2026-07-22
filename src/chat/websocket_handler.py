@@ -205,12 +205,26 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                         # Save assistant message
                         try:
                             usage = result.get("usage", {})
-                            await repo.add_message(
+                            msg_id = await repo.add_message(
                                 session_id=actual_session_id,
                                 role="assistant",
                                 content=answer,
                                 tokens_used=usage.get("completion_tokens", 0),
                             )
+                            # Save tool calls
+                            if msg_id and tool_calls_list:
+                                import json as _json
+                                for tc in tool_calls_list:
+                                    try:
+                                        await repo.add_tool_call(
+                                            message_id=str(msg_id.id),
+                                            tool_name=tc.get("name", ""),
+                                            arguments=_json.dumps(tc.get("args", {}), ensure_ascii=False),
+                                            result=_json.dumps(tc.get("result", {}), ensure_ascii=False),
+                                            status="success",
+                                        )
+                                    except Exception as tce:
+                                        logger.warning("[WS] Failed to save tool call: {}", tce)
                         except Exception as e:
                             logger.warning("[WS] Failed to save assistant msg: {}", e)
 
