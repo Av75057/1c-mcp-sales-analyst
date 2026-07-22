@@ -195,7 +195,7 @@ class C1Client:
                 "date": d.get("date", ""),
                 "nomenclature": d.get("item", d.get("nomenclature", "")),
                 "quantity": d.get("quantity", 0),
-                "sum": d.get("sum", d.get("cost", 0)),
+                "sum": float(d.get("sum", 0) or 0),
                 "cost": d.get("Себестоимость", d.get("cost_price", d.get("cost", 0))),
                 "manager": d.get("manager", ""),
                 "client": d.get("client", d.get("counterparty", "")),
@@ -303,7 +303,9 @@ class C1Client:
 
         logger.debug("GET /sales params={}", params)
         resp = await self._request("GET", f"{self.base_url}/sales", params=params)
-        return self._normalize_sales(resp.json())
+        sales = self._normalize_sales(resp.json())
+        # Filter out drafts with zero sum
+        return [s for s in sales if s.get("sum", 0) != 0]
 
     async def get_sales_by_manager(
         self,

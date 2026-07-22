@@ -166,6 +166,29 @@ async def drill_down(
     child_field = group_fields.get(child_level, "nomenclature")
     parent_field = group_fields.get(parent_level)
 
+    # If sales have a "category" field from 1C ТипНоменклатуры, use it for level 1 grouping
+    first_sale = sales[0] if sales else {}
+    has_category = "category" in first_sale or "item_type" in first_sale
+    if child_level == "category" and has_category:
+        cat_field = "category" if "category" in first_sale else "item_type"
+        table_data = _group_by_field(sales, cat_field, parent_value, parent_field)
+        if not table_data:
+            return {"error": f"Нет категорий за выбранный период"}
+        chart_type = "pie" if len(table_data) <= 8 else "bar"
+        x_data = [d["label"] for d in table_data]
+        y_data = [d["value"] for d in table_data]
+        # Build result directly for category level
+        from src.charts.tool import DRILLDOWN_DOMAINS
+        domain_meta = DRILLDOWN_DOMAINS.get(domain, {})
+        all_levels = domain_meta.get("levels", [])
+        result = {
+            "table_data": table_data, "chart_type": chart_type,
+            "title": f"{parent_value} → категории", "x_label": "Категория", "y_label": "Выручка",
+            "chart_id": "", "breadcrumbs": [{"level": parent_level or "", "label": parent_value or ""}, {"level": child_level, "label": "..."}],
+            "domain_id": domain, "drilldown": {"enabled": True, "domain": domain, "current_level": child_level, "levels": all_levels},
+        }
+        return result
+
     # Special handling for document level — return document rows with deep-links
     if child_level == "document":
         docs = []
