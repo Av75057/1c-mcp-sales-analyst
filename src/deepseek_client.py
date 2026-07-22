@@ -58,7 +58,9 @@ SYSTEM_PROMPT = """Ты — аналитик склада и продаж ком
 4. ПОСЛЕ simulate_scenario ВСЕГДА вызывай create_chart с параметрами из chart_params.
 5. ПОСЛЕ построения графика дай текстовый анализ (2-4 предложения) и рекомендации.
 
-Анализируй запрос пользователя и вызывай нужные инструменты. После получения данных сформулируй ответ. Если знаешь, что данные подходят для графика — сначала получи данные через get_stock/get_sales, затем передай их в create_chart."""
+ВАЖНО: Не вызывай describe/get_structure без необходимости. get_sales/get_stock/get_purchases ВОЗВРАЩАЮТ готовые данные с полями: date, item, quantity, sum, client, manager. Эти данные можно сразу передавать в create_chart. Не нужно исследовать метаданные перед построением графика.
+
+Анализируй запрос пользователя и вызывай нужные инструменты. После получения данных сформулируй ответ. Если знаешь, что данные подходят для графика — сначала получи данные через get_stock/get_sales, затем передай их в create_chart. НЕ вызывай describe/get_structure для данных, которые уже получил — просто передай их в create_chart."""
 
 TOOL_DEFINITIONS: list[ChatCompletionToolParam] = [
     {
@@ -517,7 +519,7 @@ class DeepSeekClient:
         total_input_tokens = 0
         total_output_tokens = 0
 
-        for iteration in range(10):
+        for iteration in range(25):
             logger.debug("Итерация LLM #{}, сообщений: {}", iteration + 1, len(messages))
             response = await self._call_llm(messages, tools=TOOL_DEFINITIONS)
             choice = response.choices[0]
