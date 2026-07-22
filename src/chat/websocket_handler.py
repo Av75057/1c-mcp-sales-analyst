@@ -219,11 +219,13 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                                 import json as _json
                                 for tc in tool_calls_list:
                                     try:
+                                        args_dict = tc.get("args", {})
+                                        result_str = _json.dumps(tc.get("result", {}), ensure_ascii=False)
                                         await repo.add_tool_call(
                                             message_id=str(msg_id.id),
                                             tool_name=tc.get("name", ""),
-                                            arguments=_json.dumps(tc.get("args", {}), ensure_ascii=False),
-                                            result=_json.dumps(tc.get("result", {}), ensure_ascii=False),
+                                            arguments=args_dict,
+                                            result=result_str,
                                             status="success",
                                         )
                                     except Exception as tce:
