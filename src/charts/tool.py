@@ -5,6 +5,47 @@ from typing import Any
 from src.charts.engine import render_chart
 from src.logger import logger
 
+DRILLDOWN_DOMAINS: dict[str, dict[str, Any]] = {
+    "sales_by_category": {
+        "label": "Продажи по категориям",
+        "levels": [
+            {"id": "category", "label": "Категория", "has_children": True},
+            {"id": "subcategory", "label": "Подкатегория", "has_children": True},
+            {"id": "sku", "label": "SKU", "has_children": True},
+            {"id": "document", "label": "Документы", "has_children": False},
+        ],
+    },
+    "sales_by_customer": {
+        "label": "Продажи по клиентам",
+        "levels": [
+            {"id": "segment", "label": "Сегмент", "has_children": True},
+            {"id": "customer", "label": "Контрагент", "has_children": True},
+            {"id": "contract", "label": "Договор", "has_children": True},
+            {"id": "document", "label": "Документы", "has_children": False},
+        ],
+    },
+    "sales_by_territory": {
+        "label": "Продажи по территории",
+        "levels": [
+            {"id": "region", "label": "Регион", "has_children": True},
+            {"id": "city", "label": "Город", "has_children": True},
+            {"id": "store", "label": "Магазин/Склад", "has_children": True},
+            {"id": "manager", "label": "Менеджер", "has_children": True},
+            {"id": "sku", "label": "SKU", "has_children": False},
+        ],
+    },
+    "time": {
+        "label": "Временной",
+        "levels": [
+            {"id": "year", "label": "Год", "has_children": True},
+            {"id": "quarter", "label": "Квартал", "has_children": True},
+            {"id": "month", "label": "Месяц", "has_children": True},
+            {"id": "week", "label": "Неделя", "has_children": True},
+            {"id": "day", "label": "День", "has_children": False},
+        ],
+    },
+}
+
 
 def create_chart_tool(
     chart_type: str,
@@ -15,6 +56,7 @@ def create_chart_tool(
     y_label: str = "",
     series_names: list[str] | None = None,
     color_scheme: str = "default",
+    domain_id: str = "",
 ) -> dict[str, Any]:
     logger.info("create_chart: type={}, title={}, points={}", chart_type, title, len(x_data))
 
@@ -48,6 +90,17 @@ def create_chart_tool(
         "y_label": y_label,
         "chart_id": "",
     }
+    # Attach drilldown context if domain is recognized
+    domain = DRILLDOWN_DOMAINS.get(domain_id)
+    if domain:
+        result["domain_id"] = domain_id
+        result["drilldown"] = {
+            "enabled": True,
+            "domain": domain_id,
+            "domain_label": domain["label"],
+            "current_level": domain["levels"][0]["id"],
+            "levels": domain["levels"],
+        }
     try:
         img = render_chart(
             chart_type=chart_type,

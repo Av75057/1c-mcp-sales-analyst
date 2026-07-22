@@ -180,6 +180,7 @@ async def create_chart_tool(
     y_label: str = "",
     series_names: list[str] | None = None,
     color_scheme: str = "default",
+    domain_id: str = "",
 ) -> dict[str, Any]:
     logger.info("create_chart: type={}, title={}, points={}", chart_type, title, len(x_data))
     from src.charts.tool import create_chart_tool as _create
@@ -192,6 +193,7 @@ async def create_chart_tool(
         y_label=y_label,
         series_names=series_names,
         color_scheme=color_scheme,
+        domain_id=domain_id,
     )
 
 
