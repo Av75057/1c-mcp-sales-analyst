@@ -39,7 +39,8 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
   } | null>(null);
 
   const drilldown = (chart as any).drilldown;
-  const isDrillEnabled = drilldown?.enabled && drilldown?.levels?.length > 0;
+  const drillLevels = drilldown?.levels as { id: string; label: string; has_children: boolean }[] | undefined;
+  const isDrillEnabled = drilldown?.enabled && drillLevels && drillLevels.length > 0;
 
   const handleChartClick = async (name: string) => {
     if (!isDrillEnabled) return;

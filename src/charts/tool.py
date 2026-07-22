@@ -115,6 +115,9 @@ def create_chart_tool(
             "current_level": domain["levels"][0]["id"],
             "levels": domain["levels"],
         }
+        logger.debug("Drilldown enabled: domain={}, levels={}", domain_id, [l["id"] for l in domain["levels"]])
+    else:
+        logger.debug("Drilldown NOT enabled: domain_id={}", domain_id)
     try:
         img = render_chart(
             chart_type=chart_type,
