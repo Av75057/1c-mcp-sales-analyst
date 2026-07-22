@@ -66,9 +66,15 @@ def create_chart_tool(
         }
 
     if chart_type == "pie" and len(x_data) > 8:
-        return {
-            "error": f"Для круговой диаграммы слишком много категорий ({len(x_data)}). Максимум 8. Объедините мелкие категории в 'Прочее'.",
-        }
+        # Auto-group small categories into 'Прочее'
+        sorted_data = sorted(zip(x_data, y_data), key=lambda p: float(p[1] or 0), reverse=True)
+        top_x = [p[0] for p in sorted_data[:7]]
+        top_y = [float(p[1] or 0) for p in sorted_data[:7]]
+        other_sum = sum(float(p[1] or 0) for p in sorted_data[7:])
+        top_x.append("Прочее")
+        top_y.append(other_sum)
+        x_data, y_data = top_x, top_y
+        logger.info("Pie chart auto-grouped: {} categories + Прочее = {} total", len(top_x) - 1, len(x_data))
 
     if chart_type == "hbar" and len(x_data) > 15:
         return {
