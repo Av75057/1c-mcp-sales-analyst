@@ -358,16 +358,15 @@ class C1Client:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         params = {"q": query, "limit": str(limit)}
-        logger.debug("GET /nomenclature/search params={}", params)
-        resp = await self._request("GET", f"{self.base_url}/nomenclature/search", params=params)
-        # Fallback to POST if GET returned 405 or 500
-        if resp.status_code in (405, 500):
-            try: body = resp.text[:100]
-            except: body = ""
-            if "Обработчик" in body or "handler" in body.lower() or resp.status_code == 405:
-                logger.debug("GET failed, trying POST /nomenclature/search")
-                resp = await self._request("POST", f"{self.base_url}/nomenclature/search", data={"q": query, "limit": str(limit)})
-        data: list[dict[str, Any]] = resp.json()
+        for method, kwargs in [("GET", {"params": params}), ("POST", {"data": params})]:
+            logger.debug("{} /nomenclature/search params={}", method, params)
+            try:
+                resp = await self._request(method, f"{self.base_url}/nomenclature/search", **kwargs)
+                data: list[dict[str, Any]] = resp.json()
+                return self._normalize_nomenclature(data)
+            except Exception as e:
+                logger.debug("{} failed: {}", method, e)
+        raise  # Both failed
 
         if not data and any(ord(c) > 127 for c in query):
             logger.warning(
