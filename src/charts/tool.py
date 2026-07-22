@@ -90,6 +90,17 @@ def create_chart_tool(
         "y_label": y_label,
         "chart_id": "",
     }
+    # Auto-detect domain if not provided
+    if not domain_id:
+        title_lower = (title + " " + x_label).lower()
+        if any(w in title_lower for w in ["категори", "товар", "номенклатур", "продаж"]):
+            domain_id = "sales_by_category"
+        elif any(w in title_lower for w in ["клиент", "контрагент", "покупател"]):
+            domain_id = "sales_by_customer"
+        elif any(w in title_lower for w in ["регион", "город", "склад", "магазин", "территори"]):
+            domain_id = "sales_by_territory"
+        elif any(w in title_lower for w in ["год", "квартал", "месяц", "недел"]):
+            domain_id = "time"
     # Attach drilldown context if domain is recognized
     domain = DRILLDOWN_DOMAINS.get(domain_id)
     if domain:
