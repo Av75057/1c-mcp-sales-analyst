@@ -14,16 +14,6 @@ api.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];
   }
-  // Send active connection ID
-  const connId = localStorage.getItem('active_connection_id');
-  if (connId) {
-    config.headers['X-Connection-ID'] = connId;
-  }
-  // Send active organization ID
-  const orgId = localStorage.getItem('active_org_id');
-  if (orgId) {
-    config.headers['X-Org-ID'] = orgId;
-  }
   return config;
 });
 
