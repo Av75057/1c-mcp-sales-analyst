@@ -86,8 +86,8 @@ def _token_match(query: str, target: str) -> bool:
     t_words -= noise
     if not q_words:
         return query.lower() in target.lower()
-    matches = sum(1 for w in q_words if w in t_words)
-    return matches >= max(1, len(q_words) - 1)
+    # All query words must be present in target (order-independent)
+    return all(w in t_words for w in q_words)
 
 
 def _group_by_field(sales: list[dict], field: str, parent_value: str | None = None, parent_field: str | None = None) -> list[dict]:
