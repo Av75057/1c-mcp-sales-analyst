@@ -51,17 +51,53 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                 elif msg_type == "get_messages":
                     sid = data.get("session_id", session_id)
                     msgs, _ = await repo.get_messages(sid, page=1, limit=200)
+                    result_messages = []
+                    for m in msgs:
+                        msg_dict: dict = {
+                            "id": str(m.id),
+                            "role": m.role,
+                            "content": m.content,
+                            "timestamp": m.created_at.isoformat() if hasattr(m.created_at, "isoformat") else str(m.created_at),
+                        }
+                        # Load tool calls and reconstruct chart if present
+                        try:
+                            raw_tool_calls = await repo.get_tool_calls(str(m.id))
+                            if raw_tool_calls:
+                                tool_calls = []
+                                for tc in raw_tool_calls:
+                                    tc_entry = {"name": tc.get("tool_name", ""), "args": {}}
+                                    try:
+                                        tc_entry["args"] = json.loads(tc.get("arguments", "{}"))
+                                    except (json.JSONDecodeError, TypeError):
+                                        pass
+                                    try:
+                                        tc_entry["result"] = json.loads(tc.get("result", "{}"))
+                                    except (json.JSONDecodeError, TypeError):
+                                        tc_entry["result"] = None
+                                    tool_calls.append(tc_entry)
+                                msg_dict["tool_calls"] = tool_calls
+                                # Check for create_chart result
+                                chart_tc = next((tc for tc in tool_calls if tc.get("name") == "create_chart"), None)
+                                if chart_tc and chart_tc.get("result"):
+                                    result_data = chart_tc["result"]
+                                    table = result_data.get("table_data", [])
+                                    if table:
+                                        msg_dict["chart"] = {
+                                            "config": chart_tc.get("args", {}),
+                                            "data": table,
+                                            "status": "ready",
+                                        }
+                                        if result_data.get("drilldown"):
+                                            msg_dict["chart"]["domain_id"] = result_data.get("domain_id", "")
+                                            msg_dict["chart"]["drilldown"] = result_data["drilldown"]
+                                        if result_data.get("image_base64"):
+                                            msg_dict["chart"]["image_base64"] = result_data["image_base64"]
+                        except Exception:
+                            logger.warning("[WS] Failed to load tool_calls for msg {}", m.id)
+                        result_messages.append(msg_dict)
                     await websocket.send_json({
                         "type": "messages",
-                        "messages": [
-                            {
-                                "id": str(m.id),
-                                "role": m.role,
-                                "content": m.content,
-                                "timestamp": m.created_at.isoformat() if hasattr(m.created_at, "isoformat") else str(m.created_at),
-                            }
-                            for m in msgs
-                        ],
+                        "messages": result_messages,
                         "id": sid,
                     })
 
