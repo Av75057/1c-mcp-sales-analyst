@@ -5,6 +5,7 @@ export function useChatWebSocket() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const pingTimer = useRef<ReturnType<typeof setInterval>>();
+  const retryCount = useRef(0);
   const { appendStreamToken, clearStream, addToolCall, clearToolCalls, addMessage, setSessions, setMessages, setError, setCurrentSession, setCurrentChart, setTyping, setStreamingContent } = useChatStore();
 
   const connect = useCallback((sessionId?: string) => {
@@ -17,6 +18,7 @@ export function useChatWebSocket() {
 
     ws.current.onopen = () => {
       console.log('[Chat] Connected:', sid);
+      retryCount.current = 0;
       setTyping(false); clearStream(); clearToolCalls(); setCurrentChart(null); setError(null);
       ws.current?.send(JSON.stringify({ type: 'get_sessions' }));
       const cur = useChatStore.getState().currentSessionId;
@@ -105,7 +107,12 @@ export function useChatWebSocket() {
       reconnectTimer.current = setTimeout(() => connect(undefined), 3000);
     };
 
-    ws.current.onerror = () => { setError('WebSocket connection error'); };
+    ws.current.onerror = () => {
+      retryCount.current++;
+      if (retryCount.current > 3) {
+        setError('Ошибка WebSocket соединения. Переподключаюсь...');
+      }
+    };
   }, []);
 
   const disconnect = useCallback(() => {
