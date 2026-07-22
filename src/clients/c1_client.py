@@ -358,8 +358,8 @@ class C1Client:
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         params = {"q": query, "limit": str(limit)}
-        logger.debug("POST /nomenclature/search params={}", params)
-        resp = await self._request("POST", f"{self.base_url}/nomenclature/search", data=params)
+        logger.debug("GET /nomenclature/search params={}", params)
+        resp = await self._request("GET", f"{self.base_url}/nomenclature/search", params=params)
         data: list[dict[str, Any]] = resp.json()
 
         if not data and any(ord(c) > 127 for c in query):

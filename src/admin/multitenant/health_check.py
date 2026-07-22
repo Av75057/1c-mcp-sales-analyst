@@ -29,7 +29,7 @@ async def check_connection(conn: dict) -> dict:
                 result["error"] = f"HTTP {resp.status_code}: {resp.text[:200]}"
     except Exception as e:
         result["status"] = "error"
-        result["error"] = str(e)[:200]
+        result["error"] = f"{type(e).__name__}: {e}"[:200]
     return result
 
 
