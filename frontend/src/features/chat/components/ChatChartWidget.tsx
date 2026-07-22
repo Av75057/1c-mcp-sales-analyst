@@ -146,13 +146,11 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
     );
   }
 
-  if (!displayData?.length) return null;
-
   const option: EChartsOption = useMemo(() => {
+    if (!displayData?.length) return {};
     const labels = displayData.map(d => d.label);
     const values = displayData.map(d => d.value);
     const rawType = displayChartType === 'hbar' ? 'bar' : displayChartType;
-    const isLastLevel = drillState?.levels?.find(l => l.id === drillState?.currentLevel)?.has_children === false;
 
     const baseOption: EChartsOption = {
       backgroundColor: 'transparent',
@@ -175,6 +173,8 @@ export const ChatChartWidget: React.FC<ChatChartWidgetProps> = React.memo(({ cha
       series: [{ type: rawType as any, data: values, smooth: rawType === 'area', areaStyle: rawType === 'area' ? {} : undefined, itemStyle: { color: '#3b82f6' } }],
     };
   }, [displayData, displayTitle, displayChartType, drillState]);
+
+  if (!chart.data?.length && !drillState?.currentData?.length) return null;
 
   const saveToLibrary = async () => {
     try {
