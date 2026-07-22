@@ -4,7 +4,6 @@ import { useTheme } from '@/shared/lib/theme';
 import { useAuthStore } from '@/features/auth/stores/authStore';
 
 const NAV_ITEMS = [
-const NAV_ITEMS = [
   { path: '/', icon: '📊', label: 'Главная' },
   { path: '/executive', icon: '🎯', label: 'KPI руководителя' },
   { path: '/library', icon: '📚', label: 'Библиотека' },
@@ -32,10 +31,10 @@ export function Sidebar() {
   return (
     <aside style={{ backgroundColor: 'var(--bg-sidebar)', borderColor: 'var(--border)' }}
       className="fixed left-0 top-0 bottom-0 w-60 border-r flex flex-col z-50">
-      <div style={{ borderColor: 'var(--border)' }} className="p-4 border-b">
+      <a href="/landing" className="block p-4 border-b no-underline" style={{ borderColor: 'var(--border)' }}>
         <h1 style={{ color: 'var(--text-primary)' }} className="font-bold text-lg">📊 1C Аналитик</h1>
         <p style={{ color: 'var(--text-muted)' }} className="text-xs mt-1">AI-powered analytics</p>
-      </div>
+      </a>
 
       <nav className="flex-1 py-2 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
