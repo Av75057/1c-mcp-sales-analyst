@@ -87,8 +87,6 @@ async def rerun_history(hid: str, request: Request):
 @router.post("/dashboards/{doc_id}/feedback")
 async def submit_feedback(doc_id: str, body: dict, request: Request):
     user_id = _user(request)
-    if not dashboard_repo.get(doc_id):
-        raise HTTPException(status_code=404, detail="Dashboard not found")
     fb = feedback_service.submit(dashboard_id=doc_id, user_id=user_id, rating=body.get("rating", "positive"), comment=body.get("comment", ""), issue_type=body.get("issue_type"))
     return {"status": "success", "feedback": fb}
 
