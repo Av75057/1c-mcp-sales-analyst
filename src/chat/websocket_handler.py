@@ -138,12 +138,16 @@ async def chat_websocket(websocket: WebSocket, session_id: str):
                                     result_data = tc.get("result", {})
                                     table = result_data.get("table_data", [])
                                     if table and len(table) > 0:
-                                        await websocket.send_json({
+                                        chart_msg: dict = {
                                             "type": "chart_data",
                                             "config": args,
                                             "data": table,
                                             "image_base64": result_data.get("image_base64", ""),
-                                        })
+                                        }
+                                        if result_data.get("drilldown"):
+                                            chart_msg["domain_id"] = result_data.get("domain_id", "")
+                                            chart_msg["drilldown"] = result_data["drilldown"]
+                                        await websocket.send_json(chart_msg)
                         except Exception:
                             logger.warning("[WS] Client disconnected during tool calls")
                             break

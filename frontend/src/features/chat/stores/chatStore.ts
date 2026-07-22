@@ -6,6 +6,14 @@ export interface ChartBlock {
   image_base64?: string;
   status: 'loading' | 'ready' | 'error';
   error?: string;
+  domain_id?: string;
+  drilldown?: {
+    enabled: boolean;
+    domain: string;
+    domain_label?: string;
+    current_level: string;
+    levels: { id: string; label: string; has_children: boolean }[];
+  } | null;
 }
 
 export interface ToolCall {

@@ -62,7 +62,14 @@ export function useChatWebSocket() {
             break;
 
           case 'chart_data':
-            setCurrentChart({ config: data.config || {}, data: data.data || [], image_base64: data.image_base64 || '', status: 'ready' });
+            setCurrentChart({ 
+              config: data.config || {}, 
+              data: data.data || [], 
+              image_base64: data.image_base64 || '', 
+              status: 'ready',
+              domain_id: data.domain_id || '',
+              drilldown: data.drilldown || null,
+            });
             break;
 
           case 'session_created':
