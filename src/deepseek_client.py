@@ -519,7 +519,7 @@ class DeepSeekClient:
         total_input_tokens = 0
         total_output_tokens = 0
 
-        for iteration in range(25):
+        for iteration in range(30):
             logger.debug("Итерация LLM #{}, сообщений: {}", iteration + 1, len(messages))
             response = await self._call_llm(messages, tools=TOOL_DEFINITIONS)
             choice = response.choices[0]
