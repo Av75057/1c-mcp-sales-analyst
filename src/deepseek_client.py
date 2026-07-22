@@ -563,6 +563,8 @@ class DeepSeekClient:
                             "image_url": result.get("image_url"),
                             "chart_type": result.get("metadata", {}).get("chart_type") if isinstance(result.get("metadata"), dict) else result.get("chart_type"),
                             "table_data": result.get("table_data", []),
+                            "domain_id": result.get("domain_id", ""),
+                            "drilldown": result.get("drilldown"),
                         }
                     all_tool_calls.append(tool_entry)
 

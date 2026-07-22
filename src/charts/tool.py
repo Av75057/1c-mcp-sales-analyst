@@ -101,6 +101,9 @@ def create_chart_tool(
             domain_id = "sales_by_territory"
         elif any(w in title_lower for w in ["год", "квартал", "месяц", "недел"]):
             domain_id = "time"
+        else:
+            # Fallback by chart type
+            domain_id = "time" if chart_type in ("line", "area") else "sales_by_category"
     # Attach drilldown context if domain is recognized
     domain = DRILLDOWN_DOMAINS.get(domain_id)
     if domain:
