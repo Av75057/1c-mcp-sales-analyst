@@ -34,39 +34,35 @@ async def get_sales_documents(
         except ValueError:
             return {"error": "invalid_date", "message": "Неверный формат даты. Используйте YYYY-MM-DD"}
 
-    from src.tools import get_client
-
     params: dict[str, Any] = {
-        "date_from": date_from,
-        "date_to": date_to,
+        "date_from": date_from, "date_to": date_to,
         "posted_only": str(posted_only).lower(),
-        "sort_by": sort_by,
-        "sort_order": sort_order,
-        "page": str(page),
-        "page_size": str(min(page_size, 500)),
+        "sort_by": sort_by, "sort_order": sort_order,
+        "page": str(page), "page_size": str(min(page_size, 500)),
     }
-    if counterparty:
-        params["counterparty"] = counterparty
-    if sum_min is not None:
-        params["sum_min"] = str(sum_min)
-    if sum_max is not None:
-        params["sum_max"] = str(sum_max)
+    if counterparty: params["counterparty"] = counterparty
+    if sum_min is not None: params["sum_min"] = str(sum_min)
+    if sum_max is not None: params["sum_max"] = str(sum_max)
+
+    import base64 as _b64
+    from src.tools import get_client
+    from src.config import settings
 
     try:
         client = get_client()
         base = client.base_url.replace("/hs/api", "/hs/api/v1")
-        from src.clients.c1_client import C1Client
-        if isinstance(client, C1Client):
-            resp = await client._request("GET", f"{base}/documents/sales", params=params)
-            return resp.json()
-        sales = await client.get_sales(date_from=date_from, date_to=date_to)
-        return {"documents": [{
-            "date": s.get("date", ""),
-            "number": s.get("document_number", ""),
-            "amount": s.get("sum", 0),
-            "counterparty": s.get("client", ""),
-            "manager": s.get("manager", ""),
-        } for s in sales], "pagination": {"page": page, "page_size": page_size, "total_count": len(sales), "total_pages": 1}}
+        raw = f"{settings.c1_username}:{settings.c1_password}".encode("utf-8")
+        auth_header = "Basic " + _b64.b64encode(raw).decode("ascii")
+
+        params_qs = "&".join(f"{k}={v}" for k, v in params.items() if v)
+        url = f"{base}/documents/sales?{params_qs}"
+
+        import httpx
+        async with httpx.AsyncClient(headers={"Authorization": auth_header}, timeout=30) as cl:
+            resp = await cl.get(url)
+            if resp.status_code == 200:
+                return resp.json()
+            return {"documents": [], "error": resp.text[:500]}
     except Exception as e:
         logger.error("Ошибка запроса к 1С: {}", e)
         return {"documents": [], "pagination": {"page": page, "page_size": page_size, "total_count": 0, "total_pages": 0}, "error": str(e)}

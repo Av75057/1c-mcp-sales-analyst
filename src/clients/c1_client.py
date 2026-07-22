@@ -303,9 +303,7 @@ class C1Client:
 
         logger.debug("GET /sales params={}", params)
         resp = await self._request("GET", f"{self.base_url}/sales", params=params)
-        sales = self._normalize_sales(resp.json())
-        # Filter out truly empty items (sum=0 AND cost=0)
-        return [s for s in sales if not (s.get("sum", 0) == 0 and s.get("cost", 0) == 0)]
+        return self._normalize_sales(resp.json())
 
     async def get_sales_by_manager(
         self,
