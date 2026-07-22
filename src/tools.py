@@ -197,6 +197,28 @@ async def create_chart_tool(
     )
 
 
+async def drill_down_tool(
+    domain: str,
+    parent_level: str,
+    parent_value: str,
+    child_level: str,
+    date_from: str = "",
+    date_to: str = "",
+    metric: str = "revenue",
+) -> dict[str, Any]:
+    logger.info("drill_down: domain={}, {}={} -> {}", domain, parent_level, parent_value, child_level)
+    from src.charts.drilldown import drill_down
+    return await drill_down(
+        domain=domain,
+        parent_level=parent_level,
+        parent_value=parent_value,
+        child_level=child_level,
+        date_from=date_from,
+        date_to=date_to,
+        metric=metric,
+    )
+
+
 async def simulate_scenario_tool(
     scenario_type: str,
     entity_name: str = "",
