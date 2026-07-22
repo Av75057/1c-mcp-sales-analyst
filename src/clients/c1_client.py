@@ -50,6 +50,10 @@ class C1Client:
         )
         self._max_retries = settings.c1_max_retries
         self._retry_delay = settings.c1_retry_delay_seconds
+        self._org_id: str | None = None
+
+    def set_org(self, org_id: str | None) -> None:
+        self._org_id = org_id
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         endpoint = path.split("/")[-1]
@@ -58,6 +62,9 @@ class C1Client:
 
         if c1_cb.is_open:
             raise C1ConnectionError("1С временно недоступна. Попробуйте позже.")
+
+        if self._org_id and method == "GET" and "params" in kwargs:
+            kwargs["params"] = {**kwargs["params"], "organization": self._org_id}
 
         for attempt in range(self._max_retries):
             try:
