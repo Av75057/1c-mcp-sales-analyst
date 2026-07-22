@@ -366,16 +366,22 @@ class C1Client:
                 return self._normalize_nomenclature(data)
             except Exception as e:
                 logger.debug("{} failed: {}", method, e)
-        raise  # Both failed
-
-        if not data and any(ord(c) > 127 for c in query):
-            logger.warning(
-                "Поиск номенклатуры по кириллице '{}' вернул 0 результатов. "
-                "Возможно, HTTP-сервис 1С не декодирует UTF-8 параметры.",
-                query,
-            )
-
-        return self._normalize_nomenclature(data)
+        # Fallback: extract unique nomenclature from sales documents
+        logger.warning("nomenclature/search failed, falling back to sales data")
+        try:
+            sales = await self.get_sales(limit=2000)
+            seen = set()
+            items = []
+            for s in sales:
+                name = s.get("nomenclature", "") or s.get("item", "")
+                if name and name not in seen and (not query or query.lower() in name.lower()):
+                    seen.add(name)
+                    items.append({"name": name, "ref": "", "article": "", "unit": "", "item_type": ""})
+            logger.info("Fallback: found {} items from sales data", len(items))
+            return items[:limit]
+        except Exception as e2:
+            logger.error("Fallback also failed: {}", e2)
+            return []
 
     async def get_price_history(
         self,
