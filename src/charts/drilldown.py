@@ -76,6 +76,20 @@ def _group_by_time_period(sales: list[dict], period: str) -> dict[str, float]:
     return dict(groups)
 
 
+def _token_match(query: str, target: str) -> bool:
+    """Token-based fuzzy match: returns True if significant word overlap."""
+    q_words = set(query.lower().split())
+    t_words = set(target.lower().split())
+    # Remove common noise words
+    noise = {"и", "в", "на", "с", "по", "из", "у", "к", "от", "за", "для", "а", "но", "или", "не", "ни", "да", "без", "о", "об", "при", "до", "во"}
+    q_words -= noise
+    t_words -= noise
+    if not q_words:
+        return query.lower() in target.lower()
+    matches = sum(1 for w in q_words if w in t_words)
+    return matches >= max(1, len(q_words) - 1)
+
+
 def _group_by_field(sales: list[dict], field: str, parent_value: str | None = None, parent_field: str | None = None) -> list[dict]:
     """Group sales by a field, optionally filtered by a parent value."""
     from collections import defaultdict
@@ -84,7 +98,7 @@ def _group_by_field(sales: list[dict], field: str, parent_value: str | None = No
         # Apply parent filter if specified
         if parent_value and parent_field:
             val = str(s.get(parent_field, ""))
-            if parent_value.lower() not in val.lower():
+            if not _token_match(parent_value, val):
                 continue
         key = str(s.get(field, "Неизвестно"))
         if not key or key == "Неизвестно":
@@ -159,7 +173,7 @@ async def drill_down(
         base_deep = settings.c1_base_url.rstrip("/").replace("/hs/api", "")
         for s in sales:
             name = str(s.get("nomenclature", "") or s.get("item", ""))
-            if parent_value.lower() not in name.lower():
+            if not _token_match(parent_value, name):
                 continue
             ref = s.get("document_number", "") or s.get("ref", "")
             doc_date = s.get("date", "")[:10]
