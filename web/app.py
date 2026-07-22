@@ -447,6 +447,45 @@ async def api_status(request: Request):
     return status_data
 
 
+@measure_time("drill_down")
+@app.post("/api/charts/drill-down")
+async def api_drill_down(body: dict):
+    """REST endpoint for chart drill-down. Returns chart_data + breadcrumbs."""
+    from src.charts.drilldown import drill_down
+    from src.charts.drilldown_cache import drilldown_cache
+
+    domain = body.get("domain", "")
+    parent_level = body.get("parent_level", "")
+    parent_value = body.get("parent_value", "")
+    child_level = body.get("child_level", "")
+    date_from = body.get("date_from", "")
+    date_to = body.get("date_to", "")
+    metric = body.get("metric", "revenue")
+
+    if not all([domain, parent_level, parent_value, child_level]):
+        return {"error": "Missing required fields: domain, parent_level, parent_value, child_level"}
+
+    # Check cache
+    cached = drilldown_cache.get(domain, parent_level, parent_value, child_level, date_from, date_to)
+    if cached:
+        return cached
+
+    result = await drill_down(
+        domain=domain,
+        parent_level=parent_level,
+        parent_value=parent_value,
+        child_level=child_level,
+        date_from=date_from,
+        date_to=date_to,
+        metric=metric,
+    )
+
+    if "error" not in result:
+        drilldown_cache.set(domain, parent_level, parent_value, child_level, date_from, date_to, result)
+
+    return result
+
+
 @app.get("/api/health/performance")
 async def api_health_performance():
     """Мониторинг производительности MCP-сервера"""
