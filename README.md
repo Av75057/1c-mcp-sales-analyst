@@ -1,4 +1,10 @@
 # AI-аналитик 1С + MCP + DeepSeek
+![CI](https://github.com/Av75057/1c-mcp-sales-analyst/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+![Tests](https://img.shields.io/badge/tests-268%20passed-brightgreen.svg)
+
+
 
 AI-аналитик склада и продаж на базе 1С:УНФ, MCP и DeepSeek. Замена ручного построения отчётов на текстовые запросы, AI-инсайты, симуляцию сценариев и распознавание документов.
 
