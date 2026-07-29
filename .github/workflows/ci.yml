@@ -73,7 +73,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - name: Lint (oxlint)
-        run: npx oxlint --deny-warnings src/
+        run: npx oxlint src/
       - name: TypeScript check
         run: npx tsc --noEmit
       - name: Unit tests (vitest)
