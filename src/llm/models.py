@@ -83,28 +83,28 @@ class ModelConfig(BaseModel):
 
 MODEL_ROUTING: dict[TaskType, ModelConfig] = {
     TaskType.CLASSIFICATION: ModelConfig(
-        provider="openai", model="gpt-4o-mini", max_tokens=256,
-        temperature=0.0, cost_per_1k_in=0.00015, cost_per_1k_out=0.0006,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=256,
+        temperature=0.0, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
     TaskType.CHAT: ModelConfig(
-        provider="openai", model="gpt-4o", max_tokens=2048,
-        temperature=0.7, cost_per_1k_in=0.0025, cost_per_1k_out=0.01,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=2048,
+        temperature=0.7, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
     TaskType.INSIGHT: ModelConfig(
-        provider="openai", model="gpt-4o", max_tokens=4096,
-        temperature=0.3, cost_per_1k_in=0.0025, cost_per_1k_out=0.01,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=4096,
+        temperature=0.3, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
     TaskType.REFLECTION: ModelConfig(
-        provider="openai", model="gpt-4o-mini", max_tokens=1024,
-        temperature=0.2, cost_per_1k_in=0.00015, cost_per_1k_out=0.0006,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=1024,
+        temperature=0.2, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
     TaskType.SUMMARIZATION: ModelConfig(
-        provider="openai", model="gpt-4o-mini", max_tokens=1024,
-        temperature=0.3, cost_per_1k_in=0.00015, cost_per_1k_out=0.0006,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=1024,
+        temperature=0.3, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
     TaskType.EMBEDDING: ModelConfig(
-        provider="openai", model="text-embedding-3-small", max_tokens=0,
-        temperature=0.0, cost_per_1k_in=0.00002, cost_per_1k_out=0.0,
+        provider="deepseek", model="deepseek-v4-flash", max_tokens=0,
+        temperature=0.0, cost_per_1k_in=0.00007, cost_per_1k_out=0.00007,
     ),
 }
 
