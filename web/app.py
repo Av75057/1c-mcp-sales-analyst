@@ -24,6 +24,7 @@ from src.perf import measure_time
 from src.charts.engine import render_chart
 from src.deepseek_client import DeepSeekClient
 from src.metrics import metrics
+from src.llm import metrics as llm_metrics
 from src.whatif.engine.simulator import WhatIfSimulator
 
 from src.observability.middleware import MetricsMiddleware
@@ -550,6 +551,13 @@ async def health():
     status_code = 200 if result["status"] in ("healthy", "degraded") else 503
     return JSONResponse(status_code=status_code, content=result)
 
+
+
+
+@app.get("/api/llm/metrics")
+async def llm_metrics_endpoint():
+    """LLM metrics: cost, tokens, latency."""
+    return llm_metrics.snapshot()
 
 @app.get("/metrics")
 async def metrics_endpoint():
