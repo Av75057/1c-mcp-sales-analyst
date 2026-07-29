@@ -75,11 +75,11 @@ jobs:
       - name: Lint (oxlint)
         run: npx oxlint src/
       - name: TypeScript check
-        run: npx tsc --noEmit || true
+        run: npx tsc --noEmit
       - name: Unit tests (vitest)
         run: npx vitest run --coverage 2>&1 | tail -30
       - name: Build
-        run: npx vite build 2>&1 || true
+        run: npx vite build 2>&1
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-build

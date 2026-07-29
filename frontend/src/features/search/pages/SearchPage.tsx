@@ -30,7 +30,7 @@ export default function SearchPage() {
     setIsLoading(true);
     try {
       if (tab === 'dashboards') {
-        const data = await searchApi.ftsSearch(query);
+        const data = await searchApi.search(query, 20);
         setResults(data.results || []);
       } else {
         const { data } = await api.post('/api/search/nomenclature', {

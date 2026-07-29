@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  full_name?: string;
   role: 'admin' | 'analyst' | 'viewer' | 'api_client';
   permissions: string[];
 }
@@ -22,5 +23,6 @@ export interface LoginCredentials {
 export interface RegisterData {
   username: string;
   email: string;
+  full_name?: string;
   password: string;
 }

@@ -11,7 +11,7 @@ interface EChartsWrapperProps {
 
 export function EChartsWrapper({ option, height = 400, loading = false, onChartClick }: EChartsWrapperProps) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const instanceRef = useRef<echarts.ECharts>();
+  const instanceRef = useRef<echarts.ECharts | null>(null);
   const onClickRef = useRef(onChartClick);
   onClickRef.current = onChartClick;
 

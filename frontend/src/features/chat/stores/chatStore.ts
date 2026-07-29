@@ -29,6 +29,7 @@ export interface Message {
   tool_calls?: ToolCall[];
   chart?: ChartBlock;
   suggestions?: string[];
+  chart_image?: string;
   timestamp: string;
 }
 
@@ -51,7 +52,7 @@ interface ChatState {
   error: string | null;
 
   setSessions: (sessions: Session[]) => void;
-  setCurrentSession: (id: string) => void;
+  setCurrentSession: (id: string | null) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (msg: Message) => void;
   setTyping: (v: boolean) => void;

@@ -12,7 +12,7 @@ const STEPS = ['Тип', 'Параметры', 'Проверка', 'Готово
 
 export default function ConnectionWizard({ tenantId, onComplete, onCancel }: WizardProps) {
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState({ name: '', base_url: '', username: '', password: '', tenant_id: tenantId });
+  const [form, setForm] = useState<{ name: string; base_url: string; username: string; password: string; tenant_id: string; id?: string; config_type?: string }>({ name: '', base_url: '', username: '', password: '', tenant_id: tenantId });
   const [testResult, setTestResult] = useState<any>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);

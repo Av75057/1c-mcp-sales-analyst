@@ -86,7 +86,7 @@ export default function ExecutiveDashboardPage() {
         ) : null}
 
         {/* Charts row */}
-        {data?.sparklines?.revenue?.length > 0 && (
+        {data?.sparklines?.revenue && data.sparklines.revenue.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <InteractiveChart widgetId="chart-revenue" title="Выручка (по дням)" option={sparklineOption(data.sparklines.revenue, data.revenue.trend_percent)} filterField="date" height={120} />
             <InteractiveChart widgetId="chart-managers" title="Топ менеджеров" option={managersOption(data.top_managers || [])} filterField="manager" height={240} />

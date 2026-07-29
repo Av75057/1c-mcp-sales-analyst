@@ -3,8 +3,8 @@ import { useChatStore } from '../stores/chatStore';
 
 export function useChatWebSocket() {
   const ws = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
-  const pingTimer = useRef<ReturnType<typeof setInterval>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pingTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const retryCount = useRef(0);
   const { appendStreamToken, clearStream, addToolCall, clearToolCalls, addMessage, setSessions, setMessages, setError, setCurrentSession, setCurrentChart, setTyping, setStreamingContent } = useChatStore();
 

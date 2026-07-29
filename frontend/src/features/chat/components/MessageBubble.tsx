@@ -17,7 +17,7 @@ export function MessageBubble({ message, onSuggestionClick }: MessageBubbleProps
   const handleSave = useCallback(async () => {
     const chartToolCall = message.tool_calls?.find(t => t.name === 'create_chart' && t.result?.image_base64);
     if (!chartToolCall) return;
-    const title = prompt('Название дашборда:', chartToolCall.args?.title || 'График из чата');
+    const title = prompt('Название дашборда:', (chartToolCall.args?.title as string) || 'График из чата');
     if (!title) return;
     const tags = (prompt('Теги (через запятую):', 'чат') || 'чат').split(',').map(t => t.trim());
     const chartItem = {

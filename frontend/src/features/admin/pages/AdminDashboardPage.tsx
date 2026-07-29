@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
               <CardHeader><CardTitle>🏆 Топ дашбордов</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(stats.top_dashboards || []).slice(0, 5).map((d, i) => (
+                  {(stats.top_dashboards || []).slice(0, 5).map((d: { id: string; title: string; views: number }, i: number) => (
                     <div key={d.id} className="flex items-center justify-between text-sm">
                       <span className="truncate flex-1" style={{ color: 'var(--text-primary)' }}>{i+1}. {d.title}</span>
                       <span className="ml-2" style={{ color: 'var(--text-secondary)' }}>👁 {d.views}</span>
@@ -91,7 +91,7 @@ export default function AdminDashboardPage() {
               <CardHeader><CardTitle>🏷️ Популярные теги</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(stats.top_tags || []).slice(0, 10).map((t) => (
+                  {(stats.top_tags || []).slice(0, 10).map((t: { tag: string; count: number }) => (
                     <div key={t.tag} className="flex items-center justify-between text-sm">
                       <Badge>{t.tag}</Badge>
                       <span style={{ color: 'var(--text-secondary)' }}>{t.count}</span>
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
               <CardHeader><CardTitle>📊 Типы графиков</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {(stats.chart_types || []).map((ct) => (
+                  {(stats.chart_types || []).map((ct: { type: string; count: number }) => (
                     <div key={ct.type} className="flex items-center justify-between text-sm">
                       <span style={{ color: 'var(--text-primary)' }}>{ct.type}</span>
                       <Badge variant="secondary">{ct.count}</Badge>
