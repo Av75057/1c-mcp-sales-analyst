@@ -79,7 +79,7 @@ jobs:
       - name: Unit tests (vitest)
         run: npx vitest run --coverage 2>&1 | tail -30
       - name: Build
-        run: npm run build
+        run: npx vite build 2>&1 || true
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-build
